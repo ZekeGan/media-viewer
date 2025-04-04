@@ -1,4 +1,14 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
 
-export default nextConfig;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+
+const nextConfig = {
+  experimental: {
+    optimizePackageImports: ['@mantine/core', '@mantine/hooks'],
+  },
+  images: {
+    unoptimized: true,
+  },
+}
+
+export default nextConfig

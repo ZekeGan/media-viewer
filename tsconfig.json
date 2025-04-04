@@ -21,6 +21,14 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "script/copy_cover_to_assets.js"
+  ],
+  "file": ["index.d.ts"],
   "exclude": ["node_modules"]
 }
