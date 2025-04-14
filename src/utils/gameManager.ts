@@ -22,11 +22,12 @@ export class GameManager {
   public async getData() {
     const json = await fs.readFileSync(path.join(this._gameMetaPath, 'data.json'), 'utf-8')
     const data = JSON.parse(json) as IGameData
-    return data
+    return { ...data, folder_path: this._curGamePath }
   }
 
   public async getCover() {
     const dirs = await fs.readdirSync(this._gameMetaPath)
+    // get name of cover with extname
     const coverName = dirs.find(dir => imgExt.includes(path.extname(dir))) || null
     if (coverName) {
       const coverPath = path.join(this._gameMetaPath, coverName)
@@ -40,7 +41,9 @@ export class GameManager {
   }
 
   public async createNewMeta() {
+    // create meta folder
     await fs.mkdirSync(this._gameMetaPath, { recursive: true })
+    // create meta's data.json
     await fs.writeFileSync(
       path.join(this._gameMetaPath, 'data.json'),
       JSON.stringify(this._getDefaultGameData(), null, 2),
@@ -48,6 +51,7 @@ export class GameManager {
     )
   }
 
+  // default meta data
   private _getDefaultGameData() {
     return {
       id: nanoid(),
@@ -59,6 +63,6 @@ export class GameManager {
       isDynamic: 'static',
       isCensored: 'censored',
       folder_path: this._curGamePath,
-    }
+    } satisfies IGameData
   }
 }

@@ -13,7 +13,7 @@ export const useSearchParamsFns = () => {
       if (tagsParams) return tagsParams.split(',')
       return []
     },
-    [queryString]
+    [searchParams]
   )
 
   const updateQueryString = useCallback(
@@ -26,7 +26,7 @@ export const useSearchParamsFns = () => {
 
       router.push(str.endsWith('=') ? '/' : `?${str}`)
     },
-    [queryString]
+    [queryString, router]
   )
 
   return { queryString, getParamsList, updateQueryString }

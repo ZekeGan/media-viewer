@@ -24,7 +24,7 @@ export const GroupedFilterContainer = ({ list, setList, withCount }: IFilterCont
       },
       {} as Record<string, CheckList>
     )
-  }, [list])
+  }, [getParent, list])
 
   const handleChange = (check: CheckList[0], checked: boolean) => {
     setList(prev => {

@@ -9,9 +9,27 @@ declare interface IGameData {
   isCensored: 'censored' | 'uncensored'
   folder_path: string
 }
+declare interface IDoujinshiData {
+  id: string
+  type: 'Doujinshi' | 'Manga' | 'Artist CG' | 'Game CG' | 'Image Set' | 'Misc'
+  page: number
+  name: string
+  male: string[]
+  female: string[]
+  artist: string[]
+  group: string[]
+  language: string[]
+  misc: string[]
+  character: string[]
+  parody: string[]
+}
 
 declare interface IGameMeta {
   data: IGameData
+  cover: any | null
+}
+declare interface IDoujinshiMeta {
+  data: IDoujinshiData
   cover: any | null
 }
 
@@ -23,14 +41,14 @@ declare type CheckList = {
 }[]
 
 declare type ISystem = {
-  tags: {
+  game_tags: {
     [k in string]: {
       _key: string
       tw: string
       parent: string
     }
   }
-  system: {
+  game_parent: {
     [k in string]: {
       tw: string
     }

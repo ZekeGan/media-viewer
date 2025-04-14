@@ -46,7 +46,7 @@ export const useCheckData = (key: string, list: string[]) => {
       return
     }
     updateQueryString(key, filterList.toString())
-  }, [filterList])
+  }, [filterList, flag, key, updateQueryString])
 
   return {
     checkedList: _list,

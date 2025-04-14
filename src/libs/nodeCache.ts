@@ -1,3 +1,5 @@
 import NodeCache from 'node-cache'
 
-export default new NodeCache({ stdTTL: 0, checkperiod: 120 })
+const nodeCache = new NodeCache({ stdTTL: 0, checkperiod: 120 })
+
+export default nodeCache

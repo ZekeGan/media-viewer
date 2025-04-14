@@ -37,7 +37,7 @@ export default function EditCurGameClient({
   metaData: IGameMeta
 }) {
   const { t } = useTranslate()
-  const { tags, updateGameList } = useMainData()
+  const { gameTags, updateGameList } = useMainData()
   const {
     data: {
       game_name,
@@ -61,7 +61,7 @@ export default function EditCurGameClient({
   const [author, setAuthor] = useState(_author)
   const [authorFrom, setAuthorFrom] = useState(author_from)
   const [tagsList, setTagsList] = useState(() => {
-    return Object.keys(tags).map(i =>
+    return Object.keys(gameTags).map(i =>
       _tags.includes(i)
         ? { key: i, label: t(i), checked: true, count: 0 }
         : { key: i, label: t(i), checked: false, count: 0 }
@@ -114,7 +114,7 @@ export default function EditCurGameClient({
       cover: coverUrl,
     }
 
-    await axios.post('/api/game', data)
+    await axios.post('/api/save_game', data)
     await updateGameList()
     router.push('/')
   }

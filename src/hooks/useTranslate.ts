@@ -2,15 +2,21 @@ import { useMainData } from '@/context/mainContext'
 import { useCallback } from 'react'
 
 export const useTranslate = () => {
-  const { system, tags } = useMainData()
+  const { gameParent, gameTags } = useMainData()
 
-  const t = useCallback((k: string) => {
-    return tags[k]?.['tw'] || system[k]?.['tw'] || k
-  }, [])
+  const t = useCallback(
+    (k: string) => {
+      return gameTags[k]?.['tw'] || gameParent[k]?.['tw'] || k
+    },
+    [gameParent, gameTags]
+  )
 
-  const getParent = useCallback((k: string) => {
-    return tags[k]?.['parent'] || '未分類'
-  }, [])
+  const getParent = useCallback(
+    (k: string) => {
+      return gameTags[k]?.['parent'] || '未分類'
+    },
+    [gameTags]
+  )
 
   return { t, getParent }
 }

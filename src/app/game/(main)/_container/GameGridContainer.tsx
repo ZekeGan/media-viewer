@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { IconSettings } from '@tabler/icons-react'
@@ -30,7 +30,7 @@ const cutString = (v: string) => {
 }
 
 export default function GameGridContainer() {
-  const { _list } = useMainData()
+  const { tempGameList } = useMainData()
   const router = useRouter()
   const { t } = useTranslate()
 
@@ -38,13 +38,13 @@ export default function GameGridContainer() {
   const [page, setPage] = useState(1)
 
   const goToEdit = (id: string) => {
-    router.push(`/edit/${id}`)
+    router.push(`/game/edit/${id}`)
   }
 
   return (
     <Stack>
       <SimpleGrid cols={{ md: 2, lg: 4, xl: 6 }}>
-        {_list.slice((page - 1) * maxNum, page * maxNum).map(item => {
+        {tempGameList.slice((page - 1) * maxNum, page * maxNum).map(item => {
           const {
             data: {
               author,
@@ -101,7 +101,7 @@ export default function GameGridContainer() {
                   <Text size="xs" c="gray.5">
                     {author_from}
                   </Text>
-                  <Anchor size="sm" c="dark" href={`/?author=${author}`}>
+                  <Anchor size="sm" c="dark" href={`/game?author=${author}`}>
                     {author}
                   </Anchor>
                 </Flex>
@@ -140,7 +140,7 @@ export default function GameGridContainer() {
         })}
       </SimpleGrid>
       <Pagination
-        total={Math.ceil(_list.length / maxNum)}
+        total={Math.ceil(tempGameList.length / maxNum)}
         value={page}
         onChange={setPage}
         mt="sm"

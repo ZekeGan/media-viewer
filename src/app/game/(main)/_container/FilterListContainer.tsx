@@ -7,7 +7,7 @@ import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { defaultGameListOrder } from '@/constants'
 
 export default function FilterListContainer() {
-  const { gameList, setList } = useMainData()
+  const { gameList, setTempGameList } = useMainData()
 
   const { queryString, getParamsList } = useSearchParamsFns()
 
@@ -71,8 +71,18 @@ export default function FilterListContainer() {
       const B = (b.data[order[0]] as string).toLowerCase()
       return A < B ? -1 : A > B ? 1 : 0
     })
-    setList(resultList)
-  }, [queryString])
+    setTempGameList(resultList)
+  }, [
+    authorFilter,
+    authorFromFilter,
+    censoredFilter,
+    dynamicFilter,
+    gameList,
+    getParamsList,
+    queryString,
+    setTempGameList,
+    tagsArrayFilter,
+  ])
 
   const filterConfig = [
     {

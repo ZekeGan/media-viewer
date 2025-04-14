@@ -15,7 +15,8 @@ const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
 ]
 
 export default function HomeClientPage() {
-  const { _list } = useMainData()
+  const { tempGameList } = useMainData()
+
   const { updateQueryString, getParamsList } = useSearchParamsFns()
 
   const orderBy = getParamsList('order')?.[0] || defaultGameListOrder
@@ -32,7 +33,7 @@ export default function HomeClientPage() {
       </Grid.Col>
 
       <Grid.Col span={10}>
-        <Divider mb="md" size="md" label={`總遊戲數 ${_list.length} 個`} />
+        <Divider mb="md" size="md" label={`總遊戲數 ${tempGameList.length} 個`} />
         <Stack>
           <Flex justify="space-between">
             <Group gap="sm">

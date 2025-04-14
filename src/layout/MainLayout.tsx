@@ -9,11 +9,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <Flex h={HeaderHeight} bg="gray.2" align="center" px="2rem">
         <Group gap="xl">
           <Link href="/">Home</Link>
-          <Link href="/image">1.Pinterest介面 只展示圖片</Link>
+          <Link href="/game">Game</Link>
+          <Link href="/game/image">1.Pinterest介面 只展示圖片</Link>
           <div>2.可隨機抽取任一遊戲</div>
-          <Link href="/tags">3.編輯TAG的介面</Link>
+          <Link href="/edit_tags">3.編輯TAG的介面</Link>
           <div>4.顯示遊戲使用的次數</div>
-          <div>5.隱藏NAV</div>
+          <Link href="/doujinshi">5.漫畫viewer</Link>
         </Group>
       </Flex>
       <Box p={MainPadding}>{children}</Box>
