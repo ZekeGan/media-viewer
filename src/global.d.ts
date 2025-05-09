@@ -12,7 +12,7 @@ declare interface IGameData {
 declare interface IDoujinshiData {
   id: string
   type: 'Doujinshi' | 'Manga' | 'Artist CG' | 'Game CG' | 'Image Set' | 'Misc'
-  page: number
+  page: string[]
   name: string
   male: string[]
   female: string[]
@@ -26,11 +26,17 @@ declare interface IDoujinshiData {
 
 declare interface IGameMeta {
   data: IGameData
-  cover: any | null
+  meta: {
+    root: string
+    coverName: string
+  }
 }
 declare interface IDoujinshiMeta {
   data: IDoujinshiData
-  cover: any | null
+  meta: {
+    root: string
+    coverName: string
+  }
 }
 
 declare type CheckList = {

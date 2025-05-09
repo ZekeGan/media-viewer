@@ -25,19 +25,14 @@ export class GameManager {
     return { ...data, folder_path: this._curGamePath }
   }
 
-  public async getCover() {
+  public async getMeta() {
     const dirs = await fs.readdirSync(this._gameMetaPath)
-    // get name of cover with extname
     const coverName = dirs.find(dir => imgExt.includes(path.extname(dir))) || null
-    if (coverName) {
-      const coverPath = path.join(this._gameMetaPath, coverName)
-      const coverBuffer = await fs.readFileSync(coverPath)
-      return `data:image/${path
-        .extname(coverPath)
-        .slice(1)};base64,${coverBuffer.toString('base64')}`
-    } else {
-      return ''
-    }
+
+    return {
+      root: this._curGamePath,
+      coverName: coverName || '',
+    } satisfies IDoujinshiMeta['meta']
   }
 
   public async createNewMeta() {

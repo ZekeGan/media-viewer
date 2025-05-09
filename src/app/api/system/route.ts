@@ -1,9 +1,8 @@
 import { CompanyName, ProjectName } from '@/constants/env'
-import nodeCache from '@/libs/nodeCache'
+import { cacheTime } from '@/context/server'
 import fs from 'fs'
+import { NextResponse } from 'next/server'
 import path from 'path'
-
-const systemCacheKey = 'system'
 
 const defaultData: ISystem = {
   game_tags: {},
@@ -12,9 +11,6 @@ const defaultData: ISystem = {
 
 export async function GET() {
   try {
-    const cachedData = nodeCache.get(systemCacheKey) as ISystem
-    // if (cachedData) return cachedData
-
     const appDataPath = process.env.APPDATA
     if (!appDataPath) throw new Error()
 
@@ -33,9 +29,13 @@ export async function GET() {
     // read system.json
     const data = JSON.parse(await fs.readFileSync(systemDataPath, 'utf-8')) as ISystem
 
-    return new Response(JSON.stringify({ status: 201, message: 'success', data }))
+    return NextResponse.json(
+      { status: 201, message: 'success', data },
+      {
+        headers: { 'Cache-Control': `max-age=${cacheTime}` },
+      }
+    )
   } catch (err) {
-    console.log('error', err)
-    return new Response(JSON.stringify({ status: 400, message: 'error', data: defaultData }))
+    return NextResponse.json({ status: 400, message: 'error', data: defaultData })
   }
 }

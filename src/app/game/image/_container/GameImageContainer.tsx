@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import axios from 'axios'
 import { notifications } from '@mantine/notifications'
 import { useMainData } from '@/context/mainContext'
-import noImg from '@/assets/no-image.jpg'
-import { Flex, Grid, Image, Paper } from '@mantine/core'
+import { Flex, Grid, Paper } from '@mantine/core'
+import { Img } from '@/components/Img'
 
 const len = 7
 
@@ -34,24 +34,22 @@ export default function GameImageContainer() {
       {list.map((arr, AIdx) => (
         <Grid.Col key={AIdx} span={12 / len}>
           <Flex direction="column" gap="lg">
-            {arr.map(item => {
-              const {
-                data: { game_name, folder_path, id },
-                cover,
-              } = item
-
-              return (
-                <Paper
-                  key={id}
-                  shadow="md"
-                  radius="lg"
-                  onClick={() => openFolder(folder_path)}
-                  style={{ cursor: 'pointer', overflow: 'hidden' }}
-                >
-                  <Image src={cover || noImg.src} w="100%" h="auto" alt={game_name} />
-                </Paper>
-              )
-            })}
+            {arr.map(item => (
+              <Paper
+                key={item.data.id}
+                shadow="md"
+                radius="lg"
+                onClick={() => openFolder(item.data.folder_path)}
+                style={{ cursor: 'pointer', overflow: 'hidden' }}
+              >
+                <Img
+                  src={`/api/image/?path=${encodeURIComponent(`${item.meta.root}/_meta/${item.meta.coverName}`)}`}
+                  w="100%"
+                  h="auto"
+                  alt={item.data.game_name}
+                />
+              </Paper>
+            ))}
           </Flex>
         </Grid.Col>
       ))}

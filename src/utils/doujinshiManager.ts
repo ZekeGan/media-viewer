@@ -3,19 +3,23 @@ import fs from 'fs'
 import { DoujinshiPath } from '@/constants/env'
 import { nanoid } from 'nanoid'
 import { imgExt } from '@/constants'
+import sharp from 'sharp'
+import pLimit from 'p-limit'
+
+const limit = pLimit(5) // 最多同時處理 5 張
 
 function parseTitle(str: string) {
-  const result = {
-    other: [''],
-    artists: [''],
-    groups: [''],
+  const result: { misc: string[]; artists: string[]; groups: string[]; name: string } = {
+    misc: [],
+    artists: [],
+    groups: [],
     name: str.trim(),
   }
 
   // 1. (<type>) [<author>(<groups>)] <name>
   const fullWithGroups = str.match(/^\(([^)]+)\)\s+\[([^(]+)\(([^)]+)\)\](.+)$/)
   if (fullWithGroups) {
-    result.other = fullWithGroups[1].split(',').map(s => s.trim())
+    result.misc = fullWithGroups[1].split(',').map(s => s.trim())
     result.artists = fullWithGroups[2].split(',').map(s => s.trim())
     result.groups = fullWithGroups[3].split(',').map(s => s.trim())
     result.name = fullWithGroups[4].trim()
@@ -25,7 +29,7 @@ function parseTitle(str: string) {
   // 優先解析完整格式: (<type>) [<author>] <name>
   const fullMatch = str.match(/^\(([^)]+)\)\s+\[([^\]]+)\](.+)$/)
   if (fullMatch) {
-    result.other = fullMatch[1].split(',').map(s => s.trim())
+    result.misc = fullMatch[1].split(',').map(s => s.trim())
     result.artists = fullMatch[2].split(',').map(s => s.trim())
     result.name = fullMatch[3].trim()
     return result
@@ -42,7 +46,7 @@ function parseTitle(str: string) {
   // 解析格式: (<type>) <name>
   const typeMatch = str.match(/^\(([^)]+)\)(.+)$/)
   if (typeMatch) {
-    result.other = typeMatch[1].split(',').map(s => s.trim())
+    result.misc = typeMatch[1].split(',').map(s => s.trim())
     result.name = typeMatch[2].trim()
     return result
   }
@@ -70,12 +74,11 @@ export class DoujinshiManager {
     return this._doujinshiMetaPath
   }
 
-  public async getAllImages() {
+  public async getImages(pages: [number, number]) {
     await this._getAllImageTitle()
-    console.log(this._pageTitleList)
 
     return Promise.all(
-      this._pageTitleList.map(async d => {
+      this._pageTitleList.slice(pages[0], pages[1]).map(async d => {
         const imagePath = path.join(this._curDoujinshiPath, d)
 
         const coverBuffer = await fs.readFileSync(imagePath)
@@ -88,7 +91,7 @@ export class DoujinshiManager {
 
   public async getData() {
     const json = await fs.readFileSync(path.join(this._doujinshiMetaPath, 'data.json'), 'utf-8')
-    const data = JSON.parse(json) as IGameData
+    const data = JSON.parse(json) as IDoujinshiData
     return data
   }
 
@@ -96,7 +99,7 @@ export class DoujinshiManager {
     // create meta folder
     await fs.mkdirSync(this._doujinshiMetaPath, { recursive: true })
     const data = parseTitle(this._doujinshiName)
-    this._miscTags = data.other
+    this._miscTags = data.misc
     this._artistsTags = data.artists
     this._groupsTags = data.groups
     await this._getAllImageTitle()
@@ -109,34 +112,29 @@ export class DoujinshiManager {
     )
   }
 
-  public async getCover() {
+  public async getMeta() {
     const dirs = await fs.readdirSync(this._doujinshiMetaPath)
-    // get name of cover with extname
     const coverName = dirs.find(dir => imgExt.includes(path.extname(dir))) || null
-    if (coverName) {
-      const coverPath = path.join(this._doujinshiMetaPath, coverName)
-      const coverBuffer = await fs.readFileSync(coverPath)
-      return `data:image/${path
-        .extname(coverPath)
-        .slice(1)};base64,${coverBuffer.toString('base64')}`
-    } else {
-      return ''
-    }
+
+    return {
+      root: this._curDoujinshiPath,
+      coverName: coverName || '',
+    } satisfies IDoujinshiMeta['meta']
   }
 
   private async _getAllImageTitle() {
     this._pageTitleList = await fs
       .readdirSync(this._curDoujinshiPath)
       .filter(t => fs.statSync(path.join(this._curDoujinshiPath, t)).isFile())
+      .filter(t => imgExt.includes(path.extname(t).toLocaleLowerCase()))
   }
 
   private async _copyCoverImage() {
     const titles = this._pageTitleList.sort()
-    console.log(titles)
 
     if (titles.length === 0) return
 
-    const ext = path.extname(titles[0])
+    const ext = path.extname(titles[0]).toLocaleLowerCase()
     if (imgExt.includes(ext)) {
       const srcPath = path.join(this._curDoujinshiPath, titles[0])
       const destPath = path.join(this._doujinshiMetaPath, `cover${ext}`)
@@ -148,7 +146,7 @@ export class DoujinshiManager {
   private _getDefaultGameData() {
     return {
       id: nanoid(),
-      page: this._pageTitleList.length,
+      page: this._pageTitleList,
       name: this._doujinshiName,
       type: 'Doujinshi',
       male: [],

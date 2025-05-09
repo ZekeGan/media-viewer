@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 }
 
 const theme = createTheme({
-  fontFamily: `${notoSansJP.style.fontFamily}, sans-serif`,
+  // fontFamily: `${notoSansJP.style.fontFamily}, sans-serif`,
 })
 
 export default async function RootLayout({
@@ -29,12 +29,12 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html>
+    <html suppressHydrationWarning={true}>
       <head>
         <ColorSchemeScript />
       </head>
       <body>
-        <MantineProvider theme={theme}>
+        <MantineProvider defaultColorScheme="dark">
           <Notifications />
           <MainContext>
             <MainLayout>{children}</MainLayout>

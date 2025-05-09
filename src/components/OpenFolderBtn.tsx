@@ -21,7 +21,7 @@ export default function OpenFolderBtn({ folderPath, ...rest }: IOpenFolderBtn) {
   }
 
   return (
-    <Button {...rest} onClick={() => openFolder(folderPath)}>
+    <Button {...rest} variant="light" onClick={() => openFolder(folderPath)}>
       打開資料夾
     </Button>
   )

@@ -8,3 +8,9 @@ COMPANY_NAME=Zeke
 PROJECT_NAME=game-viewer
 
 DOUJINSHI_PATH=Z:/Doujinshi
+
+- 圖片使用 web api 傳送
+- 研究是否能使用 thumbnail 緩存
+- 單個頁面看漫畫
+- 改進畫面展示效果
+-

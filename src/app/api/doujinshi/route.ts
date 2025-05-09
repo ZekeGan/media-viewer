@@ -3,12 +3,14 @@ import path from 'path'
 import { downloadFile } from '@/utils/download'
 import { DoujinshiPath } from '@/constants/env'
 import { DoujinshiManager } from '@/utils/doujinshiManager'
+import { NextResponse } from 'next/server'
+import { cacheTime } from '@/context/server'
 
 export async function GET() {
   try {
     const doujinshiDirs = await fs.readdirSync(DoujinshiPath)
 
-    const result: IGameMeta[] = []
+    const result: IDoujinshiMeta[] = []
 
     for (const dirName of doujinshiDirs) {
       if (dirName === '_meta') continue
@@ -19,16 +21,22 @@ export async function GET() {
         await doujinshi.createNewMeta()
       }
 
-      const cover = await doujinshi.getCover()
+      const meta = await doujinshi.getMeta()
       const data = await doujinshi.getData()
 
-      result.push({ data, cover })
-      break
+      result.push({ data, meta })
     }
 
-    return new Response(JSON.stringify({ status: 201, message: 'success', data: result }))
+    return NextResponse.json(
+      { status: 201, message: 'success', data: result },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': `max-age=${cacheTime}`,
+        },
+      }
+    )
   } catch (err) {
-    console.log('error', err)
-    return new Response(JSON.stringify({ status: 400, message: 'error', data: [] }))
+    return NextResponse.json(JSON.stringify({ status: 400, message: 'error', data: [] }))
   }
 }

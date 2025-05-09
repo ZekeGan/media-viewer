@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { downloadFile } from '@/utils/download'
+import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
@@ -11,8 +12,8 @@ export async function POST(req: Request) {
 
     if (cover) await downloadFile(cover, metaPath)
 
-    return new Response(JSON.stringify({ status: 201, message: 'success' }))
+    return NextResponse.json({ status: 201, message: 'success' })
   } catch {
-    return new Response(JSON.stringify({ status: 400, message: 'error' }))
+    return NextResponse.json({ status: 400, message: 'error' })
   }
 }

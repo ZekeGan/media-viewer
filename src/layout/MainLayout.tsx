@@ -6,7 +6,7 @@ import { ReactNode } from 'react'
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <Container fluid p={0}>
-      <Flex h={HeaderHeight} bg="gray.2" align="center" px="2rem">
+      <Flex h={HeaderHeight} bg="gray" align="center" px="2rem">
         <Group gap="xl">
           <Link href="/">Home</Link>
           <Link href="/game">Game</Link>

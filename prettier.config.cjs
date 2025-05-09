@@ -8,4 +8,5 @@ module.exports = {
   bracketSpacing: true, // `{ foo: bar }` 這樣的格式
   arrowParens: 'avoid', // 只有一個參數時省略括號
   endOfLine: 'lf', // 使用 LF 作為換行符號
+  bracketSameLine: false,
 }

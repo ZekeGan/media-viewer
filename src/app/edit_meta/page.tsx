@@ -57,8 +57,6 @@ export default function Page() {
     })
   }, [gameParent, parentSetValue, parents])
 
-  console.log(allGameParent)
-
   const saveTags = async () => {
     let _tags = tagsGetValue()
     let _parent = parentGetValue()

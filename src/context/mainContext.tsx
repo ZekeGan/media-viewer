@@ -1,7 +1,8 @@
 'use client'
 
+import { useHash } from '@mantine/hooks'
 import axios from 'axios'
-import { useParams, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   createContext,
   Dispatch,
@@ -21,6 +22,8 @@ type ContextValue = {
   gameParent: ISystem['game_parent']
   updateGameList: () => Promise<void>
   updateSystemData: () => Promise<void>
+  hash: string
+  setHash: (v: string) => void
 }
 
 const MainProvider = createContext<ContextValue>({
@@ -32,9 +35,13 @@ const MainProvider = createContext<ContextValue>({
   gameParent: {},
   updateGameList: async () => {},
   updateSystemData: async () => {},
+  hash: '',
+  setHash: () => {},
 })
 
 export const MainContext = ({ children }: { children: ReactNode }) => {
+  const [hash, setHash] = useHash()
+
   const pathname = usePathname()
   const [gameTags, setGameTags] = useState<ISystem['game_tags'] | undefined>()
   const [gameParent, setGameParent] = useState<ISystem['game_parent'] | undefined>()
@@ -61,7 +68,6 @@ export const MainContext = ({ children }: { children: ReactNode }) => {
 
   const fetchDoujinshiData = async () => {
     const res = await axios.get('/api/doujinshi')
-    console.log(res)
     setDoujinshiList(res.data.data)
   }
 
@@ -84,6 +90,8 @@ export const MainContext = ({ children }: { children: ReactNode }) => {
         gameParent,
         updateGameList: fetchGameList,
         updateSystemData: fetchSystemData,
+        hash,
+        setHash,
       }}
     >
       {children}

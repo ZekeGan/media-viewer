@@ -1,4 +1,5 @@
 import { exec } from 'child_process'
+import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
@@ -8,8 +9,8 @@ export async function POST(req: Request) {
 
     exec(`explorer ${folderPath}`)
 
-    return new Response(JSON.stringify({ status: 200, message: 'success' }))
+    return NextResponse.json({ status: 200, message: 'success' })
   } catch {
-    return new Response(JSON.stringify({ status: 400, message: 'error' }))
+    return NextResponse.json({ status: 400, message: 'error' })
   }
 }

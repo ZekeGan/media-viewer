@@ -9,7 +9,6 @@ import {
   Card,
   Flex,
   Group,
-  Image,
   Pagination,
   Pill,
   SimpleGrid,
@@ -18,10 +17,10 @@ import {
   Tooltip,
   Anchor,
 } from '@mantine/core'
-import noImg from '@/assets/no-image.jpg'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useTranslate } from '@/hooks/useTranslate'
 import { useMainData } from '@/context/mainContext'
+import { Img } from '@/components/Img'
 
 const len = 25
 
@@ -44,7 +43,7 @@ export default function GameGridContainer() {
   return (
     <Stack>
       <SimpleGrid cols={{ md: 2, lg: 4, xl: 6 }}>
-        {tempGameList.slice((page - 1) * maxNum, page * maxNum).map(item => {
+        {tempGameList.map(item => {
           const {
             data: {
               author,
@@ -57,7 +56,7 @@ export default function GameGridContainer() {
               folder_path,
               id,
             },
-            cover,
+            meta,
           } = item
 
           const GameName = (
@@ -66,7 +65,7 @@ export default function GameGridContainer() {
               href={game_url ?? undefined}
               fw="bold"
               size="md"
-              c={game_url ? 'blue.8' : 'gray.9'}
+              c={game_url ? 'blue' : 'gray'}
             >
               {cutString(game_name)}
             </Text>
@@ -80,8 +79,8 @@ export default function GameGridContainer() {
                   href={game_url ? game_url : ''}
                   className={game_url && 'hover-box'}
                 >
-                  <Image
-                    src={cover || noImg.src}
+                  <Img
+                    src={`/api/image/?path=${encodeURIComponent(`${item.meta.root}/_meta/${item.meta.coverName}`)}`}
                     h={{ md: 300, lg: 230, xl: 200 }}
                     alt={game_name}
                   />
@@ -98,10 +97,10 @@ export default function GameGridContainer() {
                 )}
 
                 <Flex align="center" gap={5}>
-                  <Text size="xs" c="gray.5">
+                  <Text size="xs" c="gray">
                     {author_from}
                   </Text>
-                  <Anchor size="sm" c="dark" href={`/game?author=${author}`}>
+                  <Anchor size="sm" c="" href={`/game?author=${author}`}>
                     {author}
                   </Anchor>
                 </Flex>
@@ -139,12 +138,12 @@ export default function GameGridContainer() {
           )
         })}
       </SimpleGrid>
-      <Pagination
+      {/* <Pagination
         total={Math.ceil(tempGameList.length / maxNum)}
         value={page}
         onChange={setPage}
         mt="sm"
-      />
+      /> */}
     </Stack>
   )
 }
