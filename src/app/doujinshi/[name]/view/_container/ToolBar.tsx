@@ -1,6 +1,6 @@
 import { ActionIcon, Box, Button, Dialog, Divider, Flex, Modal, Select, Text } from '@mantine/core'
 import { useHover } from '@mantine/hooks'
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   IconArrowBackUp,
   IconArrowsHorizontal,
@@ -19,8 +19,6 @@ import {
   IconWindowMinimize,
 } from '@tabler/icons-react'
 import { useDoujinshi } from '@/context/doujinshiContext'
-import { IImageAttrs } from '../page'
-import LoadingContainer from '@/components/LoadingContainer'
 
 export default function ToolBar() {
   const {
@@ -65,7 +63,7 @@ export default function ToolBar() {
   }
 
   const setZoomRatio = (v: number) => {
-    if (v > 2 || v < 0.1) return
+    if (v > 5 || v < 0.1) return
     setImageAttrs(prev => ({
       ...prev,
       isFullWidth: false,
@@ -97,7 +95,7 @@ export default function ToolBar() {
         ref={targetRef}
         pos="fixed"
         right={0}
-        bottom={0}
+        bottom="20px"
         w="100%"
         h="10%"
         style={{ zIndex: 99999 }}
@@ -156,7 +154,10 @@ export default function ToolBar() {
               p={0}
               size="lg"
               miw={60}
-              onClick={() => setZoomRatio(1)}
+              onClick={() => {
+                setFullHeight()
+                setZoomRatio(1)
+              }}
               style={{ userSelect: 'none', cursor: 'pointer' }}
             >
               {imageAttrs.zoomRatio.toFixed(1)}
@@ -182,7 +183,9 @@ export default function ToolBar() {
             <ActionIcon
               size="lg"
               variant="light"
-              onClick={() => setPageCount(pageCount === 1 ? 2 : 1)}
+              onClick={() => {
+                setPageCount(pageCount === 1 ? 2 : 1)
+              }}
             >
               {pageCount === 1 ? <IconSquareNumber1 /> : <IconSquareNumber2 />}
             </ActionIcon>

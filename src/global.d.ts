@@ -9,19 +9,21 @@ declare interface IGameData {
   isCensored: 'censored' | 'uncensored'
   folder_path: string
 }
+
 declare interface IDoujinshiData {
   id: string
-  type: 'Doujinshi' | 'Manga' | 'Artist CG' | 'Game CG' | 'Image Set' | 'Misc'
-  page: string[]
-  name: string
+  fullTitle: string
+  title: string
+  groups: string[]
+  artists: string[]
+  series: string[]
+  types: 'Doujinshi' | 'Manga' | 'Artist CG' | 'Game CG' | 'Image Set' | 'Misc' | string
+  language: string[]
+  pages: string[]
   male: string[]
   female: string[]
-  artist: string[]
-  group: string[]
-  language: string[]
   misc: string[]
-  character: string[]
-  parody: string[]
+  charactors: string[]
 }
 
 declare interface IGameMeta {

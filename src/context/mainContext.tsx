@@ -15,7 +15,6 @@ import {
 
 type ContextValue = {
   gameList: IGameMeta[]
-  doujinshiList: IDoujinshiMeta[]
   tempGameList: IGameMeta[]
   setTempGameList: Dispatch<SetStateAction<IGameMeta[]>>
   gameTags: ISystem['game_tags']
@@ -28,7 +27,6 @@ type ContextValue = {
 
 const MainProvider = createContext<ContextValue>({
   gameList: [],
-  doujinshiList: [],
   tempGameList: [],
   setTempGameList: () => {},
   gameTags: {},
@@ -48,8 +46,6 @@ export const MainContext = ({ children }: { children: ReactNode }) => {
   const [gameList, setGameList] = useState<IGameMeta[] | undefined>()
   const [tempGameList, setTempGameList] = useState<IGameMeta[]>([])
 
-  const [doujinshiList, setDoujinshiList] = useState<IDoujinshiMeta[]>([])
-
   const fetchSystemData = async () => {
     const res = await axios.get('/api/system')
     if (res.data.statue === 401) return
@@ -62,19 +58,12 @@ export const MainContext = ({ children }: { children: ReactNode }) => {
   const fetchGameList = async () => {
     const res = await axios.get('/api/game')
     if (res.data.statue === 401) return
-
     setGameList(res.data.data)
-  }
-
-  const fetchDoujinshiData = async () => {
-    const res = await axios.get('/api/doujinshi')
-    setDoujinshiList(res.data.data)
   }
 
   useEffect(() => {
     fetchSystemData()
     fetchGameList()
-    fetchDoujinshiData()
   }, [pathname])
 
   if (!gameTags || !gameParent || !gameList) return null
@@ -83,7 +72,6 @@ export const MainContext = ({ children }: { children: ReactNode }) => {
     <MainProvider.Provider
       value={{
         gameList,
-        doujinshiList,
         tempGameList,
         setTempGameList,
         gameTags,

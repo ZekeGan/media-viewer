@@ -1,6 +1,4 @@
 import fs from 'fs'
-import path from 'path'
-import { downloadFile } from '@/utils/download'
 import { DoujinshiPath } from '@/constants/env'
 import { DoujinshiManager } from '@/utils/doujinshiManager'
 import { NextResponse } from 'next/server'
@@ -16,23 +14,30 @@ export async function GET() {
       if (dirName === '_meta') continue
 
       const doujinshi = new DoujinshiManager(dirName)
+      try {
+        if (!fs.existsSync(doujinshi.doujinshiMetaPath)) {
+          await doujinshi.createNewMeta()
+        } else {
+          await doujinshi.renewMeta()
+        }
 
-      if (!fs.existsSync(doujinshi.doujinshiMetaPath)) {
-        await doujinshi.createNewMeta()
+        const meta = await doujinshi.getMeta()
+        const data = await doujinshi.getData()
+
+        result.push({ data, meta })
+      } catch {
+        continue
       }
-
-      const meta = await doujinshi.getMeta()
-      const data = await doujinshi.getData()
-
-      result.push({ data, meta })
     }
+
+    result.sort((a, b) => (a.data.title > b.data.title ? 1 : a.data.title < b.data.title ? -1 : 0))
 
     return NextResponse.json(
       { status: 201, message: 'success', data: result },
       {
         status: 200,
         headers: {
-          'Cache-Control': `max-age=${cacheTime}`,
+          // 'Cache-Control': `max-age=${cacheTime}`,
         },
       }
     )

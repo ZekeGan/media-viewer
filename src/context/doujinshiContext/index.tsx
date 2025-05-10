@@ -12,12 +12,12 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { useMainData } from './mainContext'
 import { useParams, useRouter } from 'next/navigation'
 import { useHash } from '@mantine/hooks'
-import axios from 'axios'
 import { ComboboxItem } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { useImagessList } from './useImageList'
+import { useDoujinshiData } from './useDoujinshiData'
 
 type Pagination = {
   allPages: string[]
@@ -40,6 +40,7 @@ type IImageAttrs = {
 }
 
 type ContextValue = {
+  doujinshiList: IDoujinshiMeta[] | undefined
   curPageLabel: string
   curDoujinshi: IDoujinshiMeta | undefined
   imageList: { label: string; imageUrl: string }[] | undefined
@@ -54,6 +55,7 @@ type ContextValue = {
 }
 
 const DoujinshiProvider = createContext<ContextValue>({
+  doujinshiList: undefined,
   curPageLabel: '',
   curDoujinshi: undefined,
   imageList: undefined,
@@ -75,13 +77,11 @@ const DoujinshiProvider = createContext<ContextValue>({
 
 export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
   const router = useRouter()
-  const params = useParams()
-  const { doujinshiList } = useMainData()
+  const { doujinshiList, curDoujinshi } = useDoujinshiData()
+  const { imageList } = useImagessList(curDoujinshi)
   const [_curPageLabel, setCurPageLabel] = useHash()
   const curPageLabel = _curPageLabel.slice(1)
-  const [pageCount, _setPageCount] = useState(2)
-  const [imageList, setImageList] = useState<ContextValue['imageList']>(undefined)
-  const [curDoujinshi, setCurDoujinshi] = useState<IDoujinshiMeta>()
+  const [pageCount, setPageCount] = useState(2)
 
   const [imageAttrs, setImageAttrs] = useState<IImageAttrs>({
     isSinglePage: true,
@@ -99,20 +99,20 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
       }
       if (!curDoujinshi) return data
 
-      const idx = curDoujinshi.data.page.findIndex(d => d === label)
+      const idx = curDoujinshi.data.pages.findIndex(d => d === label)
 
       if (pageCount === 1) {
-        data.labels = curDoujinshi.data.page[idx]
+        data.labels = curDoujinshi.data.pages[idx]
         data.pages = `${idx + 1}`
       } else if (pageCount > 1) {
         if (idx === 0) {
-          data.labels = curDoujinshi.data.page[0]
+          data.labels = curDoujinshi.data.pages[0]
           data.pages = '1'
         } else if (idx % 2 === 0) {
-          data.labels = `${curDoujinshi.data.page[idx - 1] ?? ''}-${curDoujinshi.data.page[idx]}`
+          data.labels = `${curDoujinshi.data.pages[idx - 1] ?? ''}-${curDoujinshi.data.pages[idx]}`
           data.pages = `${idx}-${idx + 1}`
         } else if (idx % 2 === 1) {
-          data.labels = `${curDoujinshi.data.page[idx]}-${curDoujinshi.data.page[idx + 1] ?? ''}`
+          data.labels = `${curDoujinshi.data.pages[idx]}-${curDoujinshi.data.pages[idx + 1] ?? ''}`
           data.pages = `${idx + 1}-${idx + 2}`
         }
       }
@@ -126,27 +126,16 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
     setCurPageLabel(window.location.hash)
   }, [setCurPageLabel])
 
-  // 尋找當前doujinshi
-  useLayoutEffect(() => {
-    if (!params.name) return
-    const doujinshiName = decodeURIComponent(params.name as string)
-    setCurDoujinshi(doujinshiList.find(d => d.data.name === doujinshiName))
-
-    return () => {
-      setCurDoujinshi(undefined)
-    }
-  }, [doujinshiList, params.name])
-
   // 根據當前hash來組合各種pagination數據
   const pagination = useMemo(() => {
     if (!curDoujinshi || !curPageLabel) return undefined
     const getPageLabel = (idxs: number[]) => {
-      return idxs.map(d => curDoujinshi.data.page[d])
+      return idxs.map(d => curDoujinshi.data.pages[d])
     }
 
     const curPageLabels = curPageLabel.split('-').filter(d => d !== '')
 
-    let allPageList = curDoujinshi.data.page
+    let allPageList = curDoujinshi.data.pages
       .map((d, idx) => {
         if (pageCount === 1) {
           return { label: idx + 1, value: `${d}` }
@@ -157,14 +146,14 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
         } else if (idx % 2 === 0) {
           const data = getLabels(d)
           return { label: data.pages, value: data.labels }
-        } else if (idx === curDoujinshi.data.page.length - 1) {
-          return { label: curDoujinshi.data.page.length.toString(), value: `${d}` }
+        } else if (idx === curDoujinshi.data.pages.length - 1) {
+          return { label: curDoujinshi.data.pages.length.toString(), value: `${d}` }
         }
       })
       .filter(d => d) as ComboboxItem[]
 
     const curPageIdxs = Array.from({ length: curPageLabels.length })
-      .map((_, idx) => curDoujinshi.data.page.findIndex(d => d === curPageLabels[idx]))
+      .map((_, idx) => curDoujinshi.data.pages.findIndex(d => d === curPageLabels[idx]))
       .filter(d => d >= 0)
       .reverse()
     const prevPageIdxs = Array.from({ length: curPageLabels.length })
@@ -172,13 +161,13 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
       .filter(d => d >= 0)
     const nextPageIdxs = Array.from({ length: curPageLabels.length })
       .map((_, i) => Math.max(...curPageIdxs) + 1 + i)
-      .filter(d => d <= curDoujinshi.data.page.length - 1)
+      .filter(d => d <= curDoujinshi.data.pages.length - 1)
       .reverse()
 
     return {
-      allPages: curDoujinshi.data.page,
+      allPages: curDoujinshi.data.pages,
       allPageList,
-      totalPage: curDoujinshi.data.page.length,
+      totalPage: curDoujinshi.data.pages.length,
 
       curPageIdxs,
       curPageLabels,
@@ -191,28 +180,6 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
     }
   }, [curDoujinshi, curPageLabel, getLabels, pageCount])
 
-  // 獲取當前doujinshi全部圖片資源
-  useLayoutEffect(() => {
-    async function fetchAllImage() {
-      if (!curDoujinshi) return
-      const images = await Promise.all(
-        curDoujinshi.data.page.map(async d => {
-          const buffer = await axios.get(
-            `/api/image?path=${encodeURIComponent(`${curDoujinshi.meta.root}/${d}`)}`,
-            { responseType: 'blob' }
-          )
-          return {
-            label: d,
-            imageUrl: URL.createObjectURL(buffer.data),
-          }
-        })
-      )
-      setImageList(images)
-    }
-
-    fetchAllImage()
-  }, [curDoujinshi])
-
   // 根據給予的label來組合成hash，前往指定頁面
   const goToSpecificPage = (label: string) => {
     if (!curDoujinshi) return
@@ -220,12 +187,12 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
     const labels = getLabels(label).labels
 
     setCurPageLabel(labels)
-    router.replace(`/doujinshi/${encodeURIComponent(curDoujinshi.data.name)}/view#${labels}`)
+    router.replace(`/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}/view#${labels}`)
   }
 
   const goToGallery = () => {
     if (!curDoujinshi) return
-    router.replace(`/doujinshi/${curDoujinshi.data.name}`)
+    router.replace(`/doujinshi/${curDoujinshi.data.title}`)
   }
 
   // 往前往後或是停在當前頁面
@@ -256,10 +223,6 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const setPageCount = (v: number) => {
-    _setPageCount(v)
-  }
-
   useEffect(() => {
     goToPage(0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -268,6 +231,7 @@ export const DoujinshiContext = ({ children }: { children: ReactNode }) => {
   return (
     <DoujinshiProvider.Provider
       value={{
+        doujinshiList,
         curPageLabel,
         curDoujinshi,
         imageList,

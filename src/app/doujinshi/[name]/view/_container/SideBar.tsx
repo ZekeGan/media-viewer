@@ -24,7 +24,6 @@ export default function SideBar() {
   }, [targetHover, pagination])
 
   if (!curDoujinshi || !imageList) return null
-  // console.log('side')
 
   return (
     <>
