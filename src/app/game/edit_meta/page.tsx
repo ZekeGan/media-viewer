@@ -1,7 +1,16 @@
 'use client'
 
-import { useMainData } from '@/context/mainContext'
-import { Autocomplete, Button, Divider, Flex, Grid, Input, Text, Title } from '@mantine/core'
+import { useGameData } from '@/context/gameContext'
+import {
+  Autocomplete,
+  Button,
+  Divider,
+  Flex,
+  Grid,
+  Input,
+  Text,
+  Title,
+} from '@mantine/core'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
@@ -9,7 +18,7 @@ import { Controller, useForm } from 'react-hook-form'
 
 export default function Page() {
   const router = useRouter()
-  const { gameList, gameTags, gameParent, updateSystemData } = useMainData()
+  const { gameList, gameTags, gameParent, updateSystemData } = useGameData()
   const {
     getValues: tagsGetValue,
     setValue: tagsSetValue,
@@ -47,7 +56,9 @@ export default function Page() {
         tagsSetValue(d, data)
         return data
       })
-      .sort((a, b) => (a.parent === b.parent ? 0 : a.parent > b.parent ? -1 : 1))
+      .sort((a, b) =>
+        a.parent === b.parent ? 0 : a.parent > b.parent ? -1 : 1
+      )
   }, [gameList, gameTags, tagsSetValue])
 
   const allGameParent = useMemo(() => {
@@ -86,7 +97,12 @@ export default function Page() {
           </Grid.Col>
         </Grid>
         {allGameParent.map((d, idx) => (
-          <Grid key={d._key} align="center" bg={idx % 2 === 0 ? '#eee' : ''} p="sm">
+          <Grid
+            key={d._key}
+            align="center"
+            bg={idx % 2 === 0 ? '#eee' : ''}
+            p="sm"
+          >
             <Grid.Col span={2}>
               <Text>{d._key}</Text>
             </Grid.Col>
@@ -119,7 +135,12 @@ export default function Page() {
           </Grid.Col>
         </Grid>
         {allGameTags.map((d, idx) => (
-          <Grid key={d._key} align="center" bg={idx % 2 === 0 ? '#eee' : ''} p="sm">
+          <Grid
+            key={d._key}
+            align="center"
+            bg={idx % 2 === 0 ? '#eee' : ''}
+            p="sm"
+          >
             <Grid.Col span={2}>
               <Text>{d._key}</Text>
             </Grid.Col>
@@ -127,7 +148,9 @@ export default function Page() {
               <Controller
                 name={`${d._key}.parent`}
                 control={tagsControl}
-                render={({ field }) => <Autocomplete {...field} data={parents} />}
+                render={({ field }) => (
+                  <Autocomplete {...field} data={parents} />
+                )}
               />
             </Grid.Col>
             <Grid.Col span={2}>

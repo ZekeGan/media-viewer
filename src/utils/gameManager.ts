@@ -20,14 +20,18 @@ export class GameManager {
   }
 
   public async getData() {
-    const json = await fs.readFileSync(path.join(this._gameMetaPath, 'data.json'), 'utf-8')
+    const json = await fs.readFileSync(
+      path.join(this._gameMetaPath, 'data.json'),
+      'utf-8'
+    )
     const data = JSON.parse(json) as IGameData
     return { ...data, folder_path: this._curGamePath }
   }
 
   public async getMeta() {
     const dirs = await fs.readdirSync(this._gameMetaPath)
-    const coverName = dirs.find(dir => imgExt.includes(path.extname(dir))) || null
+    const coverName =
+      dirs.find(dir => imgExt.includes(path.extname(dir))) || null
 
     return {
       root: this._curGamePath,

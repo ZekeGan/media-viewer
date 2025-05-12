@@ -2,11 +2,11 @@
 
 import { Box, Divider, Stack } from '@mantine/core'
 
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import GameImageContainer from './_container/GameImageContainer'
 
 export default function Page() {
-  const { gameList } = useMainData()
+  const { gameList } = useGameData()
 
   return (
     <Box>

@@ -1,8 +1,8 @@
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { useCallback } from 'react'
 
 export const useTranslate = () => {
-  const { gameParent, gameTags } = useMainData()
+  const { gameParent, gameTags } = useGameData()
 
   const t = useCallback(
     (k: string) => {

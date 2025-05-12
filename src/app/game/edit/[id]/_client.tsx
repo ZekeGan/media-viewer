@@ -26,7 +26,7 @@ import { uniq } from 'ramda'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useRouter } from 'next/navigation'
 import { GroupedFilterContainer } from '@/components/FilterContainer'
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { useTranslate } from '@/hooks/useTranslate'
 
 export default function EditCurGameClient({
@@ -37,7 +37,7 @@ export default function EditCurGameClient({
   metaData: IGameMeta
 }) {
   const { t } = useTranslate()
-  const { gameTags, updateGameList } = useMainData()
+  const { gameTags, updateGameList } = useGameData()
   const {
     data: {
       game_name,
@@ -83,18 +83,25 @@ export default function EditCurGameClient({
     )
   }, [search, tagsList])
 
-  const contentHeight = useMemo(() => height - HeaderHeight - MainPadding * 2, [height])
+  const contentHeight = useMemo(
+    () => height - HeaderHeight - MainPadding * 2,
+    [height]
+  )
 
   const inputNewTag = (e: ChangeEvent<HTMLInputElement>) => {
     const v = e.currentTarget.value
-    if (tagsList.some(i => i.key.toLowerCase() === v.toLowerCase())) setNewTagStatus(true)
+    if (tagsList.some(i => i.key.toLowerCase() === v.toLowerCase()))
+      setNewTagStatus(true)
     else setNewTagStatus(false)
     setNewTag(v)
   }
 
   const addNewTag = () => {
     if (newTagStatus) return
-    setTagsList([{ key: newTag, label: newTag, checked: true, count: 0 }, ...tagsList])
+    setTagsList([
+      { key: newTag, label: newTag, checked: true, count: 0 },
+      ...tagsList,
+    ])
     setNewTag('')
   }
 
@@ -191,7 +198,12 @@ export default function EditCurGameClient({
                       />
 
                       <Flex align="center" gap="sm">
-                        <Popover position="top" withArrow shadow="md" opened={newTagStatus}>
+                        <Popover
+                          position="top"
+                          withArrow
+                          shadow="md"
+                          opened={newTagStatus}
+                        >
                           <Popover.Target>
                             <TextInput
                               placeholder="新增標籤(英文)"
@@ -204,10 +216,16 @@ export default function EditCurGameClient({
                           </Popover.Dropdown>
                         </Popover>
                         <ActionIcon variant="outline" onClick={addNewTag}>
-                          <IconPlus style={{ width: '70%', height: '70%' }} stroke={1.5} />
+                          <IconPlus
+                            style={{ width: '70%', height: '70%' }}
+                            stroke={1.5}
+                          />
                         </ActionIcon>
                       </Flex>
-                      <GroupedFilterContainer list={filterTags} setList={setTagsList} />
+                      <GroupedFilterContainer
+                        list={filterTags}
+                        setList={setTagsList}
+                      />
                     </Stack>
                   </Accordion.Panel>
                 </Accordion.Item>

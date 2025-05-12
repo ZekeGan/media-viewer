@@ -23,11 +23,17 @@ export async function GET() {
     // create system.json if file didn't exit
     const systemDataPath = path.join(envDataPath, 'system.json')
     if (!fs.existsSync(systemDataPath)) {
-      await fs.writeFileSync(systemDataPath, JSON.stringify(defaultData, null, 2), 'utf-8')
+      await fs.writeFileSync(
+        systemDataPath,
+        JSON.stringify(defaultData, null, 2),
+        'utf-8'
+      )
     }
 
     // read system.json
-    const data = JSON.parse(await fs.readFileSync(systemDataPath, 'utf-8')) as ISystem
+    const data = JSON.parse(
+      await fs.readFileSync(systemDataPath, 'utf-8')
+    ) as ISystem
 
     return NextResponse.json(
       { status: 201, message: 'success', data },
@@ -36,6 +42,10 @@ export async function GET() {
       }
     )
   } catch (err) {
-    return NextResponse.json({ status: 400, message: 'error', data: defaultData })
+    return NextResponse.json({
+      status: 400,
+      message: 'error',
+      data: defaultData,
+    })
   }
 }

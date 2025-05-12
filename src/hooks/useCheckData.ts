@@ -20,7 +20,10 @@ export const useCheckData = (key: string, list: string[]) => {
     )
   })
 
-  const filterList = useMemo(() => _list.filter(i => i.checked).map(i => i.key), [_list])
+  const filterList = useMemo(
+    () => _list.filter(i => i.checked).map(i => i.key),
+    [_list]
+  )
 
   const filter = useCallback(
     <T>(dataList: T[], key: string[]) => {
@@ -34,7 +37,9 @@ export const useCheckData = (key: string, list: string[]) => {
     <T>(dataList: T[], key: string[]) => {
       if (filterList.length === 0) return dataList
       return dataList.filter(data => {
-        return filterList.some(i => path<string[]>(key, data)?.includes(i) || false)
+        return filterList.some(
+          i => path<string[]>(key, data)?.includes(i) || false
+        )
       })
     },
     [filterList]

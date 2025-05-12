@@ -4,7 +4,8 @@ const { createWriteStream } = require('fs')
 const { join, basename } = require('path')
 
 // 給定的圖片 URL
-const url = 'https://img.dlsite.jp/modpub/images2/work/doujin/RJ393000/RJ392812_img_smp3.webp'
+const url =
+  'https://img.dlsite.jp/modpub/images2/work/doujin/RJ393000/RJ392812_img_smp3.webp'
 // 指定的資料夾路徑
 const folderPath = 'Z:/_meta'
 

@@ -1,10 +1,10 @@
 'use client'
 
 import EditCurGameClient from './_client'
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 
 export default function EditPage({ params }: { params: { id: string } }) {
-  const { gameList } = useMainData()
+  const { gameList } = useGameData()
   const metaData = gameList.find(i => i.data.id === params.id)
 
   if (!metaData) return <div>Error</div>

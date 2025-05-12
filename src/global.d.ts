@@ -1,3 +1,33 @@
+declare interface IImageData {
+  title: string
+  width: number
+  height: number
+}
+
+declare interface IDoujinshiData {
+  id: string
+  fullTitle: string
+  title: string
+  groups: string[]
+  artists: string[]
+  series: string[]
+  types: 'doujinshi' | 'manga' | 'artistcg' | 'gamecg' | 'imageset' | 'misc'
+  language: string[]
+  male: string[]
+  female: string[]
+  misc: string[]
+  characters: string[]
+}
+
+declare interface IDoujinshiMeta {
+  data: IDoujinshiData
+  meta: {
+    root: string
+    coverName: string
+    pages: IImageData[]
+  }
+}
+
 declare interface IGameData {
   id: string
   game_name: string
@@ -10,31 +40,8 @@ declare interface IGameData {
   folder_path: string
 }
 
-declare interface IDoujinshiData {
-  id: string
-  fullTitle: string
-  title: string
-  groups: string[]
-  artists: string[]
-  series: string[]
-  types: 'Doujinshi' | 'Manga' | 'Artist CG' | 'Game CG' | 'Image Set' | 'Misc' | string
-  language: string[]
-  pages: string[]
-  male: string[]
-  female: string[]
-  misc: string[]
-  charactors: string[]
-}
-
 declare interface IGameMeta {
   data: IGameData
-  meta: {
-    root: string
-    coverName: string
-  }
-}
-declare interface IDoujinshiMeta {
-  data: IDoujinshiData
   meta: {
     root: string
     coverName: string

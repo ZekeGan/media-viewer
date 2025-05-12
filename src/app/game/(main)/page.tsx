@@ -2,7 +2,7 @@
 
 import { Divider, Flex, Grid, Group, Select, Stack, Text } from '@mantine/core'
 
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { defaultGameListOrder } from '@/constants'
 import GameGridContainer from './_container/GameGridContainer'
@@ -15,7 +15,7 @@ const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
 ]
 
 export default function HomeClientPage() {
-  const { tempGameList } = useMainData()
+  const { tempGameList } = useGameData()
 
   const { updateQueryString, getParamsList } = useSearchParamsFns()
 
@@ -33,7 +33,11 @@ export default function HomeClientPage() {
       </Grid.Col>
 
       <Grid.Col span={10}>
-        <Divider mb="md" size="md" label={`總遊戲數 ${tempGameList.length} 個`} />
+        <Divider
+          mb="md"
+          size="md"
+          label={`總遊戲數 ${tempGameList.length} 個`}
+        />
         <Stack>
           <Flex justify="space-between">
             <Group gap="sm">

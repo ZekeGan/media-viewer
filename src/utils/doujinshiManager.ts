@@ -3,6 +3,7 @@ import fs from 'fs'
 import { DoujinshiPath } from '@/constants/env'
 import { nanoid } from 'nanoid'
 import { imgExt } from '@/constants'
+import imageSize from 'image-size'
 
 function parseTitle(str: string) {
   const result: IDoujinshiData = {
@@ -12,10 +13,9 @@ function parseTitle(str: string) {
     groups: [],
     title: str.trim(),
     series: [],
-    types: '',
+    types: 'doujinshi',
     language: [],
-    charactors: [],
-    pages: [],
+    characters: [],
     male: [],
     female: [],
     fullTitle: '',
@@ -51,7 +51,8 @@ function parseTitle(str: string) {
     if (artists) result.artists = processStr(artists)
     if (groups) result.groups = processStr(groups)
     if (id) result.id = id
-    if (type) result.types = type.trim().toLowerCase()
+    if (type)
+      result.types = type.trim().toLowerCase() as IDoujinshiData['types']
     if (series) result.series = processStr(series)
     if (language) result.language = processStr(language)
     result.fullTitle = str.trim()
@@ -70,7 +71,8 @@ function parseTitle(str: string) {
     // (misc) [groups(artists)] title
     [
       /^\(([^)]+)\)\s+\[([^(]+)\(([^)]+)\)\](.+)$/,
-      (misc, groups, artists, title) => extractResult({ misc, artists, groups, title }),
+      (misc, groups, artists, title) =>
+        extractResult({ misc, artists, groups, title }),
     ],
 
     // (misc) [artists] title
@@ -89,7 +91,10 @@ function parseTitle(str: string) {
     ],
 
     // [artists] title
-    [/^\[([^\]]+)\](.+)$/, (artists, title) => extractResult({ artists, title })],
+    [
+      /^\[([^\]]+)\](.+)$/,
+      (artists, title) => extractResult({ artists, title }),
+    ],
   ]
 
   for (const [regex, handler] of patterns) {
@@ -103,7 +108,7 @@ function parseTitle(str: string) {
 
 export class DoujinshiManager {
   // private _doujinshiName: string = ''
-  private _pageTitleList: string[] = []
+  private _pageTitleList: IImageData[] = []
   private _curDoujinshiPath: string = ''
   private _doujinshiMetaPath: string = ''
   private _doujinshiData: IDoujinshiData = {
@@ -113,13 +118,12 @@ export class DoujinshiManager {
     groups: [],
     artists: [],
     misc: [],
-    types: 'Doujinshi',
+    types: 'doujinshi',
     series: [],
     language: [],
-    charactors: [],
+    characters: [],
     male: [],
     female: [],
-    pages: [],
   }
 
   constructor(doujinshiName: string) {
@@ -133,59 +137,81 @@ export class DoujinshiManager {
   }
 
   public async getData() {
-    const json = await fs.readFileSync(path.join(this._doujinshiMetaPath, 'data.json'), 'utf-8')
+    const json = await fs.readFileSync(
+      path.join(this._doujinshiMetaPath, 'data.json'),
+      'utf-8'
+    )
     const data = JSON.parse(json) as IDoujinshiData
     return data
   }
 
   public async getMeta() {
-    const dirs = await fs.readdirSync(this._doujinshiMetaPath)
-    const coverName = dirs.find(dir => imgExt.includes(path.extname(dir))) || null
-
-    return {
-      root: this._curDoujinshiPath,
-      coverName: coverName || '',
-    } satisfies IDoujinshiMeta['meta']
+    const json = await fs.readFileSync(
+      path.join(this._doujinshiMetaPath, 'meta.json'),
+      'utf-8'
+    )
+    const data = JSON.parse(json) as IDoujinshiMeta['meta']
+    return data
   }
 
-  public async createNewMeta() {
+  public async createNewData() {
     // create meta folder
     await fs.mkdirSync(this._doujinshiMetaPath, { recursive: true })
 
-    if (fs.existsSync(path.join(this._curDoujinshiPath, 'info.txt'))) {
-      this._parseInfo()
-    } else {
-      this._parseFolderTitle()
-    }
+    // get image data
+    await this._getAllImageData()
 
-    await this._getAllImageTitle()
-    await this._copyCoverImage()
-    // create meta's data.json
+    // create data.json
+    const data = await this._getDefaultGameData()
     await fs.writeFileSync(
       path.join(this._doujinshiMetaPath, 'data.json'),
-      JSON.stringify(this._getDefaultGameData(), null, 2),
+      JSON.stringify(data, null, 2),
+      'utf-8'
+    )
+
+    // copy cover image
+    await this._copyCoverImage()
+
+    // create meta.json
+    const meta = await this._getDefaultMetaData()
+    await fs.writeFileSync(
+      path.join(this._doujinshiMetaPath, 'meta.json'),
+      JSON.stringify(meta, null, 2),
       'utf-8'
     )
   }
 
-  public async renewMeta() {
+  private async _getDefaultGameData() {
+    // get data from title or info.txt
     if (fs.existsSync(path.join(this._curDoujinshiPath, 'info.txt'))) {
       await this._parseInfo()
     } else {
       await this._parseFolderTitle()
     }
 
-    await this._getAllImageTitle()
+    return {
+      ...this._doujinshiData,
+      id: this._doujinshiData.id || nanoid(),
+    } satisfies IDoujinshiData
+  }
 
-    await fs.writeFileSync(
-      path.join(this._doujinshiMetaPath, 'data.json'),
-      JSON.stringify(this._getDefaultGameData(), null, 2),
-      'utf-8'
-    )
+  private async _getDefaultMetaData() {
+    const dirs = await fs.readdirSync(this._doujinshiMetaPath)
+    const coverName =
+      dirs.find(dir => imgExt.includes(path.extname(dir))) || null
+    await this._getAllImageData()
+    return {
+      coverName: coverName || '',
+      root: this._curDoujinshiPath,
+      pages: this._pageTitleList,
+    } satisfies IDoujinshiMeta['meta']
   }
 
   private async _parseInfo() {
-    const dataStr = await fs.readFileSync(`${this._curDoujinshiPath}/info.txt`, 'utf-8')
+    const dataStr = await fs.readFileSync(
+      `${this._curDoujinshiPath}/info.txt`,
+      'utf-8'
+    )
     const lines = dataStr.trim().split('\n')
     let meta: any = {
       id: '',
@@ -194,7 +220,7 @@ export class DoujinshiManager {
       groups: [],
       types: '',
       series: [],
-      charactors: [],
+      characters: [],
       language: [],
       male: [],
       female: [],
@@ -235,44 +261,45 @@ export class DoujinshiManager {
       ...this._doujinshiData,
       ...meta,
     }
-
-    // console.log(this._doujinshiData)
   }
 
   private async _parseFolderTitle() {
     const data = parseTitle(this._doujinshiData.fullTitle ?? '')
     this._doujinshiData = { ...this._doujinshiData, ...data }
-    console.log(this._doujinshiData)
   }
 
-  private async _getAllImageTitle() {
-    this._pageTitleList = await fs
+  private async _getAllImageData() {
+    const imageTitleList = await fs
       .readdirSync(this._curDoujinshiPath)
       .filter(t => fs.statSync(path.join(this._curDoujinshiPath, t)).isFile())
       .filter(t => imgExt.includes(path.extname(t).toLocaleLowerCase()))
+
+    this._pageTitleList = await Promise.all(
+      imageTitleList.map(async t => {
+        const buffer = await fs.readFileSync(
+          path.join(this._curDoujinshiPath, t)
+        )
+        const { height, width } = await imageSize(buffer)
+
+        return {
+          title: t,
+          height,
+          width,
+        } satisfies IImageData
+      })
+    )
   }
 
   private async _copyCoverImage() {
-    const titles = this._pageTitleList.sort()
+    const list = this._pageTitleList.sort()
 
-    if (titles.length === 0) return
+    if (list.length === 0) return
 
-    const ext = path.extname(titles[0]).toLocaleLowerCase()
+    const ext = path.extname(list[0].title).toLocaleLowerCase()
     if (imgExt.includes(ext)) {
-      const srcPath = path.join(this._curDoujinshiPath, titles[0])
+      const srcPath = path.join(this._curDoujinshiPath, list[0].title)
       const destPath = path.join(this._doujinshiMetaPath, `cover${ext}`)
       await fs.copyFileSync(srcPath, destPath)
     }
-  }
-
-  // default meta data
-  private _getDefaultGameData() {
-    const s = {
-      ...this._doujinshiData,
-      id: this._doujinshiData.id || nanoid(),
-      pages: this._pageTitleList,
-    } satisfies IDoujinshiData
-    console.log(s)
-    return s
   }
 }

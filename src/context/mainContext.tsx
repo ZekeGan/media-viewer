@@ -1,8 +1,6 @@
 'use client'
 
-import { useHash } from '@mantine/hooks'
-import axios from 'axios'
-import { usePathname } from 'next/navigation'
+import { useLocalStorage } from '@mantine/hooks'
 import {
   createContext,
   Dispatch,
@@ -13,74 +11,57 @@ import {
   useState,
 } from 'react'
 
-type ContextValue = {
-  gameList: IGameMeta[]
-  tempGameList: IGameMeta[]
-  setTempGameList: Dispatch<SetStateAction<IGameMeta[]>>
-  gameTags: ISystem['game_tags']
-  gameParent: ISystem['game_parent']
-  updateGameList: () => Promise<void>
-  updateSystemData: () => Promise<void>
-  hash: string
-  setHash: (v: string) => void
+export type IDoujinshiSetting = {
+  pageCount: number
+  isFullWidth: boolean
+  isFullHeight: boolean
+  zoomRatio: number
+  isVertical: boolean
 }
 
-const MainProvider = createContext<ContextValue>({
-  gameList: [],
-  tempGameList: [],
-  setTempGameList: () => {},
-  gameTags: {},
-  gameParent: {},
-  updateGameList: async () => {},
-  updateSystemData: async () => {},
-  hash: '',
-  setHash: () => {},
-})
+export const defaultDoujinshiSetting: IDoujinshiSetting = {
+  pageCount: 1,
+  isFullWidth: false,
+  isFullHeight: true,
+  zoomRatio: 1,
+  isVertical: false,
+}
+
+type ContextValue = {
+  doujinshiPageSetting: IDoujinshiSetting
+  setDoujinshiPageSetting: Dispatch<SetStateAction<IDoujinshiSetting>>
+}
+
+const defaultContext: ContextValue = {
+  doujinshiPageSetting: defaultDoujinshiSetting,
+  setDoujinshiPageSetting: () => {},
+}
+
+const MainProvider = createContext<ContextValue>(defaultContext)
 
 export const MainContext = ({ children }: { children: ReactNode }) => {
-  const [hash, setHash] = useHash()
+  const [locaStorage, setLocalStorage] = useLocalStorage({
+    key: 'setting',
+    defaultValue: JSON.stringify({ defaultDoujinshiSetting }),
+  })
 
-  const pathname = usePathname()
-  const [gameTags, setGameTags] = useState<ISystem['game_tags'] | undefined>()
-  const [gameParent, setGameParent] = useState<ISystem['game_parent'] | undefined>()
-  const [gameList, setGameList] = useState<IGameMeta[] | undefined>()
-  const [tempGameList, setTempGameList] = useState<IGameMeta[]>([])
+  const [doujinshiPageSetting, setDoujinshiPageSetting] =
+    useState<IDoujinshiSetting>(
+      JSON.parse(locaStorage).doujinshiPageSetting ?? defaultDoujinshiSetting
+    )
 
-  const fetchSystemData = async () => {
-    const res = await axios.get('/api/system')
-    if (res.data.statue === 401) return
-    const system = res.data.data as ISystem
-
-    setGameTags(system.game_tags)
-    setGameParent(system.game_parent)
-  }
-
-  const fetchGameList = async () => {
-    const res = await axios.get('/api/game')
-    if (res.data.statue === 401) return
-    setGameList(res.data.data)
-  }
-
+  // 更新localStorage
   useEffect(() => {
-    fetchSystemData()
-    fetchGameList()
-  }, [pathname])
-
-  if (!gameTags || !gameParent || !gameList) return null
+    setLocalStorage(
+      JSON.stringify({
+        doujinshiPageSetting: doujinshiPageSetting,
+      })
+    )
+  }, [doujinshiPageSetting, setLocalStorage])
 
   return (
     <MainProvider.Provider
-      value={{
-        gameList,
-        tempGameList,
-        setTempGameList,
-        gameTags,
-        gameParent,
-        updateGameList: fetchGameList,
-        updateSystemData: fetchSystemData,
-        hash,
-        setHash,
-      }}
+      value={{ doujinshiPageSetting, setDoujinshiPageSetting }}
     >
       {children}
     </MainProvider.Provider>

@@ -16,13 +16,13 @@ export async function GET() {
       const doujinshi = new DoujinshiManager(dirName)
       try {
         if (!fs.existsSync(doujinshi.doujinshiMetaPath)) {
-          await doujinshi.createNewMeta()
+          await doujinshi.createNewData()
         } else {
-          await doujinshi.renewMeta()
+          // await doujinshi.createNewData()
         }
 
-        const meta = await doujinshi.getMeta()
         const data = await doujinshi.getData()
+        const meta = await doujinshi.getMeta()
 
         result.push({ data, meta })
       } catch {
@@ -30,7 +30,9 @@ export async function GET() {
       }
     }
 
-    result.sort((a, b) => (a.data.title > b.data.title ? 1 : a.data.title < b.data.title ? -1 : 0))
+    result.sort((a, b) =>
+      a.data.title > b.data.title ? 1 : a.data.title < b.data.title ? -1 : 0
+    )
 
     return NextResponse.json(
       { status: 201, message: 'success', data: result },
@@ -42,6 +44,8 @@ export async function GET() {
       }
     )
   } catch (err) {
-    return NextResponse.json(JSON.stringify({ status: 400, message: 'error', data: [] }))
+    return NextResponse.json(
+      JSON.stringify({ status: 400, message: 'error', data: [] })
+    )
   }
 }

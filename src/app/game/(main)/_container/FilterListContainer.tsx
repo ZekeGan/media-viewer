@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
 import { Accordion, Stack } from '@mantine/core'
-import { FilterContainer, GroupedFilterContainer } from '@/components/FilterContainer'
+import {
+  FilterContainer,
+  GroupedFilterContainer,
+} from '@/components/FilterContainer'
 import { useCheckData } from '@/hooks/useCheckData'
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { defaultGameListOrder } from '@/constants'
 
 export default function FilterListContainer() {
-  const { gameList, setTempGameList } = useMainData()
+  const { gameList, setTempGameList } = useGameData()
 
   const { queryString, getParamsList } = useSearchParamsFns()
 
@@ -139,7 +142,11 @@ export default function FilterListContainer() {
             <Accordion.Control>{i.label}</Accordion.Control>
             <Accordion.Panel>
               {i.isGroup ? (
-                <GroupedFilterContainer list={i.list} setList={i.setList} withCount />
+                <GroupedFilterContainer
+                  list={i.list}
+                  setList={i.setList}
+                  withCount
+                />
               ) : (
                 <FilterContainer list={i.list} setList={i.setList} withCount />
               )}

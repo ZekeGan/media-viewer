@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react'
 export const useDoujinshiData = () => {
   const params = useParams()
 
-  const [doujinshiList, setDoujinshiList] = useState<IDoujinshiMeta[] | undefined>()
+  const [doujinshiList, setDoujinshiList] = useState<
+    IDoujinshiMeta[] | undefined
+  >()
   const [curDoujinshi, setCurDoujinshi] = useState<IDoujinshiMeta | undefined>()
 
   // 獲取doujinshiList
@@ -22,10 +24,6 @@ export const useDoujinshiData = () => {
     if (!doujinshiList || !params.name) return
     const doujinshiName = decodeURIComponent(params.name as string)
     setCurDoujinshi(doujinshiList.find(d => d.data.title === doujinshiName))
-
-    // return () => {
-    //   setCurDoujinshi(undefined)
-    // }
   }, [doujinshiList, params.name])
 
   return { doujinshiList, curDoujinshi }

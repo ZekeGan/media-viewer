@@ -1,3 +1,10 @@
+@import 'tailwindcss';
+
+.hover-box {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
 .hover-box:hover {
-  opacity: 0.9;
+  opacity: 0.6;
 }

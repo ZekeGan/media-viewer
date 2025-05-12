@@ -11,7 +11,11 @@ interface IFilterContainer {
   withCount?: boolean
 }
 
-export const GroupedFilterContainer = ({ list, setList, withCount }: IFilterContainer) => {
+export const GroupedFilterContainer = ({
+  list,
+  setList,
+  withCount,
+}: IFilterContainer) => {
   const { t, getParent } = useTranslate()
 
   const groupList = useMemo(() => {
@@ -61,7 +65,11 @@ export const GroupedFilterContainer = ({ list, setList, withCount }: IFilterCont
   )
 }
 
-export const FilterContainer = ({ list, setList, withCount = true }: IFilterContainer) => {
+export const FilterContainer = ({
+  list,
+  setList,
+  withCount = true,
+}: IFilterContainer) => {
   const handleChange = (check: CheckList[0], checked: boolean) => {
     setList(prev => {
       return prev.map(i => {

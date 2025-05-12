@@ -3,7 +3,10 @@ import { get } from 'https'
 import { basename, join } from 'path'
 import { URL } from 'url'
 
-export async function downloadFile(url: string, folderPath: string): Promise<string> {
+export async function downloadFile(
+  url: string,
+  folderPath: string
+): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       const parsedUrl = new URL(url)
@@ -14,7 +17,9 @@ export async function downloadFile(url: string, folderPath: string): Promise<str
       get(url, response => {
         if (response.statusCode !== 200) {
           file.close()
-          reject(new Error(`Failed to download. Status code: ${response.statusCode}`))
+          reject(
+            new Error(`Failed to download. Status code: ${response.statusCode}`)
+          )
           return
         }
 
@@ -51,7 +56,9 @@ export async function downloadFile(url: string, folderPath: string): Promise<str
       })
     } catch (error) {
       reject(
-        new Error(`Unexpected error: ${error instanceof Error ? error.message : String(error)}`)
+        new Error(
+          `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
+        )
       )
     }
   })

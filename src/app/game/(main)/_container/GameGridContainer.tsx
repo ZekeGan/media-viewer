@@ -19,7 +19,7 @@ import {
 } from '@mantine/core'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useTranslate } from '@/hooks/useTranslate'
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
 
 const len = 25
@@ -29,7 +29,7 @@ const cutString = (v: string) => {
 }
 
 export default function GameGridContainer() {
-  const { tempGameList } = useMainData()
+  const { tempGameList } = useGameData()
   const router = useRouter()
   const { t } = useTranslate()
 
@@ -129,8 +129,15 @@ export default function GameGridContainer() {
 
                 <Group justify="space-between" gap="sm">
                   <OpenFolderBtn flex={1} folderPath={folder_path} />
-                  <ActionIcon size="lg" variant="outline" onClick={() => goToEdit(id)}>
-                    <IconSettings style={{ width: '70%', height: '70%' }} stroke={1.5} />
+                  <ActionIcon
+                    size="lg"
+                    variant="outline"
+                    onClick={() => goToEdit(id)}
+                  >
+                    <IconSettings
+                      style={{ width: '70%', height: '70%' }}
+                      stroke={1.5}
+                    />
                   </ActionIcon>
                 </Group>
               </Stack>

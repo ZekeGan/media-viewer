@@ -1,14 +1,14 @@
 import { useMemo } from 'react'
 import axios from 'axios'
 import { notifications } from '@mantine/notifications'
-import { useMainData } from '@/context/mainContext'
+import { useGameData } from '@/context/gameContext'
 import { Flex, Grid, Paper } from '@mantine/core'
 import { Img } from '@/components/Img'
 
 const len = 7
 
 export default function GameImageContainer() {
-  const { gameList } = useMainData()
+  const { gameList } = useGameData()
 
   const list = useMemo(() => {
     let temp: IGameMeta[][] = Array.from({ length: len }).map(() => [])

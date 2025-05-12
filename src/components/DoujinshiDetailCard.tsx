@@ -1,19 +1,22 @@
 import {
   Badge,
+  Box,
   Card,
   Center,
-  DefaultMantineColor,
   Divider,
   Flex,
   Grid,
+  Highlight,
   Pill,
   Skeleton,
   Text,
   Title,
 } from '@mantine/core'
-import Link from 'next/link'
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 import { Img } from './Img'
+import { doujinshiTypesColor } from '@/constants/style'
+import OpenFolderBtn from './OpenFolderBtn'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function DoujinshiDetailCard({
   doujinshi,
@@ -22,51 +25,82 @@ export default function DoujinshiDetailCard({
   doujinshi: IDoujinshiMeta | undefined
   cardType: 'list' | 'single'
 }) {
+  const router = useRouter()
+  const params = useSearchParams()
+
+  const hightlight = useMemo(() => {
+    const tags = params.get('tags')
+    if (!tags) return []
+    return params
+      .get('tags')!
+      .split(' ')
+      .map(d => d.split(':').reverse()[0])
+  }, [params])
+
   if (!doujinshi) return <Skeleton height={200} radius="md" />
 
   const {
-    data: { id, title, male, female, misc, groups, language, artists, types, pages, charactors },
+    data: {
+      id,
+      title,
+      male,
+      female,
+      misc,
+      groups,
+      language,
+      artists,
+      series,
+      types,
+      characters,
+    },
+    meta: { root, coverName, pages },
   } = doujinshi
 
   const props = {
-    list: { imageWRatio: '25%' },
     single: { imageWRatio: { base: '60%', md: '50%', lg: '40%' } },
+    list: {
+      imageWRatio: '25%',
+      imageStyle: 'hover-box',
+      imageOnClick: () => {
+        router.push(`/doujinshi/${encodeURIComponent(title)}`)
+      },
+    },
   }[cardType]
 
-  const detail = [
-    { title: 'Language', data: language },
-    { title: 'Group', data: groups },
-    { title: 'Artist', data: artists },
-    { title: 'Male', data: male },
-    { title: 'Female', data: female },
-    { title: 'Charactors', data: charactors },
-    { title: 'Misc', data: misc },
+  const detail: { key: keyof IDoujinshiData; data: string[] }[] = [
+    { key: 'language', data: language },
+    { key: 'series', data: series },
+    { key: 'characters', data: characters },
+    { key: 'groups', data: groups },
+    { key: 'artists', data: artists },
+    { key: 'male', data: male },
+    { key: 'female', data: female },
+    { key: 'misc', data: misc },
   ]
 
-  const typesColor: Record<IDoujinshiData['types'], DefaultMantineColor> = {
-    doujinshi: 'blue',
-    manga: 'orange',
-    artistcg: 'yellow',
-    gamecg: 'green',
+  const onTagsClick = (key: string, value: string) => {
+    const params = new URLSearchParams()
+    params.set(key, value)
+    router.push(`/doujinshi?tags=${key}:${value}`)
   }
 
   return (
     <Card key={id} shadow="sm" p={0} radius="md" withBorder>
       <Flex flex={1}>
-        <Center
-          w={props.imageWRatio}
-          p="sm"
-          component={cardType === 'list' ? Link : undefined}
-          className={cardType === 'list' ? 'hover-box' : undefined}
-          href={`/doujinshi/${encodeURIComponent(title)}`}
-        >
-          <Img
-            w="100%"
-            h="100%"
-            fit="contain"
-            src={`/api/image/?path=${encodeURIComponent(`${doujinshi.meta.root}/_meta/${doujinshi.meta.coverName}`)}`}
-            alt={title}
-          />
+        <Center w={props.imageWRatio} p="sm">
+          <Box
+            className={props.imageStyle}
+            onClick={props.imageOnClick}
+            style={{ cursor: 'pointer' }}
+          >
+            <Img
+              w="100%"
+              h="100%"
+              fit="contain"
+              src={`/api/image/?path=${encodeURIComponent(`${root}/_meta/${coverName}`)}`}
+              alt={title}
+            />
+          </Box>
         </Center>
 
         <Divider orientation="vertical" />
@@ -74,34 +108,59 @@ export default function DoujinshiDetailCard({
         <Flex flex={1} p="sm" direction="column" gap="sm">
           <Grid>
             <Grid.Col span={2}>
-              <Badge size="lg" radius="sm" color={typesColor[types.toLocaleLowerCase()]}>
+              <Badge
+                classNames={{ label: 'capitalize' }}
+                size="lg"
+                radius="sm"
+                color={doujinshiTypesColor[types]}
+              >
                 {types}
               </Badge>
             </Grid.Col>
             <Grid.Col span={10}>
-              <Title order={5}>{title}</Title>
+              <Title order={5}>
+                <Highlight inherit highlight={hightlight}>
+                  {title}
+                </Highlight>
+              </Title>
             </Grid.Col>
 
             <Grid.Col span={2}>
               <Text size="sm">Pages</Text>
             </Grid.Col>
             <Grid.Col span={10}>
-              <Text size="sm" pl={5}>
-                {pages.length} 頁
-              </Text>
+              <Flex pl={5}>
+                <Text fw="bold" size="sm">
+                  {pages.length} 頁
+                </Text>
+              </Flex>
             </Grid.Col>
 
             {detail.map(d => {
               if (d.data.length === 0) return null
               return (
-                <Fragment key={d.title}>
+                <Fragment key={d.key}>
                   <Grid.Col span={2}>
-                    <Text size="sm">{d.title}</Text>
+                    <Text className="capitalize" size="sm">
+                      {d.key}
+                    </Text>
                   </Grid.Col>
                   <Grid.Col span={10}>
                     <Flex flex={1} wrap="wrap" gap="sm">
-                      {d.data.map(d => (
-                        <Pill key={d}>{d}</Pill>
+                      {d.data.map(t => (
+                        <Badge
+                          classNames={{ label: 'capitalize' }}
+                          key={t}
+                          color="dark"
+                          autoCapitalize="on"
+                          className="hover-box"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => onTagsClick(d.key, t)}
+                        >
+                          <Highlight inherit highlight={hightlight ?? []}>
+                            {t}
+                          </Highlight>
+                        </Badge>
                       ))}
                     </Flex>
                   </Grid.Col>
@@ -109,6 +168,10 @@ export default function DoujinshiDetailCard({
               )
             })}
           </Grid>
+        </Flex>
+
+        <Flex p="sm" align="end">
+          <OpenFolderBtn folderPath={root} />
         </Flex>
       </Flex>
     </Card>

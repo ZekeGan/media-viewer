@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     const { folderPath } = body
 
-    exec(`explorer ${folderPath}`)
+    exec(`start "" "${folderPath}"`)
 
     return NextResponse.json({ status: 200, message: 'success' })
   } catch {

@@ -1,81 +1,37 @@
 'use client'
 
-import { useEffect } from 'react'
-import { Box, Center, Flex, ScrollArea } from '@mantine/core'
-import LoadingContainer from '@/components/LoadingContainer'
+import { Box, Container, ScrollArea } from '@mantine/core'
 import { useDoujinshi } from '@/context/doujinshiContext'
-import { Img } from '@/components/Img'
-import SideBar from './_container/SideBar'
+
+import VerticalReadingContainer from './_container/VerticalReadingContainer'
 import ToolBar from './_container/ToolBar'
+import SideBar from './_container/SideBar'
+import HorizonReadingContainer from './_container/HorizonReadingContainer'
+import { useMainData } from '@/context/mainContext'
 
-export type IImageAttrs = {
-  isVertical: boolean
-  isSinglePage: boolean
-  isFullWidth: boolean
-  isFullHeight: boolean
-  zoomRatio: number
-}
-
-export default function EditPage() {
-  const { curDoujinshi, imageList, pagination, imageAttrs, goToPage } = useDoujinshi()
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
-  if (!curDoujinshi || !imageList || !pagination) return <LoadingContainer />
-  console.log(imageAttrs)
-
-  const ImageContainer = () => {
-    return (
-      <Box w="max-content" h="max-content">
-        <Flex
-          onClick={() => goToPage(1)}
-          style={{ cursor: 'pointer' }}
-          {...(imageAttrs.isVertical && { direction: 'column' })}
-          {...(imageAttrs.isFullHeight && { h: '100vh' })}
-          {...(imageAttrs.isFullWidth && { w: '100vw' })}
-          {...(!imageAttrs.isFullHeight &&
-            !imageAttrs.isFullWidth && { w: `${imageAttrs.zoomRatio * 100}rem` })}
-        >
-          {imageAttrs.isVertical
-            ? imageList.map(d => (
-                <Box key={d.label} flex={1}>
-                  <Img w="100%" h="100%" fit="contain" src={d.imageUrl} />
-                </Box>
-              ))
-            : pagination.curPageIdxs.map(d => (
-                <Box key={d} flex={1}>
-                  <Img w="100%" h="100%" fit="contain" src={imageList[d].imageUrl} />
-                </Box>
-              ))}
-        </Flex>
-      </Box>
-    )
-  }
+export default function Page() {
+  const { doujinshiPageSetting } = useMainData()
+  console.log('view page')
 
   return (
-    <Box h="100vh" w="100vw" style={{ overflowY: 'scroll' }}>
-      {/* <ScreenController /> */}
-      <SideBar />
-      <ToolBar />
-      {imageAttrs.isFullHeight || imageAttrs.isFullWidth || imageAttrs.isVertical ? (
-        <Center>{ImageContainer()}</Center>
-      ) : (
-        <Box
-          w="100vw"
-          h="100vh"
-          {...(imageAttrs.zoomRatio < 1 && {
-            display: 'flex',
-            style: {
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-          })}
-        >
-          {ImageContainer()}
-        </Box>
-      )}
-    </Box>
+    <Container
+      fluid
+      pos="fixed"
+      left={0}
+      top={0}
+      w="100vw"
+      h="100vh"
+      bg="dark"
+      p={0}
+    >
+      <ScrollArea w="100vw" h="100vh" type="always">
+        {doujinshiPageSetting.isVertical && <VerticalReadingContainer />}
+        {!doujinshiPageSetting.isVertical && <HorizonReadingContainer />}
+      </ScrollArea>
+      <Box style={{ zIndex: 10 }}>
+        <SideBar />
+        <ToolBar />
+      </Box>
+    </Container>
   )
 }

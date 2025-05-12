@@ -12,7 +12,10 @@ export async function POST(req: Request) {
 
     const envDataPath = path.join(appDataPath, CompanyName, ProjectName)
 
-    await fs.writeFile(path.join(envDataPath, 'system.json'), JSON.stringify(data))
+    await fs.writeFile(
+      path.join(envDataPath, 'system.json'),
+      JSON.stringify(data)
+    )
 
     return NextResponse.json({ status: 201, message: 'success' })
   } catch {

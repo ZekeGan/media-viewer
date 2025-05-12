@@ -11,10 +11,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           <Link href="/">Home</Link>
           <Link href="/game">Game</Link>
           <Link href="/game/image">1.Pinterest介面 只展示圖片</Link>
-          <div>2.可隨機抽取任一遊戲</div>
-          <Link href="/edit_tags">3.編輯TAG的介面</Link>
-          <div>4.顯示遊戲使用的次數</div>
+          <Link href="/game/edit_tags">3.編輯TAG的介面</Link>
           <Link href="/doujinshi">5.漫畫viewer</Link>
+          <div>4.顯示遊戲使用的次數</div>
         </Group>
       </Flex>
       <Box p={MainPadding}>{children}</Box>
