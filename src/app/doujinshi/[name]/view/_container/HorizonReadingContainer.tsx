@@ -1,32 +1,35 @@
-import { Box, Center, Flex } from '@mantine/core'
-import { useMainData } from '@/context/mainContext'
-import { useDoujinshi } from '@/context/doujinshiContext'
-import useFetchChuckImages from '@/hooks/useFetchChuckImages'
+import { Box, Center, Flex, ScrollArea } from '@mantine/core'
+import useFetchChuckImages from '@/hooks/doujinshi/useFetchChuckImages'
 import LoadingContainer from '@/components/LoadingContainer'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { Img } from '@/components/Img'
 
 export default function HorizonReadingContainer() {
-  const {
-    doujinshiPageSetting: { pageCount, isFullHeight, isFullWidth, zoomRatio },
-  } = useMainData()
-  const { pagination, curDoujinshi, goToPage, curPageLabel } = useDoujinshi()
-  const { imagesList } = useFetchChuckImages(
-    curDoujinshi,
-    curPageLabel.split('-')[0],
-    10
-  )
+  const isFullWidth = useDoujinshiStore(s => s.pageSetting.isFullWidth)
+  const isFullHeight = useDoujinshiStore(s => s.pageSetting.isFullHeight)
+  const zoomRatio = useDoujinshiStore(s => s.pageSetting.zoomRatio)
+  const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
+  const pagination = useDoujinshiStore(s => s.pagination)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
+  const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
+  const { goToPage } = useGoTo()
 
+  const { imagesList } = useFetchChuckImages(10)
+
+  console.log('horizon', curPageLabel)
   if (
     !imagesList ||
     imagesList.every(d => d.imageUrl === undefined) ||
-    !pagination
+    !pagination ||
+    !curDoujinshi
   ) {
     return <LoadingContainer />
   }
 
   return (
-    <Center h="100%" w="100%">
-      <>
+    <ScrollArea w="100vw" h="100vh" type="always">
+      <Center h="100%" w="100%">
         <Flex
           direction="row-reverse"
           {...(!isFullHeight && !isFullWidth && { h: `${zoomRatio * 100}vh` })}
@@ -35,7 +38,10 @@ export default function HorizonReadingContainer() {
             .split('-')
             .filter(Boolean)
             .map((_, idx) => {
-              if (!imagesList[pagination.curPageIdxs[idx]].imageUrl) return null
+              const page = imagesList[pagination.curPageIdxs[idx]]
+
+              if (!page) return null
+
               return (
                 <Box
                   key={idx}
@@ -46,14 +52,15 @@ export default function HorizonReadingContainer() {
                   <Img
                     fit="contain"
                     onClick={() => goToPage(1)}
-                    alt={imagesList[pagination.curPageIdxs[idx]].imageUrl ?? ''}
-                    src={imagesList[pagination.curPageIdxs[idx]].imageUrl ?? ''}
+                    style={{ aspectRatio: page.width / page.height }}
+                    alt={page.imageUrl ?? ''}
+                    src={page.imageUrl ?? ''}
                   />
                 </Box>
               )
             })}
         </Flex>
-      </>
-    </Center>
+      </Center>
+    </ScrollArea>
   )
 }

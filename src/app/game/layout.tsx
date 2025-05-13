@@ -1,6 +1,11 @@
 import { ReactNode } from 'react'
-import { MainContext } from '@/context/gameContext'
+import { GameContext } from '@/context/gameContext'
+import MainLayout from '@/layout/MainLayout'
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <MainContext>{children}</MainContext>
+  return (
+    <MainLayout>
+      <GameContext>{children}</GameContext>
+    </MainLayout>
+  )
 }

@@ -2,7 +2,7 @@ import fs from 'fs'
 import { GamePath } from '@/constants/env'
 import { GameManager } from '@/utils/gameManager'
 import { NextResponse } from 'next/server'
-import { cacheTime } from '@/context/server'
+import { cacheTime } from '@/constants/server'
 
 export async function GET() {
   try {

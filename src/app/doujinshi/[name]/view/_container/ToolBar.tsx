@@ -18,6 +18,7 @@ import {
   IconArrowBackUp,
   IconArrowsHorizontal,
   IconArrowsVertical,
+  IconBike,
   IconCaretDownFilled,
   IconCaretLeftFilled,
   IconCaretRightFilled,
@@ -33,9 +34,9 @@ import {
   IconWindowMaximize,
   IconWindowMinimize,
 } from '@tabler/icons-react'
-import { useDoujinshi } from '@/context/doujinshiContext'
-import { useMainData } from '@/context/mainContext'
 import { getLabels } from '@/utils/doujinshiUtils'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 
 const IconBtn = ({
   tooltip,
@@ -60,11 +61,12 @@ const IconBtn = ({
 }
 
 const ImageRatioController = () => {
-  const { doujinshiPageSetting, setDoujinshiPageSetting } = useMainData()
+  const zoomRatio = useDoujinshiStore(s => s.pageSetting.zoomRatio)
+  const setPageSetting = useDoujinshiStore(s => s.setPageSetting)
 
   const setZoomRatio = (v: number) => {
     if (v > 5 || v < 0.1) return
-    setDoujinshiPageSetting(prev => ({
+    setPageSetting(prev => ({
       ...prev,
       isFullWidth: false,
       isFullHeight: false,
@@ -73,8 +75,8 @@ const ImageRatioController = () => {
   }
 
   useHotkeys([
-    ['=', () => setZoomRatio(doujinshiPageSetting.zoomRatio + 0.1)],
-    ['-', () => setZoomRatio(doujinshiPageSetting.zoomRatio - 0.1)],
+    ['=', () => setZoomRatio(zoomRatio + 0.1)],
+    ['-', () => setZoomRatio(zoomRatio - 0.1)],
   ])
 
   return (
@@ -87,7 +89,7 @@ const ImageRatioController = () => {
         <ActionIcon
           variant="light"
           size="lg"
-          onClick={() => setZoomRatio(doujinshiPageSetting.zoomRatio - 0.1)}
+          onClick={() => setZoomRatio(zoomRatio - 0.1)}
         >
           <IconCaretDownFilled />
         </ActionIcon>
@@ -99,12 +101,12 @@ const ImageRatioController = () => {
           onClick={() => setZoomRatio(1)}
           style={{ userSelect: 'none', cursor: 'pointer' }}
         >
-          {doujinshiPageSetting.zoomRatio.toFixed(1)}
+          {zoomRatio.toFixed(1)}
         </ActionIcon.GroupSection>
         <ActionIcon
           variant="light"
           size="lg"
-          onClick={() => setZoomRatio(doujinshiPageSetting.zoomRatio + 0.1)}
+          onClick={() => setZoomRatio(zoomRatio + 0.1)}
         >
           <IconCaretUpFilled />
         </ActionIcon>
@@ -114,10 +116,10 @@ const ImageRatioController = () => {
 }
 
 const FitWidthController = () => {
-  const { doujinshiPageSetting, setDoujinshiPageSetting } = useMainData()
+  const setPageSetting = useDoujinshiStore(s => s.setPageSetting)
 
   const setFullWidth = () => {
-    setDoujinshiPageSetting(prev => ({
+    setPageSetting(prev => ({
       ...prev,
       isFullWidth: true,
       isFullHeight: false,
@@ -135,10 +137,11 @@ const FitWidthController = () => {
 }
 
 const FitHeightController = () => {
-  const { doujinshiPageSetting, setDoujinshiPageSetting } = useMainData()
+  const isVertical = useDoujinshiStore(s => s.pageSetting.isVertical)
+  const setPageSetting = useDoujinshiStore(s => s.setPageSetting)
 
   const setFullHeight = () => {
-    setDoujinshiPageSetting(prev => ({
+    setPageSetting(prev => ({
       ...prev,
       isFullWidth: false,
       isFullHeight: true,
@@ -150,7 +153,7 @@ const FitHeightController = () => {
 
   return (
     <IconBtn
-      disabled={doujinshiPageSetting.isVertical}
+      disabled={isVertical}
       tooltip="圖片貼合裝置高度"
       onClick={() => setFullHeight()}
     >
@@ -160,27 +163,32 @@ const FitHeightController = () => {
 }
 
 const ReadingDirectionController = () => {
-  const { doujinshiPageSetting, setDoujinshiPageSetting } = useMainData()
+  const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
+  const setPageSetting = useDoujinshiStore(state => state.setPageSetting)
+  const toggleSideBar = useDoujinshiStore(state => state.toggleSideBar)
 
   const setReadingDirection = () => {
-    setDoujinshiPageSetting(prev => ({
-      ...prev,
-      isFullWidth: false,
-      isFullHeight: false,
-      zoomRatio: prev.isVertical ? 1 : 0.5,
-      isVertical: !prev.isVertical,
-    }))
+    if (isVertical) {
+      setPageSetting(prev => ({
+        ...prev,
+        zoomRatio: 1,
+        isVertical: false,
+      }))
+    } else {
+      toggleSideBar(false)
+      setPageSetting(prev => ({
+        ...prev,
+        zoomRatio: 0.5,
+        isVertical: true,
+      }))
+    }
   }
 
   useHotkeys([['R', () => setReadingDirection()]])
 
   return (
     <IconBtn tooltip="切換直/橫閱讀" onClick={() => setReadingDirection()}>
-      {doujinshiPageSetting.isVertical ? (
-        <IconCarouselHorizontal />
-      ) : (
-        <IconCarouselVertical />
-      )}
+      {isVertical ? <IconCarouselHorizontal /> : <IconCarouselVertical />}
     </IconBtn>
   )
 }
@@ -192,7 +200,7 @@ const FullScreenController = () => {
     const handleChange = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', handleChange)
     return () => document.removeEventListener('fullscreenchange', handleChange)
-  }, [])
+  }, [isFullscreen])
 
   const setFullscreen = () => {
     if (!isFullscreen) document.documentElement.requestFullscreen()
@@ -202,79 +210,78 @@ const FullScreenController = () => {
   useHotkeys([['F', () => setFullscreen()]])
 
   return (
-    <IconBtn tooltip="全螢幕" onClick={() => setFullscreen()}>
-      {!isFullscreen ? <IconWindowMaximize /> : <IconWindowMinimize />}
+    <IconBtn
+      tooltip="全螢幕"
+      color={isFullscreen ? 'yellow' : ''}
+      onClick={() => setFullscreen()}
+    >
+      {!isFullscreen ? <IconWindowMinimize /> : <IconWindowMaximize />}
     </IconBtn>
   )
 }
 
 const SideBarController = () => {
-  const { doujinshiPageSetting } = useMainData()
-  const { openSideBar, setOpenSideBar } = useDoujinshi()
+  const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
+  const sideBarOpen = useDoujinshiStore(state => state.sideBarOpen)
+  const toggleSideBar = useDoujinshiStore(state => state.toggleSideBar)
 
   return (
     <IconBtn
       tooltip="打開側邊欄"
-      disabled={doujinshiPageSetting.isVertical}
-      onClick={() => setOpenSideBar(!openSideBar)}
+      disabled={isVertical}
+      onClick={() => toggleSideBar()}
+      color={sideBarOpen ? 'yellow' : ''}
     >
-      {openSideBar ? (
-        <IconLayoutSidebarLeftCollapse />
-      ) : (
+      {sideBarOpen ? (
         <IconLayoutSidebarLeftExpand />
+      ) : (
+        <IconLayoutSidebarLeftCollapse />
       )}
     </IconBtn>
   )
 }
 
 const PageDisplayController = () => {
-  const { doujinshiPageSetting, setDoujinshiPageSetting } = useMainData()
+  const pageCount = useDoujinshiStore(state => state.pageSetting.pageCount)
+  const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
+  const setPageSetting = useDoujinshiStore(state => state.setPageSetting)
+  const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
+  const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
+  const pagination = useDoujinshiStore(s => s.pagination)
+  const { goToSpecificPage } = useGoTo()
 
-  const { curDoujinshi, curPageLabel, pagination, goToSpecificPage } =
-    useDoujinshi()
-
-  const setCurPageLabel = () => {
+  const onChagePageDisplay = () => {
     if (!pagination || !curDoujinshi) return
-    if (doujinshiPageSetting.pageCount === 1) {
-      const labels = getLabels({
-        doujin: curDoujinshi,
-        pageCount: 2,
-        curLabel: curPageLabel,
-      }).labels
-      goToSpecificPage(labels)
-      setDoujinshiPageSetting(prev => ({ ...prev, pageCount: 2 }))
-    } else {
-      const labels = getLabels({
-        doujin: curDoujinshi,
-        pageCount: 1,
-        curLabel: curPageLabel,
-      }).labels
-      goToSpecificPage(labels)
-      setDoujinshiPageSetting(prev => ({ ...prev, pageCount: 1 }))
-    }
+    const labels = getLabels({
+      doujin: curDoujinshi,
+      pageCount: pageCount === 1 ? 2 : 1,
+      curLabel: curPageLabel.split('-')[0],
+    }).labels
+    setCurPageLabel(labels)
+    setPageSetting(prev => ({ ...prev, pageCount: pageCount === 1 ? 2 : 1 }))
+    goToSpecificPage(labels)
   }
 
-  useHotkeys([['D', () => setCurPageLabel()]])
+  useHotkeys([['D', () => onChagePageDisplay()]])
 
   return (
     <IconBtn
-      disabled={doujinshiPageSetting.isVertical}
+      disabled={isVertical}
       tooltip="切換單/雙畫面"
-      onClick={() => setCurPageLabel()}
+      onClick={() => onChagePageDisplay()}
     >
-      {curPageLabel.split('-').length === 1 ? (
-        <IconSquareNumber1 />
-      ) : (
-        <IconSquareNumber2 />
-      )}
+      {pageCount === 1 ? <IconSquareNumber1 /> : <IconSquareNumber2 />}
     </IconBtn>
   )
 }
 
 export default function ToolBar() {
-  const { doujinshiPageSetting } = useMainData()
-  const { goToGallery, pagination, goToPage, goToSpecificPage, curPageLabel } =
-    useDoujinshi()
+  const pagination = useDoujinshiStore(s => s.pagination)
+  const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
+  const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
+  const { goToGallery, goToPage, goToSpecificPage } = useGoTo()
   const { hovered: targetHover, ref: targetRef } = useHover()
   const { hovered: menuHovered, ref: menuRef } = useHover()
   const [pinToolBar, setPinToolBar] = useState(false)
@@ -282,13 +289,18 @@ export default function ToolBar() {
   const [isOpenJumpToModal, setIsOpenJumpToModal] = useState(false)
 
   const curPageData = useMemo(() => {
-    if (!pagination) return undefined
+    if (!pagination || !isOpenJumpToModal) return undefined
     return pagination.allPageList.find(d => curPageLabel.startsWith(d.value))
-  }, [curPageLabel, pagination])
+  }, [curPageLabel, pagination, isOpenJumpToModal])
 
   const jumpToPage = (v: string) => {
-    if (!pagination) return
-    goToSpecificPage(v.split('-')[0])
+    if (!curDoujinshi) return
+    const labels = getLabels({
+      doujin: curDoujinshi,
+      pageCount,
+      curLabel: v,
+    }).labels
+    goToSpecificPage(labels)
     setIsOpenJumpToModal(false)
   }
 
@@ -300,7 +312,7 @@ export default function ToolBar() {
     ['G', () => setIsOpenJumpToModal(!isOpenJumpToModal)],
   ])
 
-  if (!pagination || !curPageData) return null
+  if (!pagination) return null
 
   return (
     <>
@@ -361,13 +373,9 @@ export default function ToolBar() {
 
           <SideBarController />
 
-          <Button
-            size="sm"
-            variant="light"
-            onClick={() => setIsOpenJumpToModal(true)}
-          >
-            <Text size="sm">{curPageData.label} 頁</Text>
-          </Button>
+          <IconBtn tooltip="" onClick={() => setIsOpenJumpToModal(!pinToolBar)}>
+            <IconBike />
+          </IconBtn>
 
           <Divider orientation="vertical" />
 
@@ -377,9 +385,10 @@ export default function ToolBar() {
 
           <IconBtn
             tooltip="固定菜單"
+            color={pinToolBar ? 'yellow' : ''}
             onClick={() => setPinToolBar(!pinToolBar)}
           >
-            {pinToolBar ? <IconPinFilled /> : <IconPinnedFilled />}
+            {pinToolBar ? <IconPinnedFilled /> : <IconPinFilled />}
           </IconBtn>
         </Flex>
       </Dialog>
@@ -392,7 +401,7 @@ export default function ToolBar() {
         <Select
           checkIconPosition="right"
           data={pagination.allPageList}
-          defaultValue={curPageData.value}
+          defaultValue={curPageData?.value ?? ''}
           nothingFoundMessage="Nothing found..."
           onChange={e => jumpToPage(e ?? '1')}
         />

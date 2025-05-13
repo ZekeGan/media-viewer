@@ -1,15 +1,20 @@
 import { maxDoujinshiPagesLength } from '@/constants'
-import { useEffect, useRef, useState } from 'react'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-export const useFetchInfiniteImages = (pages: IImageData[] | undefined) => {
+export const useFetchInfiniteImages = () => {
+  const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const loaderRef = useRef<HTMLDivElement>(null)
   const [visibleData, setVisibleData] = useState<IImageData[] | undefined>(
     undefined
   )
 
+  const pages = useMemo(() => {
+    return curDoujinshi?.meta.pages ?? []
+  }, [curDoujinshi])
+
   // 初始化先載入一批圖片
   useEffect(() => {
-    if (!pages) return
     setVisibleData(pages.slice(0, maxDoujinshiPagesLength))
   }, [pages])
 

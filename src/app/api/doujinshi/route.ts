@@ -2,7 +2,7 @@ import fs from 'fs'
 import { DoujinshiPath } from '@/constants/env'
 import { DoujinshiManager } from '@/utils/doujinshiManager'
 import { NextResponse } from 'next/server'
-import { cacheTime } from '@/context/server'
+import { cacheTime } from '@/constants/server'
 
 export async function GET() {
   try {

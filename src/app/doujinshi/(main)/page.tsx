@@ -9,10 +9,12 @@ import LoadingContainer from '@/components/LoadingContainer'
 import SearchBar from './_container/SearchBar'
 import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import MainLayout from '@/layout/MainLayout'
 
 export default function EditPage() {
   const params = useSearchParams()
-  const { doujinshiList } = useDoujinshi()
+  const doujinshiList = useDoujinshiStore(s => s.doujinshiList)
 
   const search = useMemo(
     () => (params.get('tags') ? params.get('tags')!.split(',') : []),
@@ -89,24 +91,27 @@ export default function EditPage() {
   }, [doujinshiList, search])
 
   if (!data) return <LoadingContainer />
+  console.log('main')
 
   return (
-    <Flex direction="column">
-      <Divider mb="md" size="md" label={`總數量 ${data.length} 個`} />
-      <Center>
-        <Box w={ContentWidth}>
-          <SearchBar />
-          <Stack mt="md">
-            {data.map(item => (
-              <DoujinshiDetailCard
-                key={nanoid()}
-                doujinshi={item}
-                cardType="list"
-              />
-            ))}
-          </Stack>
-        </Box>
-      </Center>
-    </Flex>
+    <MainLayout>
+      <Flex direction="column">
+        <Divider mb="md" size="md" label={`總數量 ${data.length} 個`} />
+        <Center>
+          <Box w={ContentWidth}>
+            <SearchBar />
+            <Stack mt="md">
+              {data.map(item => (
+                <DoujinshiDetailCard
+                  key={nanoid()}
+                  doujinshi={item}
+                  cardType="list"
+                />
+              ))}
+            </Stack>
+          </Box>
+        </Center>
+      </Flex>
+    </MainLayout>
   )
 }

@@ -12,8 +12,6 @@ DOUJINSHI_PATH=Z:/Doujinshi
 ## 製作清單
 
 - BUG:數量級大SideBar卡頓問題
-- BUG:Vertical滾動卡頓
-- BUG:loacalStorage資料沒有同步
 - BUG:doujinshi detail page type顯示不完全
 
 - Feat:圖片檢視doujinshi
@@ -25,3 +23,4 @@ DOUJINSHI_PATH=Z:/Doujinshi
 - Feat:搜尋Types記錄到localStorage
 
 - Ex:顯示常用doujinshi
+- Ex:研究Blob和單純圖片之間的差別

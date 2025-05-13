@@ -1,5 +1,5 @@
 import { CompanyName, ProjectName } from '@/constants/env'
-import { cacheTime } from '@/context/server'
+import { cacheTime } from '@/constants/server'
 import fs from 'fs'
 import { NextResponse } from 'next/server'
 import path from 'path'

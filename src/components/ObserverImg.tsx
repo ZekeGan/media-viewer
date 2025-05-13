@@ -5,8 +5,10 @@ import {
   ImageProps,
   PolymorphicComponentProps,
   Box,
+  Paper,
 } from '@mantine/core'
 import noImg from '@/assets/no-image.jpg'
+import LoadingContainer from './LoadingContainer'
 
 export const ObserverImg = ({
   src,
@@ -54,14 +56,7 @@ export const ObserverImg = ({
   }
 
   return (
-    <Box
-      ref={ref}
-      style={{
-        aspectRatio,
-      }}
-      pos="relative"
-    >
-      {!hasLoaded && <Skeleton pos="absolute" w="100%" h="100%" radius="sm" />}
+    <Box ref={ref} style={{ aspectRatio }}>
       {imgSrc && (
         <Image
           w="100%"

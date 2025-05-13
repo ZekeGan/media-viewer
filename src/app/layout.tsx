@@ -4,9 +4,7 @@ import { ColorSchemeScript, createTheme, MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import '@mantine/notifications/styles.css'
 import '@mantine/core/styles.css'
-import MainLayout from '@/layout/MainLayout'
 import './global.css'
-import { MainContext } from '@/context/mainContext'
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
@@ -34,11 +32,9 @@ export default async function RootLayout({
         <ColorSchemeScript />
       </head>
       <body>
-        <MantineProvider defaultColorScheme="dark" theme={theme}>
+        <MantineProvider defaultColorScheme="dark">
           <Notifications />
-          <MainContext>
-            <MainLayout>{children}</MainLayout>
-          </MainContext>
+          {children}
         </MantineProvider>
       </body>
     </html>

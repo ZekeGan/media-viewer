@@ -12,6 +12,6 @@ export const doujinshiTypesColor: Record<
   manga: 'orange',
   artistcg: 'violet',
   gamecg: 'green',
-  Imageset: 'grape',
+  imageset: 'grape',
   misc: 'pink',
 }

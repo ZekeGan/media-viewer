@@ -1,4 +1,4 @@
-import { Pagination } from '@/context/doujinshiContext/usePageView'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
 import axios from 'axios'
 import { useEffect, useState } from 'react'
@@ -10,19 +10,17 @@ import { useEffect, useState } from 'react'
  * @param offset
  * @returns
  */
-export default function useFetchChuckImages(
-  doujin: IDoujinshiMeta | undefined,
-  curPageLabel: string,
-  offset: number = 5
-) {
+export default function useFetchChuckImages(offset: number = 5) {
+  const doujin = useDoujinshiStore(s => s.curDoujinshi)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
   const [loaded, setLoaded] = useState(false)
   const [imagesList, setImageList] = useState<
     (IImageData & { imageUrl: string | undefined })[] | undefined
   >(undefined)
 
+  // 初始化imageList
   useEffect(() => {
     if (!doujin) return
-
     setImageList(
       doujin.meta.pages.map(d => ({
         ...d,
@@ -34,7 +32,9 @@ export default function useFetchChuckImages(
 
   useEffect(() => {
     if (!doujin || !imagesList) return
-    const curIdx = doujin.meta.pages.findIndex(d => d.title === curPageLabel)
+    const curIdx = doujin.meta.pages.findIndex(
+      d => d.title === curPageLabel.split('-')[0]
+    )
 
     const fetchImages = async () => {
       try {
@@ -64,7 +64,5 @@ export default function useFetchChuckImages(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [curPageLabel, doujin, loaded])
 
-  return {
-    imagesList,
-  }
+  return { imagesList }
 }

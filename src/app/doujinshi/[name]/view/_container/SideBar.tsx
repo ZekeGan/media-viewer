@@ -1,51 +1,66 @@
-import {
-  Badge,
-  Box,
-  Drawer,
-  Paper,
-  ScrollArea,
-  Stack,
-  Tooltip,
-} from '@mantine/core'
+import { Badge, Drawer, Paper, ScrollArea, Stack, Tooltip } from '@mantine/core'
 import { useEffect, useRef } from 'react'
-import { useDoujinshi } from '@/context/doujinshiContext'
 import { ObserverImg } from '@/components/ObserverImg'
 import { getImagePath } from '@/utils'
-import { useFetchInfiniteImages } from '@/hooks/useFetchInfiniteImages'
+import scrollIntoView from 'scroll-into-view-if-needed'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { Img } from '@/components/Img'
+import { useGoTo } from '@/hooks/doujinshi/useGoTo'
+import { getLabels } from '@/utils/doujinshiUtils'
 
 export default function SideBar() {
   const itemRefs = useRef<Record<string, HTMLDivElement>>({})
-  const { curDoujinshi, goToSpecificPage, pagination, openSideBar } =
-    useDoujinshi()
-
-  const { visibleData, loaderRef } = useFetchInfiniteImages(
-    curDoujinshi?.meta.pages
-  )
+  const sideBarOpen = useDoujinshiStore(state => state.sideBarOpen)
+  const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
+  const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
+  const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
+  const { goToSpecificPage } = useGoTo()
 
   // 自動滾動到指定Page位置
   useEffect(() => {
-    if (!pagination) return
-    setTimeout(() => {
-      const el = itemRefs.current[pagination.curPageLabels[0]]
-      if (el) {
-        el.scrollIntoView({
-          behavior: 'instant',
-          block: 'start',
-        })
-      }
-    }, 0)
-  }, [openSideBar, pagination])
+    if (!sideBarOpen) return
 
-  if (!curDoujinshi || !pagination) return null
+    const tryScroll = () => {
+      const el = itemRefs.current[curPageLabel.split('-')[0]]
+
+      if (!el) {
+        requestAnimationFrame(tryScroll)
+        return
+      }
+      scrollIntoView(el, {
+        behavior: 'instant',
+        block: 'start',
+        scrollMode: 'if-needed',
+      })
+    }
+
+    setTimeout(() => tryScroll(), 0)
+  }, [curPageLabel, sideBarOpen])
+
+  const goToPage = (label: string) => {
+    if (!curDoujinshi) return
+    const labels = getLabels({
+      doujin: curDoujinshi,
+      pageCount,
+      curLabel: label,
+    }).labels
+    setCurPageLabel(labels)
+    goToSpecificPage(labels)
+  }
+
+  if (!curDoujinshi || !sideBarOpen) return null
+  console.log('sidebar---------')
 
   return (
     <Drawer
-      opened={openSideBar}
+      opened={sideBarOpen}
       onClose={close}
       withCloseButton={false}
       withOverlay={false}
       padding={0}
       size="xs"
+      keepMounted
     >
       <ScrollArea h="100vh">
         <Stack gap="md" p="md">
@@ -55,11 +70,14 @@ export default function SideBar() {
                 if (el) itemRefs.current[d.title] = el
               }}
               key={d.title}
-              id={idx.toString()}
               pos="relative"
-              style={{ cursor: 'pointer', overflow: 'hidden' }}
+              style={{
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
               radius="md"
-              onClick={() => goToSpecificPage(d.title)}
+              withBorder
+              onClick={() => goToPage(d.title)}
             >
               <Tooltip label={d.title}>
                 <Badge
@@ -72,7 +90,7 @@ export default function SideBar() {
                   opacity={0.8}
                   style={{ zIndex: 10 }}
                   color={
-                    pagination.curPageLabels.some(t => t === d.title)
+                    curPageLabel.split('-').some(t => t === d.title)
                       ? 'yellow'
                       : 'dark'
                   }
@@ -83,9 +101,8 @@ export default function SideBar() {
 
               <ObserverImg
                 src={getImagePath(curDoujinshi, d.title)}
+                style={{ aspectRatio: d.width / d.height }}
                 fit="contain"
-                w={d.width}
-                h={d.height}
               />
             </Paper>
           ))}

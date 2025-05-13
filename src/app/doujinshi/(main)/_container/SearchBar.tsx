@@ -1,25 +1,33 @@
 import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
 import {
   Button,
   Card,
   Center,
   Flex,
-  Input,
   Pill,
   PillsInput,
   Stack,
-  Text,
 } from '@mantine/core'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function SearchBar({}: {}) {
   const router = useRouter()
   const params = useSearchParams()
-  const [types, setTypes] = useState(
-    doujinshiTypes.map(d => ({ value: d, label: d, isSelected: true }))
+  const searchTypes = useDoujinshiStore(state => state.searchTypes)
+  const setSearchTypes = useDoujinshiStore(state => state.setSearchTypes)
+
+  const [types, setTypes] = useState<
+    { value: IDoujinshiData['types']; isSelected: boolean }[]
+  >(
+    doujinshiTypes.map(d => ({
+      value: d,
+      isSelected: searchTypes.includes(d),
+    }))
   )
+
   const [inputData, setInputData] = useState<string[]>([])
 
   const toggleSearch = () => {
@@ -33,6 +41,20 @@ export default function SearchBar({}: {}) {
     setInputData(params.get('tags') ? params.get('tags')!.split(',') : [])
   }, [params])
 
+  const onChangeSearchTypes = (val: string) => {
+    const newTypes = types.map(p =>
+      p.value === val ? { ...p, isSelected: !p.isSelected } : p
+    )
+    setTypes(newTypes)
+    setSearchTypes(
+      newTypes
+        .map(d => d.isSelected && d.value)
+        .filter(Boolean) as IDoujinshiData['types'][]
+    )
+  }
+
+  console.log('searchbar')
+
   return (
     <Card shadow="sm" radius="md" withBorder>
       <Center>
@@ -45,17 +67,9 @@ export default function SearchBar({}: {}) {
                 color={d.isSelected ? doujinshiTypesColor[d.value] : 'gray'}
                 variant={d.isSelected ? 'filled' : 'light'}
                 size="sm"
-                onClick={() =>
-                  setTypes(prev =>
-                    prev.map(p =>
-                      p.value === d.value
-                        ? { ...p, isSelected: !d.isSelected }
-                        : p
-                    )
-                  )
-                }
+                onClick={() => onChangeSearchTypes(d.value)}
               >
-                {d.label}
+                {d.value}
               </Button>
             ))}
           </Flex>
