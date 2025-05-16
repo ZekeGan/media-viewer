@@ -9,28 +9,32 @@ import {
   SimpleGrid,
   Skeleton,
 } from '@mantine/core'
+import MainLayout from '@/layout/MainLayout'
 import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useFetchInfiniteImages } from '@/hooks/doujinshi/useFetchInfiniteImages'
-import { getImagePath } from '@/utils'
-import MainLayout from '@/layout/MainLayout'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { getImagePath } from '@/utils'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 export default function DetailPage() {
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
+  const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
   const { visibleData, loaderRef } = useFetchInfiniteImages()
   const { goToSpecificPage } = useGoTo()
 
   const goToPage = (label: string) => {
     if (!curDoujinshi) return
+    console.log(label, 'goto')
+
     const labels = getLabels({
       doujin: curDoujinshi,
       pageCount: pageCount,
       curLabel: label,
     }).labels
+    setCurPageLabel(labels)
     goToSpecificPage(labels)
   }
 
@@ -47,8 +51,13 @@ export default function DetailPage() {
                 {visibleData.map(d => (
                   <Paper
                     withBorder
+                    radius="md"
                     key={d.title}
-                    style={{ cursor: 'pointer' }}
+                    style={{
+                      aspectRatio: d.width / d.height,
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                    }}
                     onClick={() => goToPage(d.title)}
                   >
                     <ObserverImg

@@ -1,8 +1,8 @@
+import { useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { notifications } from '@mantine/notifications'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
-import { notifications } from '@mantine/notifications'
-import { useRouter } from 'next/navigation'
-import { useCallback } from 'react'
 
 export const useGoTo = () => {
   const router = useRouter()

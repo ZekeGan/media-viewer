@@ -1,10 +1,10 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { useParams } from 'next/navigation'
-import { useHash } from '@mantine/hooks'
 import { Box } from '@mantine/core'
+import { useHash } from '@mantine/hooks'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
 
 export default function Layout({ children }: { children: ReactNode }) {
   const params = useParams()
@@ -34,6 +34,8 @@ export default function Layout({ children }: { children: ReactNode }) {
     const syncFromHash = () => {
       if (!curPageLabel) {
         const hash = window.location.hash
+        console.log(hash, 'hash')
+
         setCurPageLabel(hash.slice(1))
       } else {
         setHash(curPageLabel)
@@ -47,8 +49,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   // 更新pagination
   useEffect(() => {
     if (!curDoujinshi) return
-    console.log(pageCount)
-
+    console.log(pageCount, curPageLabel, 'pagination')
     setPagination(curDoujinshi, curPageLabel, pageCount)
   }, [curDoujinshi, curPageLabel, pageCount, setPagination])
 

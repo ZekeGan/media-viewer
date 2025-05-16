@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { IconSettings } from '@tabler/icons-react'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Box,
   Card,
@@ -15,12 +16,11 @@ import {
   Stack,
   Text,
   Tooltip,
-  Anchor,
 } from '@mantine/core'
-import OpenFolderBtn from '@/components/OpenFolderBtn'
-import { useTranslate } from '@/hooks/useTranslate'
 import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
+import OpenFolderBtn from '@/components/OpenFolderBtn'
+import { useTranslate } from '@/hooks/useTranslate'
 
 const len = 25
 

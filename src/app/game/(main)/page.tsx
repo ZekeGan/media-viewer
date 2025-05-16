@@ -1,12 +1,11 @@
 'use client'
 
 import { Divider, Flex, Grid, Group, Select, Stack, Text } from '@mantine/core'
-
 import { useGameData } from '@/context/gameContext'
-import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { defaultGameListOrder } from '@/constants'
-import GameGridContainer from './_container/GameGridContainer'
+import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import FilterListContainer from './_container/FilterListContainer'
+import GameGridContainer from './_container/GameGridContainer'
 
 const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
   { value: 'author', label: '照作者排序' },

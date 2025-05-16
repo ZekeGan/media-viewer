@@ -1,6 +1,7 @@
 'use client'
 
-import { useGameData } from '@/context/gameContext'
+import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Autocomplete,
   Button,
@@ -12,9 +13,8 @@ import {
   Title,
 } from '@mantine/core'
 import axios from 'axios'
-import { useRouter } from 'next/navigation'
-import { useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+import { useGameData } from '@/context/gameContext'
 
 export default function Page() {
   const router = useRouter()

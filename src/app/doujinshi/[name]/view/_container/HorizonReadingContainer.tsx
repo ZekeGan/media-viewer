@@ -1,9 +1,10 @@
 import { Box, Center, Flex, ScrollArea } from '@mantine/core'
-import useFetchChuckImages from '@/hooks/doujinshi/useFetchChuckImages'
-import LoadingContainer from '@/components/LoadingContainer'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
-import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { Img } from '@/components/Img'
+import LoadingContainer from '@/components/LoadingContainer'
+import useFetchChuckImages from '@/hooks/doujinshi/useFetchChuckImages'
+import { useGoTo } from '@/hooks/doujinshi/useGoTo'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { getImagePath } from '@/utils'
 
 export default function HorizonReadingContainer() {
   const isFullWidth = useDoujinshiStore(s => s.pageSetting.isFullWidth)
@@ -15,12 +16,12 @@ export default function HorizonReadingContainer() {
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const { goToPage } = useGoTo()
 
-  const { imagesList } = useFetchChuckImages(10)
+  // const { imagesList } = useFetchChuckImages(10)
 
   console.log('horizon', curPageLabel)
   if (
-    !imagesList ||
-    imagesList.every(d => d.imageUrl === undefined) ||
+    // !imagesList ||
+    // imagesList.every(d => d.imageUrl === undefined) ||
     !pagination ||
     !curDoujinshi
   ) {
@@ -38,7 +39,8 @@ export default function HorizonReadingContainer() {
             .split('-')
             .filter(Boolean)
             .map((_, idx) => {
-              const page = imagesList[pagination.curPageIdxs[idx]]
+              const page = curDoujinshi.meta.pages[pagination.curPageIdxs[idx]]
+              console.log(page, pagination)
 
               if (!page) return null
 
@@ -52,9 +54,8 @@ export default function HorizonReadingContainer() {
                   <Img
                     fit="contain"
                     onClick={() => goToPage(1)}
-                    style={{ aspectRatio: page.width / page.height }}
-                    alt={page.imageUrl ?? ''}
-                    src={page.imageUrl ?? ''}
+                    alt={getImagePath(curDoujinshi, page.title)}
+                    src={getImagePath(curDoujinshi, page.title)}
                   />
                 </Box>
               )

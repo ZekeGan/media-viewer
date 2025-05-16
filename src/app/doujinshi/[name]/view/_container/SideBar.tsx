@@ -1,11 +1,11 @@
-import { Badge, Drawer, Paper, ScrollArea, Stack, Tooltip } from '@mantine/core'
 import { useEffect, useRef } from 'react'
-import { ObserverImg } from '@/components/ObserverImg'
-import { getImagePath } from '@/utils'
+import { Badge, Drawer, Paper, ScrollArea, Stack, Tooltip } from '@mantine/core'
 import scrollIntoView from 'scroll-into-view-if-needed'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { Img } from '@/components/Img'
+import { ObserverImg } from '@/components/ObserverImg'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { getImagePath } from '@/utils'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 export default function SideBar() {
@@ -35,7 +35,7 @@ export default function SideBar() {
       })
     }
 
-    setTimeout(() => tryScroll(), 0)
+    tryScroll()
   }, [curPageLabel, sideBarOpen])
 
   const goToPage = (label: string) => {
@@ -60,7 +60,6 @@ export default function SideBar() {
       withOverlay={false}
       padding={0}
       size="xs"
-      keepMounted
     >
       <ScrollArea h="100vh">
         <Stack gap="md" p="md">
@@ -72,6 +71,7 @@ export default function SideBar() {
               key={d.title}
               pos="relative"
               style={{
+                aspectRatio: d.width / d.height,
                 cursor: 'pointer',
                 overflow: 'hidden',
               }}

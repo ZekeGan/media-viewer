@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import axios from 'axios'
-import { notifications } from '@mantine/notifications'
-import { useGameData } from '@/context/gameContext'
 import { Flex, Grid, Paper } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
+import axios from 'axios'
+import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
 
 const len = 7

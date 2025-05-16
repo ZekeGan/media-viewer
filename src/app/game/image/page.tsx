@@ -1,7 +1,6 @@
 'use client'
 
 import { Box, Divider, Stack } from '@mantine/core'
-
 import { useGameData } from '@/context/gameContext'
 import GameImageContainer from './_container/GameImageContainer'
 

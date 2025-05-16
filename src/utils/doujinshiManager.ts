@@ -1,9 +1,9 @@
-import path from 'path'
 import fs from 'fs'
-import { DoujinshiPath } from '@/constants/env'
-import { nanoid } from 'nanoid'
-import { imgExt } from '@/constants'
 import imageSize from 'image-size'
+import { nanoid } from 'nanoid'
+import path from 'path'
+import { imgExt } from '@/constants'
+import { DoujinshiPath } from '@/constants/env'
 
 function parseTitle(str: string) {
   const result: IDoujinshiData = {

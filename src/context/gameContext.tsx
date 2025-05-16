@@ -1,17 +1,17 @@
 'use client'
 
-import { useHash } from '@mantine/hooks'
-import axios from 'axios'
-import { usePathname } from 'next/navigation'
 import {
-  createContext,
   Dispatch,
   ReactNode,
   SetStateAction,
+  createContext,
   useContext,
   useEffect,
   useState,
 } from 'react'
+import { usePathname } from 'next/navigation'
+import { useHash } from '@mantine/hooks'
+import axios from 'axios'
 
 type ContextValue = {
   gameList: IGameMeta[]

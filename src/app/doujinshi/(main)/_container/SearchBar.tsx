@@ -1,6 +1,5 @@
-import { doujinshiTypes } from '@/constants'
-import { doujinshiTypesColor } from '@/constants/style'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Button,
   Card,
@@ -10,8 +9,9 @@ import {
   PillsInput,
   Stack,
 } from '@mantine/core'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { doujinshiTypes } from '@/constants'
+import { doujinshiTypesColor } from '@/constants/style'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
 
 export default function SearchBar({}: {}) {
   const router = useRouter()

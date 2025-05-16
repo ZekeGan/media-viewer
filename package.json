@@ -32,6 +32,7 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^20.16.10",
     "@types/ramda": "^0.30.2",
     "@types/react": "^18.3.11",

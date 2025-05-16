@@ -1,6 +1,6 @@
+import noImg from '@/assets/no-image.jpg'
 import { useState } from 'react'
 import { Image, ImageProps, PolymorphicComponentProps } from '@mantine/core'
-import noImg from '@/assets/no-image.jpg'
 
 export function Img({
   src,

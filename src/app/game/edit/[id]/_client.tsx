@@ -1,7 +1,8 @@
 'use client'
 
+import { IconPlus } from '@tabler/icons-react'
 import { ChangeEvent, useMemo, useState } from 'react'
-import axios from 'axios'
+import { useRouter } from 'next/navigation'
 import {
   Accordion,
   ActionIcon,
@@ -19,15 +20,14 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { IconPlus } from '@tabler/icons-react'
-import { HeaderHeight, MainPadding } from '@/constants/style'
-import useWindowSize from '@/hooks/useWindowSize'
+import axios from 'axios'
 import { uniq } from 'ramda'
-import OpenFolderBtn from '@/components/OpenFolderBtn'
-import { useRouter } from 'next/navigation'
-import { GroupedFilterContainer } from '@/components/FilterContainer'
 import { useGameData } from '@/context/gameContext'
+import { HeaderHeight, MainPadding } from '@/constants/style'
+import { GroupedFilterContainer } from '@/components/FilterContainer'
+import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useTranslate } from '@/hooks/useTranslate'
+import useWindowSize from '@/hooks/useWindowSize'
 
 export default function EditCurGameClient({
   list,

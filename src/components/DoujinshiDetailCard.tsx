@@ -1,3 +1,5 @@
+import { Fragment, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Badge,
   Box,
@@ -12,11 +14,9 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { Fragment, useMemo } from 'react'
-import { Img } from './Img'
 import { doujinshiTypesColor } from '@/constants/style'
+import { Img } from './Img'
 import OpenFolderBtn from './OpenFolderBtn'
-import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function DoujinshiDetailCard({
   doujinshi,

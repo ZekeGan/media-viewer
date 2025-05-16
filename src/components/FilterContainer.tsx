@@ -1,9 +1,9 @@
 'use client'
 
-import { useTranslate } from '@/hooks/useTranslate'
-import { Accordion, Checkbox, Stack, Text } from '@mantine/core'
-import { nanoid } from 'nanoid'
 import { Dispatch, SetStateAction, useMemo } from 'react'
+import { Accordion, Checkbox, Stack } from '@mantine/core'
+import { nanoid } from 'nanoid'
+import { useTranslate } from '@/hooks/useTranslate'
 
 interface IFilterContainer {
   list: CheckList

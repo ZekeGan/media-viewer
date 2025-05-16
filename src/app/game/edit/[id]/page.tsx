@@ -1,7 +1,7 @@
 'use client'
 
-import EditCurGameClient from './_client'
 import { useGameData } from '@/context/gameContext'
+import EditCurGameClient from './_client'
 
 export default function EditPage({ params }: { params: { id: string } }) {
   const { gameList } = useGameData()

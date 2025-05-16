@@ -1,16 +1,16 @@
 'use client'
 
-import { nanoid } from 'nanoid'
-import { Box, Center, Divider, Flex, Stack } from '@mantine/core'
-import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
-import { ContentWidth } from '@/constants/style'
-import { useDoujinshi } from '@/context/doujinshiContext'
-import LoadingContainer from '@/components/LoadingContainer'
-import SearchBar from './_container/SearchBar'
 import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { Box, Center, Divider, Flex, Stack } from '@mantine/core'
+import { nanoid } from 'nanoid'
+import { useDoujinshi } from '@/context/doujinshiContext'
+import { ContentWidth } from '@/constants/style'
 import MainLayout from '@/layout/MainLayout'
+import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
+import LoadingContainer from '@/components/LoadingContainer'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import SearchBar from './_container/SearchBar'
 
 export default function EditPage() {
   const params = useSearchParams()

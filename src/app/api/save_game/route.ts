@@ -1,7 +1,7 @@
+import { NextResponse } from 'next/server'
 import fs from 'fs/promises'
 import path from 'path'
 import { downloadFile } from '@/utils/download'
-import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {

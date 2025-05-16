@@ -1,7 +1,7 @@
-import { HeaderHeight, MainPadding } from '@/constants/style'
-import { Box, Container, Flex, Group } from '@mantine/core'
-import Link from 'next/link'
 import { ReactNode } from 'react'
+import Link from 'next/link'
+import { Box, Container, Flex, Group } from '@mantine/core'
+import { HeaderHeight, MainPadding } from '@/constants/style'
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   return (

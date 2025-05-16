@@ -1,8 +1,8 @@
-import path from 'path'
 import fs from 'fs'
-import { GamePath } from '@/constants/env'
 import { nanoid } from 'nanoid'
+import path from 'path'
 import { imgExt } from '@/constants'
+import { GamePath } from '@/constants/env'
 
 export class GameManager {
   private _gameName: string = ''

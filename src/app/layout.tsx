@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { Noto_Sans_JP } from 'next/font/google'
-import { ColorSchemeScript, createTheme, MantineProvider } from '@mantine/core'
+import { ColorSchemeScript, MantineProvider, createTheme } from '@mantine/core'
+import '@mantine/core/styles.css'
 import { Notifications } from '@mantine/notifications'
 import '@mantine/notifications/styles.css'
-import '@mantine/core/styles.css'
 import './global.css'
 
 const notoSansJP = Noto_Sans_JP({

@@ -1,13 +1,13 @@
 import { useEffect } from 'react'
 import { Accordion, Stack } from '@mantine/core'
+import { useGameData } from '@/context/gameContext'
+import { defaultGameListOrder } from '@/constants'
 import {
   FilterContainer,
   GroupedFilterContainer,
 } from '@/components/FilterContainer'
 import { useCheckData } from '@/hooks/useCheckData'
-import { useGameData } from '@/context/gameContext'
 import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
-import { defaultGameListOrder } from '@/constants'
 
 export default function FilterListContainer() {
   const { gameList, setTempGameList } = useGameData()

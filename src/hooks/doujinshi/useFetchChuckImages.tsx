@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react'
+import axios from 'axios'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
-import axios from 'axios'
-import { useEffect, useState } from 'react'
 
 /**
  * 根據當前index往前後載入輸入單位的資料

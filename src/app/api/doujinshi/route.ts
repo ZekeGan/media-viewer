@@ -1,8 +1,8 @@
+import { NextResponse } from 'next/server'
 import fs from 'fs'
 import { DoujinshiPath } from '@/constants/env'
-import { DoujinshiManager } from '@/utils/doujinshiManager'
-import { NextResponse } from 'next/server'
 import { cacheTime } from '@/constants/server'
+import { DoujinshiManager } from '@/utils/doujinshiManager'
 
 export async function GET() {
   try {

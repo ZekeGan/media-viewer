@@ -1,14 +1,11 @@
+import noImg from '@/assets/no-image.jpg'
 import { useEffect, useRef, useState } from 'react'
 import {
+  Box,
   Image,
-  Skeleton,
   ImageProps,
   PolymorphicComponentProps,
-  Box,
-  Paper,
 } from '@mantine/core'
-import noImg from '@/assets/no-image.jpg'
-import LoadingContainer from './LoadingContainer'
 
 export const ObserverImg = ({
   src,
@@ -21,10 +18,6 @@ export const ObserverImg = ({
   const [imgSrc, setImgSrc] = useState<string | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const aspectRatio =
-    typeof w === 'number' && typeof h === 'number'
-      ? Number(w) / Number(h)
-      : 4 / 3
 
   // IntersectionObserver 啟動 lazy load
   useEffect(() => {
@@ -40,7 +33,6 @@ export const ObserverImg = ({
       },
       { threshold: 0.1 }
     )
-
     observer.observe(el)
     return () => observer.disconnect()
   }, [src])
@@ -56,11 +48,15 @@ export const ObserverImg = ({
   }
 
   return (
-    <Box ref={ref} style={{ aspectRatio }}>
+    <Box
+      ref={el => {
+        if (el) ref.current = el
+      }}
+      w="100%"
+      h="100%"
+    >
       {imgSrc && (
         <Image
-          w="100%"
-          h="100%"
           src={hasError ? noImg.src : imgSrc}
           alt={alt}
           onLoad={handleLoad}
@@ -68,6 +64,12 @@ export const ObserverImg = ({
           fit="contain"
           loading="lazy"
           {...props}
+          w="100%"
+          h="100%"
+          opacity={hasLoaded ? 1 : 0.5}
+          style={{
+            transition: 'opacity 0.5s ease',
+          }}
         />
       )}
     </Box>

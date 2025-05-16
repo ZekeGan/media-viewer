@@ -1,10 +1,10 @@
-import { doujinshiTypes } from '@/constants'
-import { getLabels } from '@/utils/doujinshiUtils'
 import { ComboboxItem } from '@mantine/core'
 import { readLocalStorageValue } from '@mantine/hooks'
 import axios from 'axios'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { doujinshiTypes } from '@/constants'
+import { getLabels } from '@/utils/doujinshiUtils'
 
 interface IPageSetting {
   pageCount: 1 | 2
@@ -113,6 +113,7 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
             i => i >= 0 && i < totalPage
           )
         }
+        console.log(curIdxs, pages, 'idxs')
 
         const allPageList = pages.flatMap((d, i) => {
           if (pageCount === 1 || i === 0 || i === totalPage - 1) {

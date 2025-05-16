@@ -1,11 +1,11 @@
+import { useEffect, useRef, useState } from 'react'
+import { Center, Paper, ScrollArea, Stack } from '@mantine/core'
+import scrollIntoView from 'scroll-into-view-if-needed'
 import LoadingContainer from '@/components/LoadingContainer'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
 import { getLabels } from '@/utils/doujinshiUtils'
-import { Box, Center, Paper, ScrollArea, Stack } from '@mantine/core'
-import { useEffect, useRef, useState } from 'react'
-import scrollIntoView from 'scroll-into-view-if-needed'
 
 export default function VerticalReadingContainer() {
   const pageCount = useDoujinshiStore(state => state.pageSetting.pageCount)
@@ -83,19 +83,20 @@ export default function VerticalReadingContainer() {
         >
           {curDoujinshi.meta.pages.map(d => (
             <Paper
-              withBorder
+              ref={el => {
+                if (el) itemsRef.current[d.title] = el
+              }}
+              // withBorder
               radius={0}
               key={d.title}
               id={d.title}
               flex={1}
-              ref={el => {
-                if (el) itemsRef.current[d.title] = el
-              }}
+              style={{ aspectRatio: d.width / d.height }}
             >
               <ObserverImg
-                style={{ aspectRatio: d.width / d.height }}
                 fit="contain"
                 src={getImagePath(curDoujinshi, d.title)}
+                style={{ aspectRatio: d.width / d.height }}
               />
             </Paper>
           ))}

@@ -1,20 +1,4 @@
 import {
-  ActionIcon,
-  ActionIconProps,
-  Box,
-  Button,
-  Dialog,
-  Divider,
-  Flex,
-  Modal,
-  PolymorphicComponentProps,
-  Select,
-  Text,
-  Tooltip,
-} from '@mantine/core'
-import { useHotkeys, useHover } from '@mantine/hooks'
-import { useEffect, useMemo, useState } from 'react'
-import {
   IconArrowBackUp,
   IconArrowsHorizontal,
   IconArrowsVertical,
@@ -34,9 +18,25 @@ import {
   IconWindowMaximize,
   IconWindowMinimize,
 } from '@tabler/icons-react'
-import { getLabels } from '@/utils/doujinshiUtils'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  ActionIcon,
+  ActionIconProps,
+  Box,
+  Button,
+  Dialog,
+  Divider,
+  Flex,
+  Modal,
+  PolymorphicComponentProps,
+  Select,
+  Text,
+  Tooltip,
+} from '@mantine/core'
+import { useHotkeys, useHover } from '@mantine/hooks'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
+import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { getLabels } from '@/utils/doujinshiUtils'
 
 const IconBtn = ({
   tooltip,
@@ -178,7 +178,6 @@ const ReadingDirectionController = () => {
       toggleSideBar(false)
       setPageSetting(prev => ({
         ...prev,
-        zoomRatio: 0.5,
         isVertical: true,
       }))
     }

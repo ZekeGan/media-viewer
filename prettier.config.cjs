@@ -9,4 +9,22 @@ module.exports = {
   arrowParens: 'avoid', // 只有一個參數時省略括號
   endOfLine: 'lf', // 使用 LF 作為換行符號
   bracketSameLine: false,
+
+  importOrder: [
+    '^react$',
+    '^next',
+    '^@mantine/(.*)$',
+    '^[a-zA-Z]',
+    '^@/context(.*)$',
+    '^@/constants(.*)$',
+    '^@/layout(.*)$',
+    '^@/components(.*)$',
+    '^@/hooks(.*)$',
+    '^@/store(.*)$',
+    '^@/utils(.*)$',
+    '^[./]',
+  ],
+  // importOrderSeparation: true,
+  importOrderSortSpecifiers: true,
+  plugins: ['@trivago/prettier-plugin-sort-imports'],
 }
