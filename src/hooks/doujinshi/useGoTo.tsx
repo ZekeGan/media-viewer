@@ -17,13 +17,12 @@ export const useGoTo = () => {
   const [hash, setHash] = useHash()
 
   const goTo = useCallback(
-    (label: string) => {
+    (label: string, vip: boolean = false) => {
       if (!curDoujinshi || label === '') return
 
       setCurPageLabel(label)
 
-      if (!pathname.includes('/view') || !isVertical) {
-        console.log('replace', pathname)
+      if (vip || !pathname.includes('/view') || !isVertical) {
         const url = `/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}/view#${label}`
         router.replace(url)
       }

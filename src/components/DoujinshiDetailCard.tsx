@@ -179,7 +179,7 @@ export default function DoujinshiDetailCard({
             })}
           </Grid>
           <Flex justify="end" mt="auto">
-            <OpenFolderBtn folderPath={root} />
+            <OpenFolderBtn folderPath={root} variant="light" color="gray" />
           </Flex>
         </Flex>
       </Flex>

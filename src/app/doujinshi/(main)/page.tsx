@@ -1,13 +1,28 @@
 'use client'
 
-import { useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Box, Center, Divider, Flex, Stack, Text } from '@mantine/core'
-import { IconSearch } from '@tabler/icons-react'
+import { useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  Anchor,
+  Badge,
+  Box,
+  Breadcrumbs,
+  Card,
+  Center,
+  Divider,
+  Flex,
+  Grid,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+} from '@mantine/core'
+import { IconChevronRight, IconHome, IconSearch } from '@tabler/icons-react'
 import { nanoid } from 'nanoid'
-import { ContentWidth } from '@/constants/style'
+import { ContentWidth, doujinshiTypesColor } from '@/constants/style'
 import MainLayout from '@/layout/MainLayout'
 import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
+import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import SearchBar from './_container/SearchBar'
@@ -15,6 +30,8 @@ import SearchBar from './_container/SearchBar'
 export default function MainPage() {
   const params = useSearchParams()
   const doujinshiList = useDoujinshiStore(s => s.doujinshiList)
+  const [displayMode, setDisplayMode] = useState('thumbnail')
+  const router = useRouter()
 
   const search = useMemo(
     () => (params.get('tags') ? params.get('tags')!.split(',') : []),
@@ -23,7 +40,11 @@ export default function MainPage() {
 
   const data = useMemo(() => {
     if (!doujinshiList) return undefined
-    if (search.length === 0) return doujinshiList
+    const doujin = doujinshiList.sort((a, b) =>
+      a.data.id > b.data.id ? -1 : 1
+    )
+
+    if (search.length === 0) return doujin
 
     const map = new Map<string, string[]>()
     search.forEach(d => {
@@ -38,7 +59,7 @@ export default function MainPage() {
       }
     })
 
-    let filteredDoujinshi: IDoujinshiMeta[] = doujinshiList
+    let filteredDoujinshi: IDoujinshiMeta[] = doujin
 
     // 先把types給過濾出來
     if (map.has('types')) {
@@ -90,17 +111,41 @@ export default function MainPage() {
     return filteredDoujinshi
   }, [doujinshiList, search])
 
+  const items = [
+    { title: <IconHome />, href: '/' },
+    { title: '同人誌', href: '/doujinshi' },
+  ].map((item, index) => (
+    <Anchor href={item.href} key={index} size="sm" c="gray">
+      {item.title}
+    </Anchor>
+  ))
+
   if (!data) return <LoadingContainer />
-  console.log('main')
 
   return (
     <MainLayout>
       <Divider my="md" size="md" label={`總數量 ${data.length} 個`} />
+      <Center>
+        <Flex w={ContentWidth} justify="space-between">
+          <Breadcrumbs separator={<IconChevronRight />}>{items}</Breadcrumbs>
+          <Select
+            checkIconPosition="right"
+            allowDeselect={false}
+            w="4rem"
+            size="xs"
+            data={['5', '6', '7', '8', '9', '10']}
+            // defaultValue={detailCountPerRows.toString()}
+            // onChange={e => setDetailCountPerRows(Number(e))}
+          />
+        </Flex>
+      </Center>
+
       <Center p="md">
         <Box w={ContentWidth}>
           <SearchBar />
         </Box>
       </Center>
+
       <Center flex={1}>
         <Stack w={ContentWidth}>
           <Stack flex={1}>
@@ -112,13 +157,76 @@ export default function MainPage() {
                 </Flex>
               </Center>
             ) : (
-              data.map(item => (
-                <DoujinshiDetailCard
-                  key={nanoid()}
-                  doujinshi={item}
-                  cardType="list"
-                />
-              ))
+              <>
+                {displayMode === 'extended' && (
+                  <Stack>
+                    {data.map(item => (
+                      <DoujinshiDetailCard
+                        key={nanoid()}
+                        doujinshi={item}
+                        cardType="list"
+                      />
+                    ))}
+                  </Stack>
+                )}
+
+                {displayMode === 'thumbnail' && (
+                  <SimpleGrid cols={5}>
+                    {data.map(item => {
+                      const {
+                        data: { title, types },
+                        meta: { root, coverName, pages },
+                      } = item
+                      return (
+                        <Card key={nanoid()} p="xs">
+                          <Card.Section>
+                            <Box
+                              className="hover-box"
+                              onClick={() =>
+                                router.push(
+                                  `/doujinshi/${encodeURIComponent(title)}`
+                                )
+                              }
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <Img
+                                w="100%"
+                                h="100%"
+                                fit="contain"
+                                src={`/api/image/?path=${encodeURIComponent(`${root}/_meta/${coverName}`)}`}
+                                alt={title}
+                              />
+                            </Box>
+                          </Card.Section>
+
+                          <Stack flex={1} justify="space-between">
+                            <Box />
+                            <Box>
+                              <Text size="sm">{title}</Text>
+
+                              <Flex
+                                justify="space-between"
+                                align="center"
+                                mt="lg"
+                              >
+                                <Badge
+                                  classNames={{ label: 'capitalize' }}
+                                  radius="sm"
+                                  color={doujinshiTypesColor[types]}
+                                >
+                                  {types}
+                                </Badge>
+
+                                <Text size="sm">{pages.length} 頁</Text>
+                              </Flex>
+                            </Box>
+                          </Stack>
+                        </Card>
+                      )
+                    })}
+                  </SimpleGrid>
+                )}
+              </>
             )}
           </Stack>
         </Stack>

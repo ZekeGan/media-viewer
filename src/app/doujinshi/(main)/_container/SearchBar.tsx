@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import {
-  Button,
-  Card,
-  Center,
-  Flex,
-  Pill,
-  PillsInput,
-  Stack,
-} from '@mantine/core'
+import { Button, Card, Center, Flex, Input, Stack } from '@mantine/core'
 import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
@@ -27,11 +19,19 @@ export default function SearchBar() {
       isSelected: searchTypes.includes(d),
     }))
   )
-  const [inputData, setInputData] = useState<string[]>([])
+  const [inputData, setInputData] = useState<string>('')
 
   // get tags from url
   useEffect(() => {
-    setInputData(params.get('tags') ? params.get('tags')!.split(',') : [])
+    if (!params.get('tags')) return
+
+    const str = params
+      .get('tags')!
+      .split(',')
+      .filter(s => !s.startsWith('types:'))
+      .join(',')
+
+    setInputData(str)
   }, [params])
 
   const onChangeSearchTypes = (val: string) => {
@@ -47,10 +47,15 @@ export default function SearchBar() {
   }
 
   const onSearch = () => {
+    console.log('search')
+
     const typesParams = types.every(d => d.isSelected)
       ? []
       : types.filter(d => d.isSelected).map(d => `types:${d.value}`)
-    router.push(`/doujinshi?tags=${[...typesParams, ...inputData].join(',')}`)
+
+    router.push(
+      `/doujinshi?tags=${[...typesParams, ...inputData.split(',')].join(',')}`
+    )
   }
 
   return (
@@ -73,36 +78,14 @@ export default function SearchBar() {
           </Flex>
 
           <Flex gap="md">
-            <PillsInput flex={1}>
-              <Pill.Group>
-                {inputData.map(d => (
-                  <Pill
-                    key={d}
-                    withRemoveButton
-                    onRemove={() => {
-                      setInputData(p => p.filter(p => p !== d))
-                    }}
-                  >
-                    {d}
-                  </Pill>
-                ))}
-                <PillsInput.Field
-                  placeholder="Enter tags"
-                  onKeyDown={e => {
-                    if (e.code === 'Enter') onSearch()
-                  }}
-                  onChange={e => {
-                    const [value, ...rest] = e.currentTarget.value.split(' ')
-                    if (rest.length > 0) {
-                      setInputData(p =>
-                        Array.from(new Set<string>([...p, value]))
-                      )
-                      e.currentTarget.value = rest.join('')
-                    }
-                  }}
-                />
-              </Pill.Group>
-            </PillsInput>
+            <Input
+              flex={1}
+              value={inputData}
+              placeholder="使用 , 區分"
+              onChange={e => setInputData(e.currentTarget.value)}
+              onKeyDown={e => e.key === 'Enter' && onSearch()}
+            />
+
             <Button variant="filled" color="gray" onClick={() => onSearch()}>
               搜尋
             </Button>

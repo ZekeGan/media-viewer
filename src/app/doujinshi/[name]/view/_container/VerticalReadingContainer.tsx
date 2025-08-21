@@ -10,6 +10,7 @@ import { getImagePath } from '@/utils'
 export default function VerticalReadingContainer() {
   const isFullWidth = useDoujinshiStore(state => state.pageSetting.isFullWidth)
   const zoomRatio = useDoujinshiStore(state => state.pageSetting.zoomRatio)
+  const isBorder = useDoujinshiStore(state => state.pageSetting.isBorder)
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -90,7 +91,7 @@ export default function VerticalReadingContainer() {
               id={d.title}
               flex={1}
               style={{ aspectRatio: d.width / d.height }}
-              // withBorder
+              withBorder={isBorder}
             >
               <ObserverImg
                 fit="contain"

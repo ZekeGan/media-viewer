@@ -20,6 +20,7 @@ import {
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconArrowsVertical,
+  IconBorderCorners,
   IconBounceLeft,
   IconCaretDownFilled,
   IconCaretLeftFilled,
@@ -29,6 +30,7 @@ import {
   IconCarouselVertical,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
+  IconSquare,
   IconSquareNumber1,
   IconSquareNumber2,
   IconTool,
@@ -123,6 +125,7 @@ const ImageRatioController = () => {
 
 const FitWidthController = () => {
   const setPageSetting = useDoujinshiStore(s => s.setPageSetting)
+  const isFullWidth = useDoujinshiStore(s => s.pageSetting.isFullWidth)
 
   const setFullWidth = () => {
     setPageSetting(prev => ({
@@ -136,7 +139,11 @@ const FitWidthController = () => {
   useHotkeys([['W', () => setFullWidth()]])
 
   return (
-    <IconBtn tooltip="圖片貼合裝置寬度 / W" onClick={() => setFullWidth()}>
+    <IconBtn
+      toggleStyle={isFullWidth}
+      tooltip="圖片貼合裝置寬度 / W"
+      onClick={() => setFullWidth()}
+    >
       <IconArrowsHorizontal />
     </IconBtn>
   )
@@ -144,6 +151,7 @@ const FitWidthController = () => {
 
 const FitHeightController = () => {
   const isVertical = useDoujinshiStore(s => s.pageSetting.isVertical)
+  const isFullHeight = useDoujinshiStore(s => s.pageSetting.isFullHeight)
   const setPageSetting = useDoujinshiStore(s => s.setPageSetting)
 
   const setFullHeight = () => {
@@ -160,6 +168,7 @@ const FitHeightController = () => {
   return (
     <IconBtn
       disabled={isVertical}
+      toggleStyle={isFullHeight}
       tooltip="圖片貼合裝置高度 / H"
       onClick={() => setFullHeight()}
     >
@@ -215,15 +224,39 @@ const FullScreenController = () => {
 
   return (
     <IconBtn
-      tooltip="全螢幕 / F"
+      tooltip={`${!isFullscreen ? '開啟' : '關閉'}全螢幕 / F`}
       toggleStyle={isFullscreen}
       onClick={() => setFullscreen()}
     >
-      {!isFullscreen ? <IconArrowsMaximize /> : <IconArrowsMinimize />}
+      <IconBorderCorners />
     </IconBtn>
   )
 }
 
+const BorderDisplayController = () => {
+  const isBorder = useDoujinshiStore(state => state.pageSetting.isBorder)
+  const setPageSetting = useDoujinshiStore(state => state.setPageSetting)
+
+  const setBorderDisplay = () => {
+    setPageSetting(prev => ({
+      ...prev,
+      isBorder: !prev.isBorder,
+    }))
+  }
+
+  useHotkeys([['B', () => setBorderDisplay()]])
+
+  return (
+    <IconBtn
+      // disabled={isVertical}
+      tooltip={`${!isBorder ? '開啟' : '關閉'}邊框 / B`}
+      toggleStyle={isBorder}
+      onClick={() => setBorderDisplay()}
+    >
+      <IconSquare />
+    </IconBtn>
+  )
+}
 const PageDisplayController = () => {
   const pageCount = useDoujinshiStore(state => state.pageSetting.pageCount)
   const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
@@ -262,7 +295,7 @@ const JumpToController = () => {
   const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
   const pagination = useDoujinshiStore(s => s.pagination)
   const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
-  const { setHash } = useGoTo()
+  const { goTo } = useGoTo()
 
   const [isOpenJumpToModal, setIsOpenJumpToModal] = useState(false)
 
@@ -278,7 +311,7 @@ const JumpToController = () => {
       pageCount,
       curLabel: v,
     }).labels
-    setHash(labels)
+    goTo(labels, true)
     setIsOpenJumpToModal(false)
   }
 
@@ -382,6 +415,8 @@ export default function ToolBar() {
             <JumpToController />
 
             <Divider orientation="vertical" />
+
+            <BorderDisplayController />
 
             <FullScreenController />
           </Flex>

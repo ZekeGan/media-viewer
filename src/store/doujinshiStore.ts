@@ -12,6 +12,7 @@ interface IPageSetting {
   isFullHeight: boolean
   zoomRatio: number
   isVertical: boolean
+  isBorder: boolean
 }
 
 interface Pagination {
@@ -64,6 +65,7 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
         isFullHeight: true,
         zoomRatio: 1,
         isVertical: false,
+        isBorder: false,
       },
       setPageSetting: cb => {
         const newState = cb(get().pageSetting)

@@ -18,8 +18,6 @@ export default function SettingModal({
   openSetting: boolean
   setOpenSetting: (value: SetStateAction<boolean>) => void
 }) {
-  const detailCountPerRows = useDoujinshiStore(s => s.detailCountPerRows)
-  const setDetailCountPerRows = useDoujinshiStore(s => s.setDetailCountPerRows)
   const toolBarOpacity = useDoujinshiStore(s => s.toolBarOpacity)
   const setToolBarOpacity = useDoujinshiStore(s => s.setToolBarOpacity)
 
@@ -33,23 +31,6 @@ export default function SettingModal({
       <Title order={3}>同人誌</Title>
       <Divider size="xs" my="md" />
       <Grid mt="md" gutter="xl">
-        <Grid.Col span={6}>
-          <Flex h="100%" align="center">
-            <Text size="sm">同人誌詳情頁每 Row 數量</Text>
-          </Flex>
-        </Grid.Col>
-        <Grid.Col span={6}>
-          <Select
-            checkIconPosition="right"
-            allowDeselect={false}
-            data={['5', '6', '7', '8', '9', '10']}
-            defaultValue={detailCountPerRows.toString()}
-            onChange={e => setDetailCountPerRows(Number(e))}
-          />
-        </Grid.Col>
-
-        <Divider size="xs" my="md" />
-
         <Grid.Col span={6}>
           <Flex h="100%" align="center">
             <Text size="sm">檢視頁工具列透明度</Text>

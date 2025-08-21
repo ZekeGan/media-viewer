@@ -8,7 +8,9 @@ import {
   Card,
   Center,
   Flex,
+  Group,
   Paper,
+  Select,
   SimpleGrid,
   Skeleton,
   Text,
@@ -28,6 +30,7 @@ export default function DetailPage() {
   const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
   const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
   const detailCountPerRows = useDoujinshiStore(s => s.detailCountPerRows)
+  const setDetailCountPerRows = useDoujinshiStore(s => s.setDetailCountPerRows)
   const { visibleData, loaderRef } = useFetchInfiniteImages()
   const { goTo, setHash } = useGoTo()
 
@@ -46,11 +49,15 @@ export default function DetailPage() {
     { title: '同人誌', href: '/doujinshi' },
   ]
     .map((item, index) => (
-      <Anchor href={item.href} key={index} c="gray">
+      <Anchor href={item.href} key={index} size="sm" c="gray">
         {item.title}
       </Anchor>
     ))
-    .concat(<Text key="current">{curDoujinshi?.data.title}</Text>)
+    .concat(
+      <Text size="sm" key="current">
+        {curDoujinshi?.data.title}
+      </Text>
+    )
 
   useEffect(() => {
     setCurPageLabel('')
@@ -61,7 +68,21 @@ export default function DetailPage() {
     <MainLayout>
       <Center>
         <Flex miw={600} w={1200} direction="column" gap="xs" my="lg">
-          <Breadcrumbs separator={<IconChevronRight />}>{items}</Breadcrumbs>
+          <Flex justify="space-between">
+            <Breadcrumbs separator={<IconChevronRight />}>{items}</Breadcrumbs>
+            <Group gap="sm">
+              <Text size="sm">Row數量</Text>
+              <Select
+                checkIconPosition="right"
+                allowDeselect={false}
+                w="4rem"
+                size="xs"
+                data={['5', '6', '7', '8', '9', '10']}
+                defaultValue={detailCountPerRows.toString()}
+                onChange={e => setDetailCountPerRows(Number(e))}
+              />
+            </Group>
+          </Flex>
           <DoujinshiDetailCard doujinshi={curDoujinshi} cardType="single" />
           {!curDoujinshi || !visibleData ? (
             <Skeleton height={500} radius="md" />
