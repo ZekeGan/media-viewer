@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Autocomplete,
+  Box,
   Button,
   Divider,
   Flex,
@@ -78,7 +79,7 @@ export default function Page() {
   }
 
   return (
-    <div>
+    <Box p="md">
       <Flex justify="end">
         <Button onClick={saveTags}>儲存</Button>
       </Flex>
@@ -100,7 +101,7 @@ export default function Page() {
           <Grid
             key={d._key}
             align="center"
-            bg={idx % 2 === 0 ? '#eee' : ''}
+            bg={idx % 2 === 0 ? 'dark' : ''}
             p="sm"
           >
             <Grid.Col span={2}>
@@ -138,7 +139,7 @@ export default function Page() {
           <Grid
             key={d._key}
             align="center"
-            bg={idx % 2 === 0 ? '#eee' : ''}
+            bg={idx % 2 === 0 ? 'dark' : ''}
             p="sm"
           >
             <Grid.Col span={2}>
@@ -163,6 +164,6 @@ export default function Page() {
           </Grid>
         ))}
       </Flex>
-    </div>
+    </Box>
   )
 }

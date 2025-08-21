@@ -87,7 +87,11 @@ export default function DoujinshiDetailCard({
   return (
     <Card key={id} shadow="sm" p={0} radius="md" withBorder>
       <Flex flex={1}>
-        <Center w={props.imageWRatio} p="sm">
+        <Center
+          w={props.imageWRatio}
+          p="sm"
+          display={{ base: 'none', md: 'flex' }}
+        >
           <Box
             className={props.imageStyle}
             onClick={props.imageOnClick}
@@ -103,11 +107,14 @@ export default function DoujinshiDetailCard({
           </Box>
         </Center>
 
-        <Divider orientation="vertical" />
+        <Divider
+          orientation="vertical"
+          display={{ base: 'none', md: 'block' }}
+        />
 
         <Flex flex={1} p="sm" direction="column" gap="sm">
           <Grid>
-            <Grid.Col span={2}>
+            <Grid.Col span={3}>
               <Badge
                 classNames={{ label: 'capitalize' }}
                 size="lg"
@@ -117,7 +124,8 @@ export default function DoujinshiDetailCard({
                 {types}
               </Badge>
             </Grid.Col>
-            <Grid.Col span={10}>
+
+            <Grid.Col span={9}>
               <Title order={5}>
                 <Highlight inherit highlight={hightlight}>
                   {title}
@@ -125,10 +133,11 @@ export default function DoujinshiDetailCard({
               </Title>
             </Grid.Col>
 
-            <Grid.Col span={2}>
+            <Grid.Col span={3}>
               <Text size="sm">Pages</Text>
             </Grid.Col>
-            <Grid.Col span={10}>
+
+            <Grid.Col span={9}>
               <Flex pl={5}>
                 <Text fw="bold" size="sm">
                   {pages.length} 頁
@@ -140,12 +149,13 @@ export default function DoujinshiDetailCard({
               if (d.data.length === 0) return null
               return (
                 <Fragment key={d.key}>
-                  <Grid.Col span={2}>
+                  <Grid.Col span={3}>
                     <Text className="capitalize" size="sm">
                       {d.key}
                     </Text>
                   </Grid.Col>
-                  <Grid.Col span={10}>
+
+                  <Grid.Col span={9}>
                     <Flex flex={1} wrap="wrap" gap="sm">
                       {d.data.map(t => (
                         <Badge
@@ -168,10 +178,9 @@ export default function DoujinshiDetailCard({
               )
             })}
           </Grid>
-        </Flex>
-
-        <Flex p="sm" align="end">
-          <OpenFolderBtn folderPath={root} />
+          <Flex justify="end" mt="auto">
+            <OpenFolderBtn folderPath={root} />
+          </Flex>
         </Flex>
       </Flex>
     </Card>

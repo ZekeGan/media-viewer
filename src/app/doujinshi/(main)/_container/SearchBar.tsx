@@ -13,7 +13,7 @@ import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 
-export default function SearchBar({}: {}) {
+export default function SearchBar() {
   const router = useRouter()
   const params = useSearchParams()
   const searchTypes = useDoujinshiStore(state => state.searchTypes)
@@ -27,16 +27,9 @@ export default function SearchBar({}: {}) {
       isSelected: searchTypes.includes(d),
     }))
   )
-
   const [inputData, setInputData] = useState<string[]>([])
 
-  const toggleSearch = () => {
-    const typesParams = types.every(d => d.isSelected)
-      ? []
-      : types.filter(d => d.isSelected).map(d => `types:${d.value}`)
-    router.push(`/doujinshi?tags=${[...typesParams, ...inputData].join(',')}`)
-  }
-
+  // get tags from url
   useEffect(() => {
     setInputData(params.get('tags') ? params.get('tags')!.split(',') : [])
   }, [params])
@@ -53,7 +46,12 @@ export default function SearchBar({}: {}) {
     )
   }
 
-  console.log('searchbar')
+  const onSearch = () => {
+    const typesParams = types.every(d => d.isSelected)
+      ? []
+      : types.filter(d => d.isSelected).map(d => `types:${d.value}`)
+    router.push(`/doujinshi?tags=${[...typesParams, ...inputData].join(',')}`)
+  }
 
   return (
     <Card shadow="sm" radius="md" withBorder>
@@ -90,6 +88,9 @@ export default function SearchBar({}: {}) {
                 ))}
                 <PillsInput.Field
                   placeholder="Enter tags"
+                  onKeyDown={e => {
+                    if (e.code === 'Enter') onSearch()
+                  }}
                   onChange={e => {
                     const [value, ...rest] = e.currentTarget.value.split(' ')
                     if (rest.length > 0) {
@@ -102,11 +103,7 @@ export default function SearchBar({}: {}) {
                 />
               </Pill.Group>
             </PillsInput>
-            <Button
-              variant="filled"
-              color="gray"
-              onClick={() => toggleSearch()}
-            >
+            <Button variant="filled" color="gray" onClick={() => onSearch()}>
               搜尋
             </Button>
           </Flex>

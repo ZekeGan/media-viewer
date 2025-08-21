@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Box, Center, Divider, Flex, Stack } from '@mantine/core'
+import { Box, Center, Divider, Flex, Stack, Text } from '@mantine/core'
+import { IconSearch } from '@tabler/icons-react'
 import { nanoid } from 'nanoid'
-import { useDoujinshi } from '@/context/doujinshiContext'
 import { ContentWidth } from '@/constants/style'
 import MainLayout from '@/layout/MainLayout'
 import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
@@ -12,7 +12,7 @@ import LoadingContainer from '@/components/LoadingContainer'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import SearchBar from './_container/SearchBar'
 
-export default function EditPage() {
+export default function MainPage() {
   const params = useSearchParams()
   const doujinshiList = useDoujinshiStore(s => s.doujinshiList)
 
@@ -95,23 +95,34 @@ export default function EditPage() {
 
   return (
     <MainLayout>
-      <Flex direction="column">
-        <Divider mb="md" size="md" label={`總數量 ${data.length} 個`} />
-        <Center>
-          <Box w={ContentWidth}>
-            <SearchBar />
-            <Stack mt="md">
-              {data.map(item => (
+      <Divider my="md" size="md" label={`總數量 ${data.length} 個`} />
+      <Center p="md">
+        <Box w={ContentWidth}>
+          <SearchBar />
+        </Box>
+      </Center>
+      <Center flex={1}>
+        <Stack w={ContentWidth}>
+          <Stack flex={1}>
+            {data.length === 0 ? (
+              <Center h="100%">
+                <Flex gap="sm" mt="md">
+                  <IconSearch />
+                  <Text>沒有找到任何作品</Text>
+                </Flex>
+              </Center>
+            ) : (
+              data.map(item => (
                 <DoujinshiDetailCard
                   key={nanoid()}
                   doujinshi={item}
                   cardType="list"
                 />
-              ))}
-            </Stack>
-          </Box>
-        </Center>
-      </Flex>
+              ))
+            )}
+          </Stack>
+        </Stack>
+      </Center>
     </MainLayout>
   )
 }

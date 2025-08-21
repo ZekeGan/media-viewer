@@ -1,8 +1,26 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  ActionIcon,
+  ActionIconProps,
+  Box,
+  Divider,
+  Flex,
+  Menu,
+  Modal,
+  PolymorphicComponentProps,
+  ScrollArea,
+  Select,
+  Stack,
+  Tooltip,
+} from '@mantine/core'
+import { useHotkeys } from '@mantine/hooks'
 import {
   IconArrowBackUp,
   IconArrowsHorizontal,
+  IconArrowsMaximize,
+  IconArrowsMinimize,
   IconArrowsVertical,
-  IconBike,
+  IconBounceLeft,
   IconCaretDownFilled,
   IconCaretLeftFilled,
   IconCaretRightFilled,
@@ -11,38 +29,20 @@ import {
   IconCarouselVertical,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconPinFilled,
-  IconPinnedFilled,
   IconSquareNumber1,
   IconSquareNumber2,
-  IconWindowMaximize,
-  IconWindowMinimize,
+  IconTool,
 } from '@tabler/icons-react'
-import { useEffect, useMemo, useState } from 'react'
-import {
-  ActionIcon,
-  ActionIconProps,
-  Box,
-  Button,
-  Dialog,
-  Divider,
-  Flex,
-  Modal,
-  PolymorphicComponentProps,
-  Select,
-  Text,
-  Tooltip,
-} from '@mantine/core'
-import { useHotkeys, useHover } from '@mantine/hooks'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 const IconBtn = ({
+  toggleStyle,
   tooltip,
   children,
   ...rest
-}: { tooltip: string } & PolymorphicComponentProps<
+}: { tooltip: string; toggleStyle?: boolean } & PolymorphicComponentProps<
   'button',
   ActionIconProps
 >) => {
@@ -50,10 +50,14 @@ const IconBtn = ({
     <Tooltip
       floatingStrategy="absolute"
       label={tooltip}
-      openDelay={1000}
-      transitionProps={{ duration: 300 }}
+      openDelay={500}
+      transitionProps={{ duration: 200 }}
     >
-      <ActionIcon size="lg" variant="light" {...rest}>
+      <ActionIcon
+        color={toggleStyle ? 'yellow' : 'gray'}
+        variant="subtle"
+        {...rest}
+      >
         {children}
       </ActionIcon>
     </Tooltip>
@@ -81,13 +85,14 @@ const ImageRatioController = () => {
 
   return (
     <Tooltip
-      label="圖片放大縮小"
+      label="圖片放大縮小 / -  +"
       openDelay={400}
       transitionProps={{ duration: 400 }}
     >
       <ActionIcon.Group>
         <ActionIcon
           variant="light"
+          color="gray"
           size="lg"
           onClick={() => setZoomRatio(zoomRatio - 0.1)}
         >
@@ -106,6 +111,7 @@ const ImageRatioController = () => {
         <ActionIcon
           variant="light"
           size="lg"
+          color="gray"
           onClick={() => setZoomRatio(zoomRatio + 0.1)}
         >
           <IconCaretUpFilled />
@@ -130,7 +136,7 @@ const FitWidthController = () => {
   useHotkeys([['W', () => setFullWidth()]])
 
   return (
-    <IconBtn tooltip="圖片貼合裝置寬度" onClick={() => setFullWidth()}>
+    <IconBtn tooltip="圖片貼合裝置寬度 / W" onClick={() => setFullWidth()}>
       <IconArrowsHorizontal />
     </IconBtn>
   )
@@ -154,7 +160,7 @@ const FitHeightController = () => {
   return (
     <IconBtn
       disabled={isVertical}
-      tooltip="圖片貼合裝置高度"
+      tooltip="圖片貼合裝置高度 / H"
       onClick={() => setFullHeight()}
     >
       <IconArrowsVertical />
@@ -165,9 +171,8 @@ const FitHeightController = () => {
 const ReadingDirectionController = () => {
   const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
   const setPageSetting = useDoujinshiStore(state => state.setPageSetting)
-  const toggleSideBar = useDoujinshiStore(state => state.toggleSideBar)
 
-  const setReadingDirection = () => {
+  const setReadingDirection = useCallback(() => {
     if (isVertical) {
       setPageSetting(prev => ({
         ...prev,
@@ -175,18 +180,18 @@ const ReadingDirectionController = () => {
         isVertical: false,
       }))
     } else {
-      toggleSideBar(false)
       setPageSetting(prev => ({
         ...prev,
         isVertical: true,
+        zoomRatio: 0.5,
       }))
     }
-  }
+  }, [isVertical, setPageSetting])
 
   useHotkeys([['R', () => setReadingDirection()]])
 
   return (
-    <IconBtn tooltip="切換直/橫閱讀" onClick={() => setReadingDirection()}>
+    <IconBtn tooltip="切換直(橫)閱讀 / R" onClick={() => setReadingDirection()}>
       {isVertical ? <IconCarouselHorizontal /> : <IconCarouselVertical />}
     </IconBtn>
   )
@@ -210,32 +215,11 @@ const FullScreenController = () => {
 
   return (
     <IconBtn
-      tooltip="全螢幕"
-      color={isFullscreen ? 'yellow' : ''}
+      tooltip="全螢幕 / F"
+      toggleStyle={isFullscreen}
       onClick={() => setFullscreen()}
     >
-      {!isFullscreen ? <IconWindowMinimize /> : <IconWindowMaximize />}
-    </IconBtn>
-  )
-}
-
-const SideBarController = () => {
-  const isVertical = useDoujinshiStore(state => state.pageSetting.isVertical)
-  const sideBarOpen = useDoujinshiStore(state => state.sideBarOpen)
-  const toggleSideBar = useDoujinshiStore(state => state.toggleSideBar)
-
-  return (
-    <IconBtn
-      tooltip="打開側邊欄"
-      disabled={isVertical}
-      onClick={() => toggleSideBar()}
-      color={sideBarOpen ? 'yellow' : ''}
-    >
-      {sideBarOpen ? (
-        <IconLayoutSidebarLeftExpand />
-      ) : (
-        <IconLayoutSidebarLeftCollapse />
-      )}
+      {!isFullscreen ? <IconArrowsMaximize /> : <IconArrowsMinimize />}
     </IconBtn>
   )
 }
@@ -246,9 +230,8 @@ const PageDisplayController = () => {
   const setPageSetting = useDoujinshiStore(state => state.setPageSetting)
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
-  const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
   const pagination = useDoujinshiStore(s => s.pagination)
-  const { goToSpecificPage } = useGoTo()
+  const { setHash } = useGoTo()
 
   const onChagePageDisplay = () => {
     if (!pagination || !curDoujinshi) return
@@ -257,9 +240,8 @@ const PageDisplayController = () => {
       pageCount: pageCount === 1 ? 2 : 1,
       curLabel: curPageLabel.split('-')[0],
     }).labels
-    setCurPageLabel(labels)
     setPageSetting(prev => ({ ...prev, pageCount: pageCount === 1 ? 2 : 1 }))
-    goToSpecificPage(labels)
+    setHash(labels)
   }
 
   useHotkeys([['D', () => onChagePageDisplay()]])
@@ -267,7 +249,7 @@ const PageDisplayController = () => {
   return (
     <IconBtn
       disabled={isVertical}
-      tooltip="切換單/雙畫面"
+      tooltip="切換單(雙)畫面 / D"
       onClick={() => onChagePageDisplay()}
     >
       {pageCount === 1 ? <IconSquareNumber1 /> : <IconSquareNumber2 />}
@@ -275,15 +257,12 @@ const PageDisplayController = () => {
   )
 }
 
-export default function ToolBar() {
-  const pagination = useDoujinshiStore(s => s.pagination)
+const JumpToController = () => {
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
-  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
   const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
-  const { goToGallery, goToPage, goToSpecificPage } = useGoTo()
-  const { hovered: targetHover, ref: targetRef } = useHover()
-  const { hovered: menuHovered, ref: menuRef } = useHover()
-  const [pinToolBar, setPinToolBar] = useState(false)
+  const pagination = useDoujinshiStore(s => s.pagination)
+  const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
+  const { setHash } = useGoTo()
 
   const [isOpenJumpToModal, setIsOpenJumpToModal] = useState(false)
 
@@ -299,102 +278,27 @@ export default function ToolBar() {
       pageCount,
       curLabel: v,
     }).labels
-    goToSpecificPage(labels)
+    setHash(labels)
     setIsOpenJumpToModal(false)
   }
 
-  useHotkeys([
-    ['Backspace', () => goToGallery()],
-    ['ArrowLeft', () => goToPage(1)],
-    ['ArrowRight', () => goToPage(-1)],
-    ['M', () => setPinToolBar(!pinToolBar)],
-    ['G', () => setIsOpenJumpToModal(!isOpenJumpToModal)],
-  ])
+  useHotkeys([['G', () => setIsOpenJumpToModal(!isOpenJumpToModal)]])
 
   if (!pagination) return null
 
   return (
     <>
-      <Box
-        ref={targetRef}
-        pos="fixed"
-        right={0}
-        bottom="20px"
-        w="100%"
-        h="10%"
-      />
-
-      <Dialog
-        position={{ bottom: 20, right: 20 }}
-        w="fit-content"
-        ref={menuRef}
-        size="lg"
-        p="lg"
-        radius="lg"
-        opened={pinToolBar || targetHover || menuHovered}
-        // keepMounted
-        // opacity={0.5}
+      <IconBtn
+        tooltip="前往頁數 / G"
+        onClick={() => setIsOpenJumpToModal(true)}
       >
-        <Flex gap="md">
-          {/* 返回首頁 */}
-          <IconBtn tooltip="返回首頁" onClick={() => goToGallery()}>
-            <IconArrowBackUp />
-          </IconBtn>
-
-          <Divider orientation="vertical" />
-
-          {/* 下一頁 */}
-          <IconBtn tooltip="下一頁" onClick={() => goToPage(1)}>
-            <IconCaretLeftFilled />
-          </IconBtn>
-
-          {/* 上一頁 */}
-          <IconBtn tooltip="上一頁" onClick={() => goToPage(-1)}>
-            <IconCaretRightFilled />
-          </IconBtn>
-
-          <Divider orientation="vertical" />
-
-          <FitWidthController />
-
-          <FitHeightController />
-
-          <ImageRatioController />
-
-          <Divider orientation="vertical" />
-
-          <ReadingDirectionController />
-
-          {/* 單雙畫面 */}
-          <PageDisplayController />
-
-          <Divider orientation="vertical" />
-
-          <SideBarController />
-
-          <IconBtn tooltip="" onClick={() => setIsOpenJumpToModal(!pinToolBar)}>
-            <IconBike />
-          </IconBtn>
-
-          <Divider orientation="vertical" />
-
-          <FullScreenController />
-
-          <Divider orientation="vertical" />
-
-          <IconBtn
-            tooltip="固定菜單"
-            color={pinToolBar ? 'yellow' : ''}
-            onClick={() => setPinToolBar(!pinToolBar)}
-          >
-            {pinToolBar ? <IconPinnedFilled /> : <IconPinFilled />}
-          </IconBtn>
-        </Flex>
-      </Dialog>
+        <IconBounceLeft />
+      </IconBtn>
 
       <Modal
         opened={isOpenJumpToModal}
         onClose={() => setIsOpenJumpToModal(false)}
+        centered
         title="前往頁數"
       >
         <Select
@@ -405,6 +309,84 @@ export default function ToolBar() {
           onChange={e => jumpToPage(e ?? '1')}
         />
       </Modal>
+    </>
+  )
+}
+
+export default function ToolBar() {
+  const pagination = useDoujinshiStore(s => s.pagination)
+  const { goToGallery, goToPage } = useGoTo()
+
+  const [opened, setOpened] = useState(false)
+
+  useHotkeys([
+    ['Backspace', () => goToGallery()],
+    ['ArrowLeft', () => goToPage(1)],
+    ['ArrowRight', () => goToPage(-1)],
+  ])
+
+  if (!pagination) return null
+
+  return (
+    <>
+      <Menu
+        opened={opened}
+        onChange={setOpened}
+        position="top-end"
+        trigger="hover"
+        keepMounted
+        transitionProps={{ duration: 300, transition: 'slide-down' }}
+      >
+        <Menu.Target>
+          <Box h="10vh" w="50vw" pos="fixed" right="0" bottom="0" />
+        </Menu.Target>
+
+        <Menu.Dropdown mt="10vh">
+          <Flex align="center" gap="md" px="xs" py="5px">
+            {/* 返回首頁 */}
+            <IconBtn
+              tooltip="返回首頁 / Backspace"
+              onClick={() => goToGallery()}
+            >
+              <IconArrowBackUp />
+            </IconBtn>
+
+            <Divider orientation="vertical" />
+
+            {/* 下一頁 */}
+            <IconBtn tooltip="下一頁 / ←" onClick={() => goToPage(1)}>
+              <IconCaretLeftFilled />
+            </IconBtn>
+
+            {/* 上一頁 */}
+            <IconBtn tooltip="上一頁 / →" onClick={() => goToPage(-1)}>
+              <IconCaretRightFilled />
+            </IconBtn>
+
+            <Divider orientation="vertical" />
+
+            <FitWidthController />
+
+            <FitHeightController />
+
+            <ImageRatioController />
+
+            <Divider orientation="vertical" />
+
+            <ReadingDirectionController />
+
+            <PageDisplayController />
+
+            <Divider orientation="vertical" />
+
+            <JumpToController />
+
+            <Divider orientation="vertical" />
+
+            <FullScreenController />
+          </Flex>
+        </Menu.Dropdown>
+      </Menu>
     </>
   )
 }

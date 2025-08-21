@@ -1,13 +1,13 @@
 'use client'
 
-import { Box, Container, ScrollArea } from '@mantine/core'
+import { Box, Container } from '@mantine/core'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import HorizonReadingContainer from './_container/HorizonReadingContainer'
 import SideBar from './_container/SideBar'
 import ToolBar from './_container/ToolBar'
 import VerticalReadingContainer from './_container/VerticalReadingContainer'
 
-export default function Page() {
+export default function ViewPage() {
   const isVertical = useDoujinshiStore(s => s.pageSetting.isVertical)
   console.log('view page')
 

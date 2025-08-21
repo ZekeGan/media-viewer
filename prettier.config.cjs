@@ -14,6 +14,7 @@ module.exports = {
     '^react$',
     '^next',
     '^@mantine/(.*)$',
+    '^@tabler/(.*)$',
     '^[a-zA-Z]',
     '^@/context(.*)$',
     '^@/constants(.*)$',

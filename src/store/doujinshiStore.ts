@@ -30,9 +30,6 @@ interface IDoujinshiStore {
   searchTypes: IDoujinshiData['types'][]
   setSearchTypes: (val: IDoujinshiData['types'][]) => void
 
-  sideBarOpen: boolean
-  toggleSideBar: (bool?: boolean) => void
-
   pageSetting: IPageSetting
   setPageSetting: (cb: (prev: IPageSetting) => IPageSetting) => void
 
@@ -47,6 +44,12 @@ interface IDoujinshiStore {
 
   pagination: Pagination | undefined
   setPagination: (doujin: IDoujinshiMeta, label: string, count: number) => void
+
+  detailCountPerRows: number
+  setDetailCountPerRows: (count: number) => void
+
+  toolBarOpacity: number
+  setToolBarOpacity: (val: number) => void
 }
 
 export const useDoujinshiStore = create<IDoujinshiStore>()(
@@ -54,11 +57,6 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
     (set, get) => ({
       searchTypes: doujinshiTypes,
       setSearchTypes: val => set({ searchTypes: val }),
-
-      sideBarOpen: false,
-      toggleSideBar: bool => {
-        set(state => ({ sideBarOpen: bool ?? !state.sideBarOpen }))
-      },
 
       pageSetting: {
         pageCount: 1,
@@ -84,7 +82,7 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
         const doujinList = get().doujinshiList
         if (!doujinList) return
         const doujinTitle = decodeURIComponent(title)
-        console.log(doujinTitle)
+        // console.log(doujinTitle)
 
         set({
           curDoujinshi: doujinList.find(d => d.data.title === doujinTitle),
@@ -106,7 +104,7 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
         const len = curIdxs.length
         const min = Math.min(...curIdxs)
         const max = Math.max(...curIdxs)
-        console.log(pageCount, 'inthepagination')
+        // console.log(pageCount, 'inthepagination')
 
         const makeRange = (from: number) => {
           return Array.from({ length: len }, (_, i) => from + i).filter(
@@ -145,12 +143,20 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
           },
         })
       },
+
+      detailCountPerRows: 5,
+      setDetailCountPerRows: count => set({ detailCountPerRows: count }),
+
+      toolBarOpacity: 1,
+      setToolBarOpacity: val => set({ toolBarOpacity: val }),
     }),
     {
       name: 'doujinshi-store',
-      partialize: state => ({
-        searchTypes: state.searchTypes,
-        pageSetting: state.pageSetting,
+      partialize: s => ({
+        searchTypes: s.searchTypes,
+        pageSetting: s.pageSetting,
+        detailCountPerRows: s.detailCountPerRows,
+        toolBarOpacity: s.toolBarOpacity,
       }),
     }
   )

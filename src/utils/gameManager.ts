@@ -36,7 +36,7 @@ export class GameManager {
     return {
       root: this._curGamePath,
       coverName: coverName || '',
-    } satisfies IDoujinshiMeta['meta']
+    } satisfies IGameMeta['meta']
   }
 
   public async createNewMeta() {

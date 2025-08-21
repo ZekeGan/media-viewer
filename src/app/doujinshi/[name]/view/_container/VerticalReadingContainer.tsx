@@ -1,35 +1,34 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Center, Paper, ScrollArea, Stack } from '@mantine/core'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import LoadingContainer from '@/components/LoadingContainer'
 import { ObserverImg } from '@/components/ObserverImg'
+import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
-import { getLabels } from '@/utils/doujinshiUtils'
 
 export default function VerticalReadingContainer() {
-  const pageCount = useDoujinshiStore(state => state.pageSetting.pageCount)
   const isFullWidth = useDoujinshiStore(state => state.pageSetting.isFullWidth)
   const zoomRatio = useDoujinshiStore(state => state.pageSetting.zoomRatio)
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const curPageLabel = useDoujinshiStore(s => s.curPageLabel)
-  const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
-
   const containerRef = useRef<HTMLDivElement>(null)
   const itemsRef = useRef<Record<string, HTMLDivElement>>({})
-  const [hasScrolled, setHasScrolled] = useState(false)
-  const tempLabel = useRef<string>(curPageLabel)
+  const temp = useRef('')
+  const { setHash } = useGoTo()
 
   // 更新 hash
   useEffect(() => {
-    if (!curDoujinshi || !hasScrolled) return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return
-        const title = entry.target.getAttribute('id') ?? ''
-        tempLabel.current = title
+        if (entry.isIntersecting) {
+          const title = entry.target.getAttribute('id') ?? ''
+          console.log(title)
+
+          temp.current = title
+        }
       },
-      { threshold: 0.7 }
+      { threshold: 0.2 }
     )
 
     for (const label in itemsRef.current) {
@@ -38,21 +37,20 @@ export default function VerticalReadingContainer() {
     }
 
     return () => {
-      //* 避免每次更新pagelabel影響到其他組件
-      setCurPageLabel(
-        getLabels({
-          doujin: curDoujinshi,
-          pageCount: pageCount,
-          curLabel: tempLabel.current,
-        }).labels
-      )
       observer.disconnect()
+      if (temp.current) setHash(temp.current)
     }
-  }, [curDoujinshi, pageCount, hasScrolled, setCurPageLabel])
+  }, [setHash])
+
+  // useEffect(() => {
+  //   const timer = setInterval(() => {
+  //     setHash(temp.current)
+  //   }, 5000)
+  //   return () => clearInterval(timer)
+  // }, [setHash])
 
   // scroll to curLabel view
   useEffect(() => {
-    if (hasScrolled) return
     const tryScroll = () => {
       const el = itemsRef.current[curPageLabel.split('-')[0]]
       if (!el) {
@@ -65,11 +63,12 @@ export default function VerticalReadingContainer() {
         block: 'start',
         scrollMode: 'if-needed',
       })
-      setHasScrolled(true)
     }
 
     tryScroll()
-  }, [curPageLabel, hasScrolled])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  console.log('scroll')
 
   if (!curDoujinshi) return <LoadingContainer />
 
@@ -86,12 +85,12 @@ export default function VerticalReadingContainer() {
               ref={el => {
                 if (el) itemsRef.current[d.title] = el
               }}
-              // withBorder
               radius={0}
               key={d.title}
               id={d.title}
               flex={1}
               style={{ aspectRatio: d.width / d.height }}
+              // withBorder
             >
               <ObserverImg
                 fit="contain"

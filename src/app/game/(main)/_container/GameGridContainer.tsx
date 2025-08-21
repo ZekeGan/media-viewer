@@ -1,4 +1,3 @@
-import { IconSettings } from '@tabler/icons-react'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -17,6 +16,7 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core'
+import { IconSettings } from '@tabler/icons-react'
 import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
 import OpenFolderBtn from '@/components/OpenFolderBtn'

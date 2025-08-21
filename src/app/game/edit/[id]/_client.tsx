@@ -1,6 +1,5 @@
 'use client'
 
-import { IconPlus } from '@tabler/icons-react'
 import { ChangeEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -20,6 +19,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
+import { IconPlus } from '@tabler/icons-react'
 import axios from 'axios'
 import { uniq } from 'ramda'
 import { useGameData } from '@/context/gameContext'
@@ -49,7 +49,7 @@ export default function EditCurGameClient({
       tags: _tags,
       folder_path,
     },
-    cover,
+    meta: { coverName },
   } = metaData
 
   const router = useRouter()
@@ -149,8 +149,8 @@ export default function EditCurGameClient({
                 value={gameUrl}
               />
               <TextInput
-                placeholder={cover ? '封面已存在' : ''}
-                disabled={cover}
+                placeholder={coverName ? '封面已存在' : ''}
+                disabled={!!coverName}
                 label="封面網址"
                 onChange={e => setCoverUrl(e.currentTarget.value.trim())}
                 value={coverUrl}

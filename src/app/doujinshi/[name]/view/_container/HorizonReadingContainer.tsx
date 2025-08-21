@@ -1,7 +1,6 @@
 import { Box, Center, Flex, ScrollArea } from '@mantine/core'
 import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
-import useFetchChuckImages from '@/hooks/doujinshi/useFetchChuckImages'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
@@ -16,17 +15,7 @@ export default function HorizonReadingContainer() {
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const { goToPage } = useGoTo()
 
-  // const { imagesList } = useFetchChuckImages(10)
-
-  console.log('horizon', curPageLabel)
-  if (
-    // !imagesList ||
-    // imagesList.every(d => d.imageUrl === undefined) ||
-    !pagination ||
-    !curDoujinshi
-  ) {
-    return <LoadingContainer />
-  }
+  if (!pagination || !curDoujinshi) return <LoadingContainer />
 
   return (
     <ScrollArea w="100vw" h="100vh" type="always">
@@ -40,7 +29,6 @@ export default function HorizonReadingContainer() {
             .filter(Boolean)
             .map((_, idx) => {
               const page = curDoujinshi.meta.pages[pagination.curPageIdxs[idx]]
-              console.log(page, pagination)
 
               if (!page) return null
 

@@ -1,30 +1,47 @@
-import { useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useHash } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 export const useGoTo = () => {
   const router = useRouter()
+  const pathname = usePathname()
+
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)
   const setCurPageLabel = useDoujinshiStore(s => s.setCurPageLabel)
   const pageCount = useDoujinshiStore(s => s.pageSetting.pageCount)
   const pagination = useDoujinshiStore(s => s.pagination)
+  const isVertical = useDoujinshiStore(s => s.pageSetting.isVertical)
+  const [hash, setHash] = useHash()
 
-  const goToSpecificPage = useCallback(
+  const goTo = useCallback(
     (label: string) => {
-      if (!curDoujinshi) return
-      router.replace(
-        `/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}/view#${encodeURIComponent(label)}`
-      )
+      if (!curDoujinshi || label === '') return
+
+      setCurPageLabel(label)
+
+      if (!pathname.includes('/view') || !isVertical) {
+        console.log('replace', pathname)
+        const url = `/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}/view#${label}`
+        router.replace(url)
+      }
     },
-    [curDoujinshi, router]
+    [curDoujinshi, isVertical, pathname, router, setCurPageLabel]
   )
+
+  useEffect(() => {
+    if (hash === '') return
+    let label: string = ''
+    if (hash.startsWith('#')) label = hash.slice(1)
+
+    goTo(label)
+  }, [goTo, hash])
 
   const goToPage = useCallback(
     (v: number) => {
       if (!curDoujinshi || !pagination) return
-      console.log(pagination)
 
       const targets =
         v > 0
@@ -33,31 +50,28 @@ export const useGoTo = () => {
             ? pagination.prevPageLabels[0]
             : pagination.curPageLabels[0]
 
-      if (targets) {
-        const label = getLabels({
-          doujin: curDoujinshi,
-          pageCount,
-          curLabel: targets,
-        }).labels
-        console.log(label, pageCount)
-        setCurPageLabel(label)
-        return
-        // return goToSpecificPage(label)
+      if (!targets) {
+        return notifications.show({
+          position: 'top-center',
+          message: v < 0 ? '已經是最前了' : '已經是最底了',
+          autoClose: 2000,
+        })
       }
+      const label = getLabels({
+        doujin: curDoujinshi,
+        pageCount,
+        curLabel: targets,
+      }).labels
 
-      notifications.show({
-        position: 'top-center',
-        message: v < 0 ? '已經是最前了' : '已經是最底了',
-        autoClose: 2000,
-      })
+      goTo(label)
     },
-    [curDoujinshi, pageCount, pagination, setCurPageLabel]
+    [curDoujinshi, goTo, pageCount, pagination]
   )
 
   const goToGallery = () => {
     if (!curDoujinshi) return
-    router.push(`/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}`)
+    router.replace(`/doujinshi/${encodeURIComponent(curDoujinshi.data.title)}`)
   }
 
-  return { goToGallery, goToPage, goToSpecificPage }
+  return { goToGallery, goTo, goToPage, hash, setHash }
 }

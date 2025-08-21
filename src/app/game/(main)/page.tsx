@@ -26,7 +26,7 @@ export default function HomeClientPage() {
   }
 
   return (
-    <Grid>
+    <Grid p="md">
       <Grid.Col span={2}>
         <FilterListContainer />
       </Grid.Col>
