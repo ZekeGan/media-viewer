@@ -14,7 +14,6 @@ export const useInfiniteScroll = (
   const [start, setStart] = useState(0)
   const [end, setEnd] = useState(0)
   const [visibleData, setVisibleData] = useState<IImageData[]>([])
-  //   console.log('page', pages, start, end)
 
   useEffect(() => {
     if (!pages || !curLabelIdx || loaded) return
@@ -25,8 +24,7 @@ export const useInfiniteScroll = (
 
   useEffect(() => {
     if (!pages) return
-    console.log('loop')
-    console.log(start, end, 'start end')
+
 
     setVisibleData(pages.slice(start, end))
   }, [end, pages, start])

@@ -47,7 +47,6 @@ export default function SearchBar() {
   }
 
   const onSearch = () => {
-    console.log('search')
 
     const typesParams = types.every(d => d.isSelected)
       ? []

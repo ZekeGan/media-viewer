@@ -73,7 +73,7 @@ export default function Page() {
     let _tags = tagsGetValue()
     let _parent = parentGetValue()
 
-    await axios.post('/api/game/tags', {
+    await axios.post('/api/tags', {
       game_tags: _tags,
       game_parent: _parent,
     })

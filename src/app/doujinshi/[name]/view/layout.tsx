@@ -12,7 +12,6 @@ export default function Layout({ children }: { children: ReactNode }) {
   // 更新pagination
   useEffect(() => {
     if (!curDoujinshi) return
-    // console.log(pageCount, curPageLabel, 'pagination')
     setPagination(curDoujinshi, curPageLabel, pageCount)
   }, [curDoujinshi, curPageLabel, pageCount, setPagination])
 

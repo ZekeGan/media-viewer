@@ -84,7 +84,6 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
         const doujinList = get().doujinshiList
         if (!doujinList) return
         const doujinTitle = decodeURIComponent(title)
-        // console.log(doujinTitle)
 
         set({
           curDoujinshi: doujinList.find(d => d.data.title === doujinTitle),
@@ -106,7 +105,6 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
         const len = curIdxs.length
         const min = Math.min(...curIdxs)
         const max = Math.max(...curIdxs)
-        // console.log(pageCount, 'inthepagination')
 
         const makeRange = (from: number) => {
           return Array.from({ length: len }, (_, i) => from + i).filter(

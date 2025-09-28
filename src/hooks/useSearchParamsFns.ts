@@ -23,7 +23,6 @@ export const useSearchParamsFns = () => {
       else currentParams.set(key, value)
 
       const str = currentParams.toString()
-      console.log('go')
 
       router.push(str.endsWith('=') ? '/' : `?${str}`)
     },

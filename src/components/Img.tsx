@@ -10,6 +10,8 @@ export function Img({
   const [loaded, setLoaded] = useState(false)
 
   const onError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    console.error(e)
+
     e.currentTarget.src = noImg.src
   }
 

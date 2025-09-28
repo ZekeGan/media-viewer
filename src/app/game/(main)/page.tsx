@@ -301,6 +301,7 @@ export default function HomeClientPage() {
                   },
                   meta,
                 } = item
+             
 
                 const GameName = (
                   <Text

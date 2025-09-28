@@ -33,7 +33,6 @@ export class GameManager {
     const coverName =
       dirs.find(dir => imgExt.includes(path.extname(dir))) || null
 
-    console.log(coverName)
 
     return {
       root: this._curGamePath,

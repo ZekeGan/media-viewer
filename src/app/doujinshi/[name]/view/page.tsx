@@ -9,7 +9,6 @@ import VerticalReadingContainer from './_container/VerticalReadingContainer'
 
 export default function ViewPage() {
   const isVertical = useDoujinshiStore(s => s.pageSetting.isVertical)
-  console.log('view page')
 
   return (
     <Container fluid w="100vw" h="100vh" bg="dark" p={0}>
