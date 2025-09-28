@@ -1,13 +1,14 @@
 'use client'
 
 import { Dispatch, SetStateAction, useMemo } from 'react'
+import { createKey } from 'next/dist/shared/lib/router/router'
 import { Accordion, Checkbox, Stack } from '@mantine/core'
 import { nanoid } from 'nanoid'
 import { useTranslate } from '@/hooks/useTranslate'
 
 interface IFilterContainer {
   list: CheckList
-  setList: Dispatch<SetStateAction<CheckList>>
+  setList: (...args: any) => void
   withCount?: boolean
 }
 
@@ -30,15 +31,6 @@ export const GroupedFilterContainer = ({
     )
   }, [getParent, list])
 
-  const handleChange = (check: CheckList[0], checked: boolean) => {
-    setList(prev => {
-      return prev.map(i => {
-        if (i.key === check.key) return { ...i, checked }
-        return i
-      })
-    })
-  }
-
   return (
     <Stack>
       <Accordion multiple defaultValue={Object.keys(groupList)}>
@@ -53,7 +45,7 @@ export const GroupedFilterContainer = ({
                     checked={i.checked}
                     label={withCount ? `${i.label}(${i.count})` : i.label}
                     ml="sm"
-                    onChange={e => handleChange(i, e.currentTarget.checked)}
+                    onChange={() => setList(i.key)}
                   />
                 ))}
               </Stack>
@@ -70,15 +62,6 @@ export const FilterContainer = ({
   setList,
   withCount = true,
 }: IFilterContainer) => {
-  const handleChange = (check: CheckList[0], checked: boolean) => {
-    setList(prev => {
-      return prev.map(i => {
-        if (i.key === check.key) return { ...i, checked }
-        return i
-      })
-    })
-  }
-
   return (
     <Stack gap="lg">
       {list.map(i => (
@@ -86,7 +69,7 @@ export const FilterContainer = ({
           key={nanoid()}
           checked={i.checked}
           label={withCount ? `${i.label}(${i.count})` : i.label}
-          onChange={e => handleChange(i, e.currentTarget.checked)}
+          onChange={() => setList(i.key)}
         />
       ))}
     </Stack>

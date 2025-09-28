@@ -26,9 +26,9 @@ export async function GET() {
       { status: 201, message: 'success', data: result },
       {
         status: 200,
-        headers: {
-          'Cache-Control': `max-age=${cacheTime}`,
-        },
+        // headers: {
+        //   'Cache-Control': `max-age=${cacheTime}`,
+        // },
       }
     )
   } catch (err) {

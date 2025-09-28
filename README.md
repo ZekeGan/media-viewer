@@ -10,8 +10,10 @@ PROJECT_NAME=game-viewer
 DOUJINSHI_PATH=Z:/Doujinshi
 
 ## Do To List
+
 - OPTS: Game加快初次載入速度
 
+- Feat: Game圖片檢視使用Select選取
 - Feat: Dou最愛本子(加入頁面/顯示使用次數etc...)
 
 - Ex: 顯示常用doujinshi
@@ -19,6 +21,7 @@ DOUJINSHI_PATH=Z:/Doujinshi
 - Ex: 研議是否繼續使用APPDATA?
 
 ### Done
+
 - Bug: 數量級大SideBar卡頓問題
 - Bug: 打開側邊欄初始圖片沒有加載，滾動observer觸發後才會加載
 - Bug: doujinshi detail page type顯示不完全
@@ -35,8 +38,11 @@ DOUJINSHI_PATH=Z:/Doujinshi
 - Feat: Doujinshi detail page 新增返回畫廊按鈕(麵包屑)
 - Feat: 垂直閱讀，可以設定是否打開border(當背景為透明或上下圖片類似無法判斷每張圖片邊)
 - Feat: Dou圖片檢視doujinshi list(例子:ex-hentai extended...)
+- Feat: Game Tag過濾根據URL變換而執行過濾
+- Feat: Game選取的標籤在上方顯示
 
 ## Home Page
+
 - 儀錶板
 - 顯示統計資訊
 - (動態?)圖表

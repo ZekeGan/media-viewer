@@ -61,11 +61,12 @@ export default function EditCurGameClient({
   const [author, setAuthor] = useState(_author)
   const [authorFrom, setAuthorFrom] = useState(author_from)
   const [tagsList, setTagsList] = useState(() => {
-    return Object.keys(gameTags).map(i =>
-      _tags.includes(i)
-        ? { key: i, label: t(i), checked: true, count: 0 }
-        : { key: i, label: t(i), checked: false, count: 0 }
-    )
+    return Object.keys(gameTags).map(i => ({
+      key: i,
+      label: t(i),
+      checked: _tags.includes(i),
+      count: 0,
+    }))
   })
   const [isUncensored, setIsUncensored] = useState(_isCensored === 'uncensored')
   const [isDynamic, setIsDynamic] = useState(_isDynamic === 'dynamic')
@@ -110,11 +111,11 @@ export default function EditCurGameClient({
     const data = {
       data: {
         ...metaData.data,
-        game_name: gameName,
-        game_url: gameUrl,
+        game_name: gameName.trim(),
+        game_url: gameUrl.trim(),
         tags: filteredTag,
-        author,
-        author_from: authorFrom,
+        author: author.trim(),
+        author_from: authorFrom.trim(),
         isDynamic: isDynamic ? 'dynamic' : 'static',
         isCensored: isUncensored ? 'uncensored' : 'censored',
       },
@@ -123,7 +124,7 @@ export default function EditCurGameClient({
 
     await axios.post('/api/save_game', data)
     await updateGameList()
-    router.push('/')
+    router.push('/game')
   }
 
   return (
@@ -145,20 +146,20 @@ export default function EditCurGameClient({
             <Stack gap="sm">
               <TextInput
                 label="遊戲網址"
-                onChange={e => setGameUrl(e.currentTarget.value.trim())}
+                onChange={e => setGameUrl(e.currentTarget.value)}
                 value={gameUrl}
               />
               <TextInput
                 placeholder={coverName ? '封面已存在' : ''}
                 disabled={!!coverName}
                 label="封面網址"
-                onChange={e => setCoverUrl(e.currentTarget.value.trim())}
+                onChange={e => setCoverUrl(e.currentTarget.value)}
                 value={coverUrl}
               />
 
               <TextInput
                 label="遊戲名稱"
-                onChange={e => setGameName(e.currentTarget.value.trim())}
+                onChange={e => setGameName(e.currentTarget.value)}
                 value={gameName}
               />
               <Autocomplete
@@ -166,14 +167,14 @@ export default function EditCurGameClient({
                 label="作者"
                 placeholder="選擇或新增作者"
                 value={author}
-                onChange={v => setAuthor(v.trim())}
+                onChange={v => setAuthor(v)}
               />
               <Autocomplete
                 data={uniq(list.map(i => i.data.author_from).filter(i => !!i))}
                 label="產地"
                 placeholder="選擇或新增產地"
                 value={authorFrom}
-                onChange={v => setAuthorFrom(v.trim())}
+                onChange={v => setAuthorFrom(v)}
               />
               <Switch
                 label={isUncensored ? '無碼' : '有碼'}
@@ -224,7 +225,14 @@ export default function EditCurGameClient({
                       </Flex>
                       <GroupedFilterContainer
                         list={filterTags}
-                        setList={setTagsList}
+                        setList={(val: string) => {
+                          console.log(val)
+                          setTagsList(prev =>
+                            prev.map(i =>
+                              i.key === val ? { ...i, checked: !i.checked } : i
+                            )
+                          )
+                        }}
                       />
                     </Stack>
                   </Accordion.Panel>
