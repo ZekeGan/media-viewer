@@ -1,3 +1,5 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
-contextBridge.exposeInMainWorld('electron', {})
+contextBridge.exposeInMainWorld('electron', {
+  getGameList: () => ipcRenderer.invoke('game:list'),
+})

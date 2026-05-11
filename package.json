@@ -5,15 +5,16 @@
   "main": "electron/main.ts",
   "type": "module",
   "scripts": {
-    "dev": "pnpm build:electron && concurrently \"next dev\" \"pnpm electron\"",
+    "dev:electron": "electron-vite dev",
     "dev:next": "next dev",
-    "electron": "wait-on http://localhost:3000 && electron .",
+    "build": "next build && electron-vite build",
+    "preview": "electron-vite preview",
+    "build:web": "next build",
     "build:electron": "tsc -p electron/tsconfig.json",
-    "build": "next build",
-    "start": "next start",
-    "check": "npx tsc --noEmit",
+    "start": "electron dist-electron/main.js",
     "lint": "next lint",
-    "prettier": "prettier . --write"
+    "check": "tsc --noEmit",
+    "format": "prettier . --write"
   },
   "dependencies": {
     "@mantine/core": "^8.0.0",
@@ -42,10 +43,9 @@
     "@types/ramda": "^0.30.2",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
-    "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^42.0.1",
-    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.3.0",
     "postcss": "^8.4.47",
@@ -53,6 +53,6 @@
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.5.3",
     "typescript": "^5.6.2",
-    "wait-on": "^9.0.6"
+    "vite": "^8.0.12"
   }
 }
