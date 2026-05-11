@@ -1,3 +1,4 @@
+import { IDoujinshiData, IDoujinshiMeta, IImageData } from '@/types/data'
 import { ComboboxItem } from '@mantine/core'
 import { readLocalStorageValue } from '@mantine/hooks'
 import axios from 'axios'
@@ -5,7 +6,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { doujinshiTypes } from '@/constants'
 import { getLabels } from '@/utils/doujinshiUtils'
-import { IDoujinshiData, IDoujinshiMeta, IImageData } from 'global'
 
 interface IPageSetting {
   pageCount: 1 | 2

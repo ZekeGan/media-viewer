@@ -1,4 +1,4 @@
-import { IDoujinshiMeta } from 'global'
+import { IDoujinshiMeta } from '@/types/data'
 
 export const getLabels = ({
   doujin,

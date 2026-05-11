@@ -1,5 +1,6 @@
 'use client'
 
+import { IGameMeta, ISystem } from '@/types/data'
 import {
   Dispatch,
   ReactNode,
@@ -12,7 +13,6 @@ import {
 import { usePathname } from 'next/navigation'
 import { useHash } from '@mantine/hooks'
 import axios from 'axios'
-import { IGameMeta, ISystem } from 'global'
 
 type ContextValue = {
   gameList: IGameMeta[]
@@ -58,10 +58,22 @@ export const GameContext = ({ children }: { children: ReactNode }) => {
     setGameParent(system.game_parent)
   }
 
+  // const fetchGameList = async () => {
+  //   const res = await axios.get('/api/game')
+  //   // window.api.getGameList()
+  //   if (res.data.statue === 401) return
+  //   setGameList(res.data.data)
+  // }
+
   const fetchGameList = async () => {
-    const res = await axios.get('/api/game')
-    if (res.data.statue === 401) return
-    setGameList(res.data.data)
+    console.log(window.api)
+
+    const res = await window.api.getGameList()
+    console.log(res)
+
+    if (!res) return
+
+    setGameList(res)
   }
 
   useEffect(() => {

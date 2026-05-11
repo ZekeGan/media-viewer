@@ -1,9 +1,9 @@
+import { IGameMeta } from '@/types/data'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import { GamePath } from '@/constants/env'
 import { cacheTime } from '@/constants/server'
 import { GameManager } from '@/utils/gameManager'
-import { IGameMeta } from 'global'
 
 export async function GET() {
   try {

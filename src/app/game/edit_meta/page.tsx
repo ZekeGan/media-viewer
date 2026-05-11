@@ -1,5 +1,6 @@
 'use client'
 
+import { ISystem } from '@/types/data'
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -16,7 +17,6 @@ import {
 import axios from 'axios'
 import { Controller, useForm } from 'react-hook-form'
 import { useGameData } from '@/context/gameContext'
-import { ISystem } from 'global'
 
 export default function Page() {
   const router = useRouter()

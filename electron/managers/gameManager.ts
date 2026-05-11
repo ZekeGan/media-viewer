@@ -1,9 +1,9 @@
 import fs from 'fs'
 import { nanoid } from 'nanoid'
 import path from 'path'
-import { IGameData, IGameMeta } from '../../global'
+import { IGameData, IGameMeta } from '../../src/types/data'
 import { GamePath } from '../config/env'
-import { IMG_EXT } from '../constants'
+import { IMG_EXT } from '../constants/index'
 
 export class GameManager {
   private _gameName: string = ''

@@ -1,10 +1,10 @@
+import { IDoujinshiData } from '@/types/data'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Center, Flex, Input, Stack } from '@mantine/core'
 import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
-import { IDoujinshiData } from 'global'
 
 export default function SearchBar() {
   const router = useRouter()
@@ -48,7 +48,6 @@ export default function SearchBar() {
   }
 
   const onSearch = () => {
-
     const typesParams = types.every(d => d.isSelected)
       ? []
       : types.filter(d => d.isSelected).map(d => `types:${d.value}`)

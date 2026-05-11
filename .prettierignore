@@ -1,0 +1,7 @@
+node_modules/
+dist/
+/.next/
+out/
+*.png
+*.jpg
+*.ico

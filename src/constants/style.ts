@@ -1,5 +1,5 @@
+import { IDoujinshiData } from '@/types/data'
 import { MantineColor } from '@mantine/core'
-import { IDoujinshiData } from 'global'
 
 export const HeaderHeight = 80
 export const MainPadding = 20

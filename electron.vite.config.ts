@@ -1,18 +1,23 @@
 import { defineConfig } from 'electron-vite'
+import { resolve } from 'path'
 
 export default defineConfig({
   main: {
     build: {
-      lib: {
-        entry: 'electron/main.ts',
+      outDir: 'out/main',
+      rollupOptions: {
+        input: resolve(__dirname, 'electron/main.ts'),
+        external: ['electron'],
       },
     },
   },
 
   preload: {
     build: {
-      lib: {
-        entry: 'electron/preload.ts',
+      outDir: 'out/preload',
+      rollupOptions: {
+        input: resolve(__dirname, 'electron/preload.ts'),
+        external: ['electron'],
       },
     },
   },

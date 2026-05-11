@@ -1,5 +1,6 @@
 'use client'
 
+import { IGameMeta } from '@/types/data'
 import { ChangeEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -28,7 +29,6 @@ import { GroupedFilterContainer } from '@/components/FilterContainer'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useTranslate } from '@/hooks/useTranslate'
 import useWindowSize from '@/hooks/useWindowSize'
-import { IGameMeta } from 'global'
 
 export default function EditPage({ params }: { params: { id: string } }) {
   const { gameList } = useGameData()

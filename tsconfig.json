@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "global": ["./global.d.ts"]
+      "global": ["src/types/data.ts"]
     }
   },
   "include": [

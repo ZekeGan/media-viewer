@@ -1,6 +1,6 @@
+import { IImageData } from '@/types/data'
 import { useEffect, useRef, useState } from 'react'
 import { maxDoujinshiPagesLength } from '@/constants'
-import { IImageData } from 'global'
 
 const count = (target: number, ref: any[]) => {
   return target > ref.length ? ref.length : target < 0 ? 0 : target
@@ -25,7 +25,6 @@ export const useInfiniteScroll = (
 
   useEffect(() => {
     if (!pages) return
-
 
     setVisibleData(pages.slice(start, end))
   }, [end, pages, start])

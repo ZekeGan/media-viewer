@@ -1,8 +1,8 @@
+import { IDoujinshiMeta } from '@/types/data'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import { DoujinshiPath } from '@/constants/env'
 import { DoujinshiManager } from '@/utils/doujinshiManager'
-import { IDoujinshiMeta } from 'global'
 
 export async function GET() {
   try {

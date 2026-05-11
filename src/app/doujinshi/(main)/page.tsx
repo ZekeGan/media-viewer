@@ -1,5 +1,6 @@
 'use client'
 
+import { IDoujinshiData, IDoujinshiMeta } from '@/types/data'
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -26,7 +27,6 @@ import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import SearchBar from './_container/SearchBar'
-import { IDoujinshiData, IDoujinshiMeta } from 'global'
 
 export default function MainPage() {
   const params = useSearchParams()

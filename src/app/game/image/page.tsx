@@ -1,5 +1,6 @@
 'use client'
 
+import { IGameMeta } from '@/types/data'
 import { useMemo } from 'react'
 import { Stack } from '@mantine/core'
 import { Flex, Grid, Paper } from '@mantine/core'
@@ -7,7 +8,6 @@ import { notifications } from '@mantine/notifications'
 import axios from 'axios'
 import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
-import { IGameMeta } from 'global'
 
 export default function Page() {
   const len = 7

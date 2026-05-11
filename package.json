@@ -2,7 +2,7 @@
   "name": "media-viewer",
   "version": "0.2.0",
   "private": true,
-  "main": "electron/main.ts",
+  "main": "out/main/main.js",
   "type": "module",
   "scripts": {
     "dev:electron": "electron-vite dev",
@@ -14,7 +14,7 @@
     "start": "electron dist-electron/main.js",
     "lint": "next lint",
     "check": "tsc --noEmit",
-    "format": "prettier . --write"
+    "prettier": "prettier ."
   },
   "dependencies": {
     "@mantine/core": "^8.0.0",
