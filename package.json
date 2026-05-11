@@ -2,11 +2,14 @@
   "name": "media-viewer",
   "version": "0.2.0",
   "private": true,
+  "main": "electron/main.ts",
+  "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "pnpm build:electron && concurrently \"next dev\" \"pnpm electron\"",
+    "electron": "wait-on http://localhost:3000 && electron .",
+    "build:electron": "tsc -p electron/tsconfig.json",
     "build": "next build",
     "start": "next start",
-    "check": "npx tsc --noEmit",
     "lint": "next lint",
     "prettier": "prettier . --write"
   },
@@ -37,12 +40,17 @@
     "@types/ramda": "^0.30.2",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^42.0.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.3.0",
     "postcss": "^8.4.47",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.5.3",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "wait-on": "^9.0.6"
   }
 }

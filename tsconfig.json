@@ -28,7 +28,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "script/copy_cover_to_assets.js"
-  ],
+, "electron/preload.js", "electron/main.ts"  ],
   "file": ["index.d.ts"],
   "exclude": ["node_modules"]
 }
