@@ -28,6 +28,7 @@ import { GroupedFilterContainer } from '@/components/FilterContainer'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useTranslate } from '@/hooks/useTranslate'
 import useWindowSize from '@/hooks/useWindowSize'
+import { IGameMeta } from 'global'
 
 export default function EditPage({ params }: { params: { id: string } }) {
   const { gameList } = useGameData()

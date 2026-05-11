@@ -7,6 +7,7 @@ import { notifications } from '@mantine/notifications'
 import axios from 'axios'
 import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
+import { IGameMeta } from 'global'
 
 export default function Page() {
   const len = 7

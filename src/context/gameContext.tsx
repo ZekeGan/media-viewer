@@ -12,6 +12,7 @@ import {
 import { usePathname } from 'next/navigation'
 import { useHash } from '@mantine/hooks'
 import axios from 'axios'
+import { IGameMeta, ISystem } from 'global'
 
 type ContextValue = {
   gameList: IGameMeta[]

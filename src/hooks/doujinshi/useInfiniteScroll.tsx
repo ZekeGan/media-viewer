@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { maxDoujinshiPagesLength } from '@/constants'
+import { IImageData } from 'global'
 
 const count = (target: number, ref: any[]) => {
   return target > ref.length ? ref.length : target < 0 ? 0 : target

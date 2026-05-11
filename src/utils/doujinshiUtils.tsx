@@ -1,3 +1,5 @@
+import { IDoujinshiMeta } from 'global'
+
 export const getLabels = ({
   doujin,
   curLabel,

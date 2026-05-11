@@ -17,6 +17,7 @@ import {
 import { doujinshiTypesColor } from '@/constants/style'
 import { Img } from './Img'
 import OpenFolderBtn from './OpenFolderBtn'
+import { IDoujinshiData, IDoujinshiMeta } from 'global'
 
 export default function DoujinshiDetailCard({
   doujinshi,

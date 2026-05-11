@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 import path from 'path'
 import { imgExt } from '@/constants'
 import { DoujinshiPath } from '@/constants/env'
+import { IDoujinshiData, IDoujinshiMeta, IImageData } from 'global'
 
 function parseTitle(str: string) {
   const result: IDoujinshiData = {

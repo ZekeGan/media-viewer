@@ -5,6 +5,7 @@ import { createKey } from 'next/dist/shared/lib/router/router'
 import { Accordion, Checkbox, Stack } from '@mantine/core'
 import { nanoid } from 'nanoid'
 import { useTranslate } from '@/hooks/useTranslate'
+import { CheckList } from 'global'
 
 interface IFilterContainer {
   list: CheckList

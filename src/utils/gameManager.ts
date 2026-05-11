@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import path from 'path'
 import { imgExt } from '@/constants'
 import { GamePath } from '@/constants/env'
+import { IGameData, IGameMeta } from 'global'
 
 export class GameManager {
   private _gameName: string = ''
@@ -32,7 +33,6 @@ export class GameManager {
     const dirs = await fs.readdirSync(this._gameMetaPath)
     const coverName =
       dirs.find(dir => imgExt.includes(path.extname(dir))) || null
-
 
     return {
       root: this._curGamePath,

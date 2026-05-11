@@ -34,6 +34,7 @@ import { Img } from '@/components/Img'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { useTranslate } from '@/hooks/useTranslate'
+import { IGameData, IGameMeta } from 'global'
 
 const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
   { value: 'author', label: '照作者排序' },
@@ -301,7 +302,6 @@ export default function HomeClientPage() {
                   },
                   meta,
                 } = item
-             
 
                 const GameName = (
                   <Text

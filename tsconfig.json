@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
+
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -18,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "global": ["./global.d.ts"]
     }
   },
   "include": [
@@ -29,6 +31,5 @@
     ".next/types/**/*.ts",
     "script/copy_cover_to_assets.js"
   ],
-  "file": ["index.d.ts"],
   "exclude": ["node_modules"]
 }

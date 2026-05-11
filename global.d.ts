@@ -1,10 +1,10 @@
-declare interface IImageData {
+export interface IImageData {
   title: string
   width: number
   height: number
 }
 
-declare interface IDoujinshiData {
+export interface IDoujinshiData {
   id: string
   fullTitle: string
   title: string
@@ -19,7 +19,7 @@ declare interface IDoujinshiData {
   characters: string[]
 }
 
-declare interface IDoujinshiMeta {
+export interface IDoujinshiMeta {
   data: IDoujinshiData
   meta: {
     root: string
@@ -28,7 +28,7 @@ declare interface IDoujinshiMeta {
   }
 }
 
-declare interface IGameData {
+export interface IGameData {
   id: string
   game_name: string
   game_url: string
@@ -40,7 +40,7 @@ declare interface IGameData {
   folder_path: string
 }
 
-declare interface IGameMeta {
+export interface IGameMeta {
   data: IGameData
   meta: {
     root: string
@@ -48,14 +48,14 @@ declare interface IGameMeta {
   }
 }
 
-declare type CheckList = {
+export type CheckList = {
   key: string
   label: string
   count: number
   checked: boolean
 }[]
 
-declare type ISystem = {
+export type ISystem = {
   game_tags: {
     [k in string]: {
       _key: string

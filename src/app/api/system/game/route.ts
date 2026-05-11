@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { CompanyName, ProjectName } from '@/constants/env'
 import { cacheTime } from '@/constants/server'
+import { ISystem } from 'global'
 
 const defaultData: ISystem = {
   game_tags: {},
