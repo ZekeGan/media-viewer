@@ -16,6 +16,7 @@ import {
 } from '@mantine/core'
 import { IDoujinshiData, IDoujinshiMeta } from 'shared/type'
 import { doujinshiTypesColor } from '@/constants/style'
+import { getMetaImagePath } from '@/utils/path'
 import { Img } from './Img'
 import OpenFolderBtn from './OpenFolderBtn'
 
@@ -54,7 +55,7 @@ export default function DoujinshiDetailCard({
       types,
       characters,
     },
-    meta: { root, coverName, pages },
+    meta: { root, pages },
   } = doujinshi
 
   const props = {
@@ -102,7 +103,7 @@ export default function DoujinshiDetailCard({
               w="100%"
               h="100%"
               fit="contain"
-              src={`/api/image/?path=${encodeURIComponent(`${root}/_meta/${coverName}`)}`}
+              src={getMetaImagePath(doujinshi)}
               alt={title}
             />
           </Box>

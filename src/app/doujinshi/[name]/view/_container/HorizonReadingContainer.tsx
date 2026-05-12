@@ -3,7 +3,7 @@ import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
-import { getImagePath } from '@/utils'
+import { getImagePath } from '@/utils/path'
 
 export default function HorizonReadingContainer() {
   const isFullWidth = useDoujinshiStore(s => s.pageSetting.isFullWidth)

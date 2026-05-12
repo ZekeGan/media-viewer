@@ -27,6 +27,7 @@ import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import SearchBar from './_container/SearchBar'
+import { getMetaImagePath } from '@/utils/path'
 
 export default function MainPage() {
   const params = useSearchParams()
@@ -176,7 +177,7 @@ export default function MainPage() {
                     {data.map(item => {
                       const {
                         data: { title, types },
-                        meta: { root, coverName, pages },
+                        meta: {  pages },
                       } = item
                       return (
                         <Card key={nanoid()} p="xs">
@@ -194,7 +195,7 @@ export default function MainPage() {
                                 w="100%"
                                 h="100%"
                                 fit="contain"
-                                src={`/api/image/?path=${encodeURIComponent(`${root}/_meta/${coverName}`)}`}
+                                src={getMetaImagePath(item)}
                                 alt={title}
                               />
                             </Box>

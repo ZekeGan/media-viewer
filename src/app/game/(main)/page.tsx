@@ -35,6 +35,7 @@ import { Img } from '@/components/Img'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
 import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
 import { useTranslate } from '@/hooks/useTranslate'
+import { getMetaImagePath } from '@/utils/path'
 
 const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
   { value: 'author', label: '照作者排序' },
@@ -330,7 +331,7 @@ export default function HomeClientPage() {
                         className={game_url && 'hover-box'}
                       >
                         <Img
-                          src={`/api/image/?path=${encodeURIComponent(meta.root)}/_meta/${meta.coverName}`}
+                          src={getMetaImagePath(item)}
                           h={{ md: 300, lg: 230, xl: 200 }}
                           alt={game_name}
                         />

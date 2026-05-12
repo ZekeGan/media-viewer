@@ -5,7 +5,7 @@ import LoadingContainer from '@/components/LoadingContainer'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
-import { getImagePath } from '@/utils'
+import { getImagePath } from '@/utils/path'
 
 export default function VerticalReadingContainer() {
   const isFullWidth = useDoujinshiStore(state => state.pageSetting.isFullWidth)

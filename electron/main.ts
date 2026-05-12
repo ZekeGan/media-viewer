@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow, app, net, protocol } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { registerDoujinshiIPC } from './ipc/doujinshi'
@@ -9,6 +9,13 @@ const _filename = fileURLToPath(import.meta.url)
 const _dirname = path.dirname(_filename)
 
 const preloadPath = path.join(_dirname, '../preload/preload.js')
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'media',
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
+  },
+])
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -37,6 +44,11 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  protocol.handle('media', req => {
+    const url = new URL(req.url)
+    const filePath = decodeURIComponent(url.searchParams.get('path') || '')
+    return net.fetch(`file://${filePath}`)
+  })
   registerDoujinshiIPC()
   registerGameIPC()
   registerOsIPC()

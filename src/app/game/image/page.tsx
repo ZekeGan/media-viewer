@@ -3,11 +3,10 @@
 import { useMemo } from 'react'
 import { Stack } from '@mantine/core'
 import { Flex, Grid, Paper } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
-import axios from 'axios'
 import { IGameMeta } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
 import { Img } from '@/components/Img'
+import { getMetaImagePath } from '@/utils/path'
 
 export default function Page() {
   const len = 7
@@ -24,7 +23,6 @@ export default function Page() {
 
   const openFolder = async (folderPath: string) => {
     await window.electronApi.openFolder(folderPath)
- 
   }
 
   return (
@@ -42,7 +40,7 @@ export default function Page() {
                   style={{ cursor: 'pointer', overflow: 'hidden' }}
                 >
                   <Img
-                    src={`/api/image/?path=${encodeURIComponent(`${item.meta.root}/_meta/${item.meta.coverName}`)}`}
+                    src={getMetaImagePath(item)}
                     w="100%"
                     h="auto"
                     alt={item.data.game_name}

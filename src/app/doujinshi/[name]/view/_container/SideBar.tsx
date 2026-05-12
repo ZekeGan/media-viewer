@@ -13,8 +13,8 @@ import scrollIntoView from 'scroll-into-view-if-needed'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
-import { getImagePath } from '@/utils'
 import { getLabels } from '@/utils/doujinshiUtils'
+import { getImagePath } from '@/utils/path'
 
 export default function SideBar() {
   const itemRefs = useRef<Record<string, HTMLDivElement>>({})
