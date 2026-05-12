@@ -58,11 +58,8 @@ export const GameContext = ({ children }: { children: ReactNode }) => {
     setGameParent(system.game_parent)
   }
 
-
-
   const fetchGameList = async () => {
     const res = await window.electronApi.getGameList()
-    console.log(res)
 
     if (!res) return
 

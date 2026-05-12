@@ -23,14 +23,8 @@ export default function Page() {
   }, [gameList])
 
   const openFolder = async (folderPath: string) => {
-    const res = await axios.post('/api/exec', { folderPath })
-    if (res.status === 200) {
-      notifications.show({
-        title: '成功打開資料夾',
-        message: '',
-        position: 'top-right',
-      })
-    }
+    await window.electronApi.openFolder(folderPath)
+ 
   }
 
   return (

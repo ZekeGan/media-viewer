@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { registerDoujinshiIPC } from './ipc/doujinshi'
 import { registerGameIPC } from './ipc/game'
+import { registerOsIPC } from './ipc/os'
 
 const _filename = fileURLToPath(import.meta.url)
 const _dirname = path.dirname(_filename)
@@ -38,6 +39,7 @@ function createWindow() {
 app.whenReady().then(() => {
   registerDoujinshiIPC()
   registerGameIPC()
+  registerOsIPC()
   createWindow()
 })
 

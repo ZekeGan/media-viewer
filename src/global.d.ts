@@ -7,6 +7,7 @@ declare global {
     electronApi: {
       getGameList: () => Promise<IGameMeta[]>
       getDoujinshiList: () => Promise<IDoujinshiMeta[]>
+      openFolder: (folderPath: string) => Promise<void>
     }
   }
 }
