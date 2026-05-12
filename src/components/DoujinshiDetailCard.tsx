@@ -1,4 +1,3 @@
-import { IDoujinshiData, IDoujinshiMeta } from '@/types/data'
 import { Fragment, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -15,6 +14,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
+import { IDoujinshiData, IDoujinshiMeta } from 'shared/type'
 import { doujinshiTypesColor } from '@/constants/style'
 import { Img } from './Img'
 import OpenFolderBtn from './OpenFolderBtn'

@@ -1,7 +1,7 @@
-import { ISystem } from '@/types/data'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { ISystem } from 'shared/type'
 import { CompanyName, ProjectName } from '@/constants/env'
 import { cacheTime } from '@/constants/server'
 

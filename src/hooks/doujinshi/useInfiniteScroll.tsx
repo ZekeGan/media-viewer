@@ -1,5 +1,5 @@
-import { IImageData } from '@/types/data'
 import { useEffect, useRef, useState } from 'react'
+import { IImageData } from 'shared/type'
 import { maxDoujinshiPagesLength } from '@/constants'
 
 const count = (target: number, ref: any[]) => {

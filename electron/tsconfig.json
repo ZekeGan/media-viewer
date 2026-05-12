@@ -9,5 +9,5 @@
     "skipLibCheck": true
   },
 
-  "include": ["./*.ts", "../electron.vite.config.ts"]
+  "include": ["./*.ts", "../electron.vite.config.ts", "./shared/global.d.ts"]
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { IGameMeta, ISystem } from '@/types/data'
 import {
   Dispatch,
   ReactNode,
@@ -13,6 +12,7 @@ import {
 import { usePathname } from 'next/navigation'
 import { useHash } from '@mantine/hooks'
 import axios from 'axios'
+import { IGameMeta, ISystem } from 'shared/type'
 
 type ContextValue = {
   gameList: IGameMeta[]
@@ -58,17 +58,10 @@ export const GameContext = ({ children }: { children: ReactNode }) => {
     setGameParent(system.game_parent)
   }
 
-  // const fetchGameList = async () => {
-  //   const res = await axios.get('/api/game')
-  //   // window.api.getGameList()
-  //   if (res.data.statue === 401) return
-  //   setGameList(res.data.data)
-  // }
+
 
   const fetchGameList = async () => {
-    console.log(window.api)
-
-    const res = await window.api.getGameList()
+    const res = await window.electronApi.getGameList()
     console.log(res)
 
     if (!res) return

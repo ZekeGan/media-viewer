@@ -1,6 +1,5 @@
 'use client'
 
-import { ISystem } from '@/types/data'
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -16,6 +15,7 @@ import {
 } from '@mantine/core'
 import axios from 'axios'
 import { Controller, useForm } from 'react-hook-form'
+import { ISystem } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
 
 export default function Page() {

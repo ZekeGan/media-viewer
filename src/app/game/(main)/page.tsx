@@ -1,6 +1,5 @@
 'use client'
 
-import { IGameData, IGameMeta } from '@/types/data'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -25,6 +24,7 @@ import {
 import { IconSettings } from '@tabler/icons-react'
 import { nanoid } from 'nanoid'
 import * as R from 'ramda'
+import { IGameData, IGameMeta } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
 import { defaultGameListOrder } from '@/constants'
 import {

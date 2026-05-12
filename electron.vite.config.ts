@@ -21,4 +21,6 @@ export default defineConfig({
       },
     },
   },
+
+  // 這裡不配置 renderer，交給 Next.js 處理
 })

@@ -1,7 +1,7 @@
-import { IDoujinshiData, IDoujinshiMeta, IImageData } from '@/types/data'
 import { ComboboxItem } from '@mantine/core'
 import { readLocalStorageValue } from '@mantine/hooks'
 import axios from 'axios'
+import { IDoujinshiData, IDoujinshiMeta, IImageData } from 'shared/type'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { doujinshiTypes } from '@/constants'
@@ -76,8 +76,9 @@ export const useDoujinshiStore = create<IDoujinshiStore>()(
       doujinshiList: undefined,
       fetchDoujinshiList: async () => {
         if (get().doujinshiList) return
-        const res = await axios.get('/api/doujinshi')
-        set({ doujinshiList: res.data.data })
+        const res = await window.electronApi.getDoujinshiList()
+
+        set({ doujinshiList: res })
       },
 
       curDoujinshi: undefined,

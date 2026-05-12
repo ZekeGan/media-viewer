@@ -5,15 +5,14 @@
   "main": "out/main/main.js",
   "type": "module",
   "scripts": {
-    "dev:electron": "electron-vite dev",
+    "dev:electron": "electron-vite dev --watch",
     "dev:next": "next dev",
     "build": "next build && electron-vite build",
+    "build:next": "next build",
+    "build:electron": "electron-vite build",
     "preview": "electron-vite preview",
-    "build:web": "next build",
-    "build:electron": "tsc -p electron/tsconfig.json",
-    "start": "electron dist-electron/main.js",
+    "start": "electron out/main.js",
     "lint": "next lint",
-    "check": "tsc --noEmit",
     "prettier": "prettier ."
   },
   "dependencies": {

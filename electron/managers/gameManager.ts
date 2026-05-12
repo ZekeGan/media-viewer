@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { nanoid } from 'nanoid'
 import path from 'path'
-import { IGameData, IGameMeta } from '../../src/types/data'
+import { IGameData, IGameMeta } from '../../shared/type'
 import { GamePath } from '../config/env'
 import { IMG_EXT } from '../constants/index'
 

@@ -1,6 +1,5 @@
 'use client'
 
-import { IDoujinshiData, IDoujinshiMeta } from '@/types/data'
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -20,6 +19,7 @@ import {
 } from '@mantine/core'
 import { IconChevronRight, IconHome, IconSearch } from '@tabler/icons-react'
 import { nanoid } from 'nanoid'
+import { IDoujinshiData, IDoujinshiMeta } from 'shared/type'
 import { ContentWidth, doujinshiTypesColor } from '@/constants/style'
 import MainLayout from '@/layout/MainLayout'
 import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'

@@ -1,4 +1,4 @@
-import { IDoujinshiData, IGameData } from '@/types/data'
+import { IDoujinshiData, IGameData } from 'shared/type'
 
 export const DataName = 'data.json'
 export const imgExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp']

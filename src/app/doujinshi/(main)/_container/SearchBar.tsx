@@ -1,7 +1,7 @@
-import { IDoujinshiData } from '@/types/data'
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, Center, Flex, Input, Stack } from '@mantine/core'
+import { IDoujinshiData } from 'shared/type'
 import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
 import { useDoujinshiStore } from '@/store/doujinshiStore'

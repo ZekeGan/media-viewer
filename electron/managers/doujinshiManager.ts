@@ -1,10 +1,10 @@
-import { IDoujinshiData, IDoujinshiMeta, IImageData } from '@/types/data'
 import fs from 'fs'
 import imageSize from 'image-size'
 import { nanoid } from 'nanoid'
 import path from 'path'
-import { imgExt } from '@/constants'
-import { DoujinshiPath } from '@/constants/env'
+import { IDoujinshiData, IDoujinshiMeta, IImageData } from 'shared/type'
+import { DoujinshiPath } from '../config/env'
+import { IMG_EXT } from '../constants/index'
 
 function parseTitle(str: string) {
   const result: IDoujinshiData = {
@@ -199,7 +199,7 @@ export class DoujinshiManager {
   private async _getDefaultMetaData() {
     const dirs = await fs.readdirSync(this._doujinshiMetaPath)
     const coverName =
-      dirs.find(dir => imgExt.includes(path.extname(dir))) || null
+      dirs.find(dir => IMG_EXT.includes(path.extname(dir))) || null
     await this._getAllImageData()
     return {
       coverName: coverName || '',
@@ -273,7 +273,7 @@ export class DoujinshiManager {
     const imageTitleList = await fs
       .readdirSync(this._curDoujinshiPath)
       .filter(t => fs.statSync(path.join(this._curDoujinshiPath, t)).isFile())
-      .filter(t => imgExt.includes(path.extname(t).toLocaleLowerCase()))
+      .filter(t => IMG_EXT.includes(path.extname(t).toLocaleLowerCase()))
 
     this._pageTitleList = await Promise.all(
       imageTitleList.map(async t => {
@@ -297,7 +297,7 @@ export class DoujinshiManager {
     if (list.length === 0) return
 
     const ext = path.extname(list[0].title).toLocaleLowerCase()
-    if (imgExt.includes(ext)) {
+    if (IMG_EXT.includes(ext)) {
       const srcPath = path.join(this._curDoujinshiPath, list[0].title)
       const destPath = path.join(this._doujinshiMetaPath, `cover${ext}`)
       await fs.copyFileSync(srcPath, destPath)

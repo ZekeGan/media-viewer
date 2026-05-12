@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { IGameMeta } from '../../src/types/data'
+import { IGameMeta } from '../../shared/type'
 import { GamePath } from '../config/env'
 import { GameManager } from '../managers/gameManager'
 

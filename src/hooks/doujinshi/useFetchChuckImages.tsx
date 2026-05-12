@@ -1,6 +1,6 @@
-import { IImageData } from '@/types/data'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import { IImageData } from 'shared/type'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 import { getImagePath } from '@/utils'
 

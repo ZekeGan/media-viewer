@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
-
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -18,9 +17,10 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".", // TS為5版，如果VS插件高於該版本 會報錯 不用理即可
     "paths": {
-      "@/*": ["./src/*"],
-      "global": ["src/types/data.ts"]
+      // "@shared/*": ["./shared"],
+      "@/*": ["./src/*"]
     }
   },
   "include": [

@@ -1,6 +1,5 @@
 'use client'
 
-import { IGameMeta } from '@/types/data'
 import { ChangeEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -23,6 +22,7 @@ import {
 import { IconPlus } from '@tabler/icons-react'
 import axios from 'axios'
 import { uniq } from 'ramda'
+import { IGameMeta } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
 import { HeaderHeight, MainPadding } from '@/constants/style'
 import { GroupedFilterContainer } from '@/components/FilterContainer'

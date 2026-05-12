@@ -1,5 +1,5 @@
-import { IImageData } from '@/types/data'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { IImageData } from 'shared/type'
 import { maxDoujinshiPagesLength } from '@/constants'
 import { useDoujinshiStore } from '@/store/doujinshiStore'
 

@@ -1,10 +1,10 @@
 'use client'
 
-import { CheckList } from '@/types/data'
 import { Dispatch, SetStateAction, useMemo } from 'react'
 import { createKey } from 'next/dist/shared/lib/router/router'
 import { Accordion, Checkbox, Stack } from '@mantine/core'
 import { nanoid } from 'nanoid'
+import { CheckList } from 'shared/type'
 import { useTranslate } from '@/hooks/useTranslate'
 
 interface IFilterContainer {

@@ -9,7 +9,6 @@ module.exports = {
   arrowParens: 'avoid', // 只有一個參數時省略括號
   endOfLine: 'lf', // 使用 LF 作為換行符號
   bracketSameLine: false,
-
   importOrder: [
     '^react$',
     '^next',
@@ -25,7 +24,14 @@ module.exports = {
     '^@/utils(.*)$',
     '^[./]',
   ],
-  // importOrderSeparation: true,
   importOrderSortSpecifiers: true,
   plugins: ['@trivago/prettier-plugin-sort-imports'],
+  overrides: [
+    {
+      files: ['electron/**/*.ts'],
+      options: {
+        parser: 'typescript',
+      },
+    },
+  ],
 }
