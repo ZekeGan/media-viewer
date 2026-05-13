@@ -50,15 +50,12 @@ export const GameContext = ({ children }: { children: ReactNode }) => {
   const [tempGameList, setTempGameList] = useState<IGameMeta[]>([])
 
   const fetchSystemData = async () => {
-    const res = await axios.get('/api/system/game')
-    if (res.data.statue === 401) return
-    const system = res.data.data as ISystem
+    // const res = await axios.get('/api/system/game')
+    const res = await window.electronApi.getSystemData()
 
-    setGameTags(system.game_tags)
-    setGameParent(system.game_parent)
+    setGameTags(res.game_tags)
+    setGameParent(res.game_parent)
   }
-
-
 
   const fetchGameList = async () => {
     const res = await window.electronApi.getGameList()

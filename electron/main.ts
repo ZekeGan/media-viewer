@@ -1,14 +1,15 @@
 import { BrowserWindow, app, net, protocol } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { registerDoujinshiIPC } from './ipc/doujinshi'
-import { registerGameIPC } from './ipc/game'
-import { registerOsIPC } from './ipc/os'
+import {
+  registerDoujinshiIPC,
+  registerGameIPC,
+  registerOsIPC,
+  registerSystemIPC,
+} from './ipc'
 
 const _filename = fileURLToPath(import.meta.url)
 const _dirname = path.dirname(_filename)
-
-const preloadPath = path.join(_dirname, '../preload/preload.js')
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -23,7 +24,7 @@ function createWindow() {
     height: 800,
     show: false,
     webPreferences: {
-      preload: preloadPath,
+      preload: path.join(_dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       // 儘管electron官方默認開啟，但是electron-vite的配置中還是推薦關閉。https://electron-vite.org/guide/dev#limitations-of-sandboxing
@@ -43,6 +44,15 @@ function createWindow() {
   win.loadURL('http://localhost:3000')
 }
 
+process.on('uncaughtException', error => {
+  // console.error('Uncaught Exception:', error)
+  app.quit()
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  // console.error('Unhandled Rejection:', reason)
+})
+
 app.whenReady().then(() => {
   protocol.handle('media', req => {
     const url = new URL(req.url)
@@ -52,6 +62,8 @@ app.whenReady().then(() => {
   registerDoujinshiIPC()
   registerGameIPC()
   registerOsIPC()
+  registerSystemIPC()
+
   createWindow()
 })
 

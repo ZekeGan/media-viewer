@@ -131,7 +131,7 @@ function EditCurGameClient({
       cover: coverUrl,
     }
 
-    await axios.post('/api/save_game', data)
+    // await axios.post('/api/save_game', data)
     await updateGameList()
     router.push('/game')
   }
