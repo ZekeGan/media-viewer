@@ -57,50 +57,50 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   ]
 
   return (
-    <Container fluid p={0} w="100vw" h="100vh">
-      <Card radius={0} p={0}>
-        <Flex justify="space-between" align="center" px="md">
-          <Box />
+    <Container fluid p={0} w="100vw" h="100vh" className="flex flex-col ">
+      <div>
+        <Card radius={0} p={0}>
+          <Flex justify="space-between" align="center" px="md">
+            <Box />
 
-          <Group gap="xl">
-            <HoverAnchor href="/">
-              <Text>首頁</Text>
-            </HoverAnchor>
-            <HoverCard>
-              <HoverCard.Target>
-                <Text>遊戲</Text>
-              </HoverCard.Target>
-              <HoverCard.Dropdown p={0}>
-                <Stack miw={200}>
-                  {gameList.map(d => (
-                    <HoverAnchor key={d.href} href={d.href}>
-                      <Flex gap="md">
-                        {d.icon}
-                        <Text>{d.label}</Text>
-                      </Flex>
-                    </HoverAnchor>
-                  ))}
-                </Stack>
-              </HoverCard.Dropdown>
-            </HoverCard>
-            <HoverAnchor href="/doujinshi">
-              <Text>同人誌</Text>
-            </HoverAnchor>
-          </Group>
+            <Group gap="xl">
+              <HoverAnchor href="/">
+                <Text>首頁</Text>
+              </HoverAnchor>
+              <HoverCard>
+                <HoverCard.Target>
+                  <Text>遊戲</Text>
+                </HoverCard.Target>
+                <HoverCard.Dropdown p={0}>
+                  <Stack miw={200}>
+                    {gameList.map(d => (
+                      <HoverAnchor key={d.href} href={d.href}>
+                        <Flex gap="md">
+                          {d.icon}
+                          <Text>{d.label}</Text>
+                        </Flex>
+                      </HoverAnchor>
+                    ))}
+                  </Stack>
+                </HoverCard.Dropdown>
+              </HoverCard>
+              <HoverAnchor href="/doujinshi">
+                <Text>同人誌</Text>
+              </HoverAnchor>
+            </Group>
 
-          <Flex>
-            <ActionIcon
-              variant="transparent"
-              onClick={() => setOpenSetting(true)}
-            >
-              <IconSettings />
-            </ActionIcon>
+            <Flex>
+              <ActionIcon
+                variant="transparent"
+                onClick={() => setOpenSetting(true)}
+              >
+                <IconSettings />
+              </ActionIcon>
+            </Flex>
           </Flex>
-        </Flex>
-      </Card>
-
-      <Box>{children}</Box>
-
+        </Card>
+      </div>
+      <div className="flex-1">{children}</div>
       <SettingModal openSetting={openSetting} setOpenSetting={setOpenSetting} />
     </Container>
   )

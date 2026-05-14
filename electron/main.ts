@@ -41,7 +41,7 @@ function createWindow() {
     }
   })
 
-  win.loadURL('http://localhost:3000')
+  win.loadURL('http://localhost:3000/editor')
 }
 
 process.on('uncaughtException', error => {

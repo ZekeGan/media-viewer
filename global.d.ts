@@ -1,6 +1,9 @@
 import { IDoujinshiMeta, ISystem } from 'shared/type'
 
-export {}
+declare module '*.css' {
+  const content: Record<string, string>
+  export default content
+}
 
 declare global {
   interface Window {
@@ -13,3 +16,5 @@ declare global {
     }
   }
 }
+
+export {}
