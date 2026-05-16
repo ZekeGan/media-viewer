@@ -25,9 +25,9 @@ import MainLayout from '@/layout/MainLayout'
 import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
 import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
-import SearchBar from './_container/SearchBar'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getMetaImagePath } from '@/utils/path'
+import SearchBar from './_container/SearchBar'
 
 export default function MainPage() {
   const params = useSearchParams()
@@ -177,7 +177,7 @@ export default function MainPage() {
                     {data.map(item => {
                       const {
                         data: { title, types },
-                        meta: {  pages },
+                        meta: { pages },
                       } = item
                       return (
                         <Card key={nanoid()} p="xs">

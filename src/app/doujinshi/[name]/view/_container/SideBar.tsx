@@ -12,7 +12,7 @@ import {
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 import { getImagePath } from '@/utils/path'
 

@@ -1,21 +1,28 @@
 'use client'
 
-import { Column, DataType, Layout } from '@/types/main'
-import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Flex } from '@mantine/core'
+import React, { useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import GridLayout, {
   LayoutItem,
   Layout as ReactLayout,
 } from 'react-grid-layout'
 import { Control, useWatch } from 'react-hook-form'
-import { columnIdKey, columnTypeKey } from '@/constants/editor'
 import {
-  ItemBoolean,
-  ItemButton,
-  ItemDate,
-  ItemNumber,
-  ItemString,
+  Column,
+  DataLayoutItem,
+  DataType,
+  Layout,
+  VisualLayoutItem,
+} from 'shared/main'
+import { columnIdKey, columnTypeKey } from '@/constants/editor'
+import { useAppStore } from '@/stores/mainStore'
+import {
+  // ItemBoolean,
+  // ItemButton,
+  // ItemDate,
+  // ItemNumber,
+  CellText,
   ItemWrapper,
 } from '../_component/displayItem'
 import { ValueType } from '../page'
@@ -24,63 +31,53 @@ const cols = 20
 
 export function EditArea({
   layouts,
-  setLayouts,
   control,
 }: {
-  layouts: Layout[]
-  setLayouts: React.Dispatch<React.SetStateAction<Layout[]>>
   control: Control<ValueType>
+  layouts: Layout
 }) {
+  const searchParams = useSearchParams()
+  const layoutId = searchParams.get('id')
   const columns = useWatch({ control, name: 'columns' })
+  const updateLayoutItems = useAppStore(s => s.updateLayoutItems)
+  const grids = useMemo(() => {
+    if (!layouts) return []
+    return layouts.layoutItems.map(l => l.grid)
+  }, [layouts])
 
-  const processedLayouts = useMemo(() => {
-    const l = layouts.map(l => {
-      const idx = columns.findIndex(c => c.id === l.targetColumn)
-      return { ...l, idx }
-    })
+  const handleChange = (grids: ReactLayout) => {
+    if (!layoutId) return
 
-    return { renderLayout: l, componentLayout: l.map(s => s.layout) }
-  }, [columns, layouts])
-
-  const handleChange = (oriLayout: ReactLayout) => {
-    const newLayout = layouts
+    const newLayoutItems = layouts.layoutItems
       .map(l => {
-        const item = oriLayout.find(o => o.i === l.layout.i)
-        if (!item) return
-        return { ...l, layout: item }
+        const item = grids.find(o => o.i === l.grid.i)
+        if (!item) return l
+        return { ...l, grid: item } satisfies DataLayoutItem | VisualLayoutItem
       })
-      .filter(l => !!l)
-
-    setLayouts(newLayout)
+      .filter(l => l)
+    updateLayoutItems(layoutId, newLayoutItems)
   }
 
   const handleDrop = (item: LayoutItem, e: DragEvent) => {
     const dataType = e.dataTransfer?.getData(columnTypeKey) as DataType
-    const targetColumn = e.dataTransfer?.getData(columnIdKey) as DataType
+    const columnId = e.dataTransfer?.getData(columnIdKey) as DataType
+    console.log(item)
 
-    if (!dataType || !targetColumn) return
-    const { x, y, w, h } = item
-    const layoutId = nanoid()
-    setLayouts(p => [
-      ...p,
+    if (!dataType || !columnId || !layoutId) return
+    const newLayoutItems: Layout['layoutItems'] = [
+      ...layouts.layoutItems,
       {
-        id: layoutId,
-        targetColumn,
-        config: { dataType },
-        layout: { i: `${p.length + 1}`, w, h, x, y },
+        id: nanoid(),
+        layoutId: layoutId,
+        columnId: columnId,
+        grid: { ...item, i: nanoid() },
+        renderer: 'TEXT',
       },
-    ])
+    ]
+    updateLayoutItems(layoutId, newLayoutItems)
   }
 
-  useEffect(() => {
-    const newLayout = layouts.map(l => {
-      const c = columns.find(c => c.id === l.targetColumn)
-      if (!c) return l
-      return { ...l, config: { dataType: c.dataType } }
-    })
-    setLayouts(newLayout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columns])
+  if (!columns) return null
 
   return (
     <div className="p-5">
@@ -92,7 +89,7 @@ export function EditArea({
         />
 
         <GridLayout
-          layout={processedLayouts.componentLayout}
+          layout={grids}
           dropConfig={{
             enabled: true,
             defaultItem: { w: 2, h: 1 },
@@ -114,52 +111,20 @@ export function EditArea({
           autoSize={false}
           style={{ minHeight: '1000px' }}
         >
-          {processedLayouts.renderLayout.map(i => {
-            if (i.config.dataType === 'STRING') {
-              return (
-                <div key={i.layout.i} className="w-full h-full">
-                  <ItemWrapper idx={i.idx}>
-                    <ItemString />
-                  </ItemWrapper>
-                </div>
-              )
+          {layouts.layoutItems.map(l => {
+            if ('columnId' in l) {
+              const c = columns.find(c => c.id === l.columnId)
+              if (l.renderer === 'TEXT') {
+                return (
+                  <div key={l.grid.i} className="w-full h-full">
+                    <ItemWrapper label={c?.name}>
+                      <CellText />
+                    </ItemWrapper>
+                  </div>
+                )
+              }
             }
-            if (i.config.dataType === 'NUMBER') {
-              return (
-                <div key={i.layout.i} className="w-full h-full">
-                  <ItemWrapper idx={i.idx}>
-                    <ItemNumber />
-                  </ItemWrapper>
-                </div>
-              )
-            }
-            if (i.config.dataType === 'DATE') {
-              return (
-                <div key={i.layout.i} className="w-full h-full">
-                  <ItemWrapper idx={i.idx}>
-                    <ItemDate />
-                  </ItemWrapper>
-                </div>
-              )
-            }
-            if (i.config.dataType === 'BOOLEAN') {
-              return (
-                <div key={i.layout.i} className="w-full h-full">
-                  <ItemWrapper idx={i.idx}>
-                    <ItemBoolean />
-                  </ItemWrapper>
-                </div>
-              )
-            }
-            if (i.config.dataType === 'BUTTON') {
-              return (
-                <div key={i.layout.i} className="w-full h-full">
-                  <ItemWrapper idx={i.idx}>
-                    <ItemButton />
-                  </ItemWrapper>
-                </div>
-              )
-            }
+
             return null
           })}
         </GridLayout>

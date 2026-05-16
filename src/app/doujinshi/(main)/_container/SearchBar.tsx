@@ -4,7 +4,7 @@ import { Button, Card, Center, Flex, Input, Stack } from '@mantine/core'
 import { IDoujinshiData } from 'shared/type'
 import { doujinshiTypes } from '@/constants'
 import { doujinshiTypesColor } from '@/constants/style'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 
 export default function SearchBar() {
   const router = useRouter()

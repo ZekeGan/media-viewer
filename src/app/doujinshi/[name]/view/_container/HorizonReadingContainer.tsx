@@ -2,7 +2,7 @@ import { Box, Center, Flex, ScrollArea } from '@mantine/core'
 import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getImagePath } from '@/utils/path'
 
 export default function HorizonReadingContainer() {

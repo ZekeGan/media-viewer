@@ -1,6 +1,5 @@
 'use client'
 
-import { Column, DataType } from '@/types/main'
 import { useState } from 'react'
 import {
   ActionIcon,
@@ -20,18 +19,19 @@ import {
 import clsx from 'clsx'
 import { nanoid } from 'nanoid'
 import { Control, Controller, useFieldArray, useWatch } from 'react-hook-form'
+import { Column, DataType } from 'shared/main'
 import { columnIdKey, columnTypeKey } from '@/constants/editor'
 import { ValueType } from '../page'
 
 const ValidColumnTypes: DataType[] = [
   'STRING',
   'NUMBER',
-  'IMAGE',
-  'BUTTON',
-  'ARRAY_STRING',
-  'DATE',
   'BOOLEAN',
-  'NONE',
+  'DATETIME',
+  'ARRAY_STRING',
+  'ARRAY_NUMBER',
+  'JSON',
+  'FILE_PATH',
 ]
 
 export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
@@ -48,6 +48,7 @@ export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
     e.dataTransfer.setData(columnTypeKey, dataType)
     e.dataTransfer.setData(columnIdKey, id)
   }
+  console.log(columns)
 
   return (
     <section className="h-full border-r border-gray-700 ">
@@ -84,7 +85,7 @@ export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
             </ActionIcon>
           </Flex>
 
-          <Box>
+          <Flex direction="column" gap="xs">
             {fields.map((field, idx) => (
               <Card
                 key={field.id}
@@ -94,34 +95,42 @@ export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
                 draggable={openColumn}
                 onDragStart={e => handleDrag(e, idx)}
               >
-                <Flex className="p-2" align="center" gap="md">
-                  <Avatar size="sm">{idx + 1}</Avatar>
+                <Flex justify="space-between">
+                  <Flex
+                    className="p-2"
+                    align="center"
+                    gap="xs"
+                    direction="column"
+                  >
+                    <Controller
+                      control={control}
+                      name={`columns.${idx}.name`}
+                      render={({ field }) => (
+                        <TextInput
+                          label="名稱"
+                          className="w-full"
+                          placeholder="欄位名稱"
+                          defaultValue={field.value}
+                          onBlur={e => field.onChange(e.target.value)}
+                        />
+                      )}
+                    />
 
-                  <Controller
-                    control={control}
-                    name={`columns.${idx}.name`}
-                    render={({ field }) => (
-                      <TextInput
-                        placeholder="欄位名稱"
-                        defaultValue={field.value}
-                        onBlur={e => field.onChange(e.target.value)}
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name={`columns.${idx}.dataType`}
-                    render={({ field }) => (
-                      <Select
-                        placeholder="資料類型"
-                        data={ValidColumnTypes}
-                        defaultValue={field.value}
-                        onChange={value => field.onChange(value as DataType)}
-                      />
-                    )}
-                  />
-
+                    <Controller
+                      control={control}
+                      name={`columns.${idx}.dataType`}
+                      render={({ field }) => (
+                        <Select
+                          label="資料類型"
+                          className="w-full"
+                          placeholder="資料類型"
+                          data={ValidColumnTypes}
+                          defaultValue={field.value}
+                          onChange={value => field.onChange(value as DataType)}
+                        />
+                      )}
+                    />
+                  </Flex>
                   <Box
                     style={{
                       cursor: 'grab',
@@ -134,7 +143,7 @@ export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
                 </Flex>
               </Card>
             ))}
-          </Box>
+          </Flex>
         </Box>
       </Flex>
     </section>

@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useHash } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 export const useGoTo = () => {

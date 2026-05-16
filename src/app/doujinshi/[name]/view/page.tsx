@@ -1,7 +1,7 @@
 'use client'
 
 import { Box, Container } from '@mantine/core'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import HorizonReadingContainer from './_container/HorizonReadingContainer'
 import SideBar from './_container/SideBar'
 import ToolBar from './_container/ToolBar'

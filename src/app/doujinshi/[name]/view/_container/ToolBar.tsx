@@ -36,7 +36,7 @@ import {
   IconTool,
 } from '@tabler/icons-react'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 const IconBtn = ({

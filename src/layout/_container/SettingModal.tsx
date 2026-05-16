@@ -9,7 +9,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 
 export default function SettingModal({
   openSetting,

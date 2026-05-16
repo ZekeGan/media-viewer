@@ -3,7 +3,7 @@
 import { ReactNode, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Box } from '@mantine/core'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 
 export default function Layout({ children }: { children: ReactNode }) {
   const params = useParams()

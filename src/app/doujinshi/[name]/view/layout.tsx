@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 
 export default function Layout({ children }: { children: ReactNode }) {
   const curDoujinshi = useDoujinshiStore(s => s.curDoujinshi)

@@ -21,7 +21,7 @@ import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useFetchInfiniteImages } from '@/hooks/doujinshi/useFetchInfiniteImages'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 import { getImagePath } from '@/utils/path'
 

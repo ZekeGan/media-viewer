@@ -1,11 +1,11 @@
 'use client'
 
-import { Layout } from '@/types/main'
 import { useState } from 'react'
 import { ActionIcon, Avatar, Box, Card, Flex } from '@mantine/core'
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { Control, useFieldArray, useWatch } from 'react-hook-form'
+import { Layout } from 'shared/main'
 import { ValueType } from '../page'
 
 export function ConfigSideBar({ layouts }: { layouts: Layout[] }) {

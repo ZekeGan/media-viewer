@@ -4,7 +4,7 @@ import scrollIntoView from 'scroll-into-view-if-needed'
 import LoadingContainer from '@/components/LoadingContainer'
 import { ObserverImg } from '@/components/ObserverImg'
 import { useGoTo } from '@/hooks/doujinshi/useGoTo'
-import { useDoujinshiStore } from '@/store/doujinshiStore'
+import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getImagePath } from '@/utils/path'
 
 export default function VerticalReadingContainer() {

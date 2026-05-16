@@ -1,188 +1,44 @@
 'use client'
 
-import { Display } from '@/types/editor'
-import { Column, DataType, Layout } from '@/types/main'
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Flex } from '@mantine/core'
-import { nanoid } from 'nanoid'
 import { useForm } from 'react-hook-form'
+import { Column } from 'shared/main'
 import MainLayout from '@/layout/MainLayout'
+import { useLoadInitialData } from '@/hooks/useLoadInitialData'
+import { useAppStore } from '@/stores/mainStore'
 import { ColumnSideBar } from './_container/columnSideBar'
 import { ConfigSideBar } from './_container/configSideBar'
 import { EditArea } from './_container/editArea'
-
-const getDefaultDisplayData = (type: DataType, target: string): Display => {
-  const id = nanoid()
-  const data: Record<DataType, Display> = {
-    STRING: {
-      id,
-      target,
-      type: 'STRING',
-      value: '',
-    },
-    NUMBER: {
-      id,
-      target,
-      type: 'NUMBER',
-      value: 0,
-    },
-    IMAGE: {
-      id,
-      target,
-      type: 'STRING',
-      value: 'toom1',
-    },
-    BUTTON: {
-      id: nanoid(),
-      target,
-      type: 'BUTTON',
-      config: {
-        buttonStr: 'run exe',
-        command: '',
-      },
-    },
-    ARRAY_STRING: {
-      target,
-      id,
-      type: 'STRING',
-      value: 'toom1',
-    },
-    DATE: {
-      id,
-      target,
-      type: 'DATE',
-      config: {
-        formatStr: 'yyyy/MM/dd',
-      },
-      value: new Date('2000/01/01').toString(),
-    },
-    BOOLEAN: {
-      id,
-      target,
-      type: 'BOOLEAN',
-      config: {
-        trueStr: '',
-        falseStr: '',
-      },
-      value: true,
-    },
-    NONE: {
-      id,
-      target,
-      type: 'NONE',
-    },
-  }
-  return data[type]
-}
-
-const initialLayout: Layout[] = [
-  {
-    layout: {
-      i: 'a',
-      x: 0,
-      y: 0,
-      w: 5,
-      h: 3,
-    },
-    config: {
-      dataType: 'STRING',
-    },
-    id: 'a',
-    targetColumn: '',
-  },
-  {
-    layout: {
-      i: 'b',
-      x: 0,
-      y: 3,
-      w: 3,
-      h: 1,
-    },
-    config: {
-      dataType: 'NUMBER',
-    },
-    id: 'b',
-    targetColumn: '',
-  },
-  {
-    layout: {
-      i: 'c',
-      x: 3,
-      y: 3,
-      w: 2,
-      h: 1,
-    },
-    config: {
-      dataType: 'DATE',
-    },
-    id: 'c',
-    targetColumn: '',
-  },
-  {
-    layout: {
-      i: 'd',
-      x: 0,
-      y: 4,
-      w: 2,
-      h: 1,
-    },
-    config: {
-      dataType: 'BOOLEAN',
-    },
-    id: 'd',
-    targetColumn: '',
-  },
-  {
-    layout: {
-      i: 'e',
-      x: 4,
-      y: 4,
-      w: 1,
-      h: 1,
-    },
-    config: {
-      dataType: 'STRING',
-    },
-    id: 'e',
-    targetColumn: '',
-  },
-  {
-    layout: {
-      i: 'f',
-      x: 0,
-      y: 4,
-      w: 5,
-      h: 1,
-    },
-    config: {
-      dataType: 'BUTTON',
-    },
-    id: 'f',
-    targetColumn: '',
-  },
-]
-
-const defaultColumn: Column[] = [
-  {
-    id: nanoid(),
-    name: '',
-    dataType: 'STRING',
-  },
-]
 
 export type ValueType = {
   columns: Column[]
 }
 
 export default function GridEditorPage() {
-  const [isPreviewMode, setIsPreviewMode] = useState(false)
-  const [layouts, setLayouts] = useState<Layout[]>(initialLayout)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const layoutId = searchParams.get('id')
+  useLoadInitialData()
+  const currentView = useAppStore(s => s.currentView)
 
-  const { control } = useForm<ValueType>({
-    defaultValues: {
-      columns: defaultColumn,
-    },
-  })
+  const layouts = useMemo(() => {
+    if (!currentView || !layoutId) return
+    return currentView.layouts.find(l => l.id === layoutId)
+  }, [currentView, layoutId])
+
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
+
+  const { control, reset } = useForm<ValueType>()
+  useEffect(() => {
+    if (!currentView) return
+
+    reset({ columns: currentView.columns })
+  }, [currentView, reset])
+
+  if (!layoutId) router.prefetch('/')
+  if (!currentView || !layouts) return null
 
   return !isPreviewMode ? (
     <MainLayout>
@@ -211,14 +67,10 @@ export default function GridEditorPage() {
               </Flex>
             </Flex>
           </div>
-          <EditArea
-            control={control}
-            layouts={layouts}
-            setLayouts={setLayouts}
-          />
+          <EditArea control={control} layouts={layouts} />
         </section>
 
-        <ConfigSideBar layouts={layouts} />
+        {/* <ConfigSideBar layouts={layouts} /> */}
       </Flex>
     </MainLayout>
   ) : (
@@ -239,6 +91,70 @@ export default function GridEditorPage() {
     </MainLayout>
   )
 }
+
+// const getDefaultDisplayData = (type: DataType, target: string): Display => {
+//   const id = nanoid()
+//   const data: Record<DataType, Display> = {
+//     STRING: {
+//       id,
+//       target,
+//       type: 'STRING',
+//       value: '',
+//     },
+//     NUMBER: {
+//       id,
+//       target,
+//       type: 'NUMBER',
+//       value: 0,
+//     },
+//     IMAGE: {
+//       id,
+//       target,
+//       type: 'STRING',
+//       value: 'toom1',
+//     },
+//     BUTTON: {
+//       id: nanoid(),
+//       target,
+//       type: 'BUTTON',
+//       config: {
+//         buttonStr: 'run exe',
+//         command: '',
+//       },
+//     },
+//     ARRAY_STRING: {
+//       target,
+//       id,
+//       type: 'STRING',
+//       value: 'toom1',
+//     },
+//     DATE: {
+//       id,
+//       target,
+//       type: 'DATE',
+//       config: {
+//         formatStr: 'yyyy/MM/dd',
+//       },
+//       value: new Date('2000/01/01').toString(),
+//     },
+//     BOOLEAN: {
+//       id,
+//       target,
+//       type: 'BOOLEAN',
+//       config: {
+//         trueStr: '',
+//         falseStr: '',
+//       },
+//       value: true,
+//     },
+//     NONE: {
+//       id,
+//       target,
+//       type: 'NONE',
+//     },
+//   }
+//   return data[type]
+// }
 
 // const displayData: Display[] = [
 //   {
