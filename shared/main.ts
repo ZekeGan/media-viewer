@@ -27,6 +27,7 @@ export type DataType =
   | 'JSON'
   | 'FILE_PATH'
 
+//* Column
 export interface Column {
   id: string
   // windowViewId: string
@@ -34,38 +35,68 @@ export interface Column {
   dataType: DataType
   isSystem?: boolean // 新增：是否為系統內建欄位（如：建立時間，不可刪除）
 }
+//*
 
-export type DataRendererType =
-  | 'BUTTON'
-  | 'TEXT'
-  | 'IMAGE'
-  | 'LINK'
-  | 'TAG'
-  | 'PROGRESS' // 等等
-export type VisualRendererType = 'DIVIDER' // 等等
-
+//* Layout
 export interface Layout {
   id: string
   name: string
   // updateDate: Date
   layoutItems: (DataLayoutItem | VisualLayoutItem)[]
 }
-export interface DataLayoutItem {
+
+interface LayoutItemBase {
   id: string
   layoutId: string
-  columnId: string
   grid: ReactGridLayoutItem
+}
+
+export type DataRendererType =
+  // | 'BUTTON'
+  | 'TEXT'
+  // | 'IMAGE'
+  // | 'LINK'
+  // | 'TAG'
+  // | 'PROGRESS'
+  | 'DATE_TEXT' // 等等
+interface DataLayoutItemBase extends LayoutItemBase {
+  columnId: string
   renderer: DataRendererType
   rendererConfig?: Record<string, any>
 }
-export interface VisualLayoutItem {
-  id: string
-  layoutId: string
-  grid: ReactGridLayoutItem
+
+interface TextLayoutItem extends DataLayoutItemBase {
+  renderer: 'TEXT'
+  rendererConfig: {
+    label?: string
+    fontSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | number // number 表示自定义 px
+    color?: string // Tailwind 颜色类名，如 'gray-700' 或任意颜色值
+    fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold'
+    textAlign?: 'left' | 'center' | 'right'
+    truncate?: boolean // 是否截断（单行加省略号）
+  }
+}
+interface DateTextLayoutItem extends DataLayoutItemBase {
+  renderer: 'DATE_TEXT'
+  rendererConfig: {
+    label?: string
+    format?: string
+  }
+}
+export type DataLayoutItem = TextLayoutItem | DateTextLayoutItem
+
+export type VisualRendererType = 'DIVIDER' // 等等
+interface VisualLayoutItemBase extends LayoutItemBase {
   renderer: VisualRendererType
   rendererConfig?: Record<string, any>
 }
 
+interface DividerLayoutItem extends VisualLayoutItemBase {}
+
+export type VisualLayoutItem = DividerLayoutItem
+//*
+
+//* Folder
 // 只對應一個資料夾，該資料夾儲存 FolderId
 // 深度搜尋該子資料夾可設定深度
 export interface Folder {

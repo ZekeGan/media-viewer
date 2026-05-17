@@ -4,10 +4,8 @@ import { useMemo, useState } from 'react'
 import { ActionIcon, Box, Card, Flex } from '@mantine/core'
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import clsx from 'clsx'
-import {
-  useFormContext,
-  useWatch,
-} from 'react-hook-form'
+import { useFormContext, useWatch } from 'react-hook-form'
+import { CellConfigRenderer } from '../_components/displayItem'
 import { useEditorContext } from '../_contexts/editorContext'
 import { ValueType } from '../page'
 
@@ -42,7 +40,9 @@ export function ConfigSideBar() {
             </ActionIcon>
           </Flex>
           <main>
-            {currentLayoutItem && <div>{currentLayoutItem.renderer}</div>}
+            {currentLayoutItem && (
+              <CellConfigRenderer layoutItem={currentLayoutItem} />
+            )}
           </main>
         </Box>
       </Flex>

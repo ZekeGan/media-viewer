@@ -1,52 +1,63 @@
-// import {
-//   DisplayBoolean,
-//   DisplayButton,
-//   DisplayDate,
-//   DisplayNumber,
-//   DisplayString,
-// } from '@/types/editor'
-import { ReactNode } from 'react'
-import { Avatar, Badge, Button, Text } from '@mantine/core'
-import { format } from 'date-fns'
-import { useFormContext } from 'react-hook-form'
-import { Cell, CellString, Column, DataLayoutItem, Layout } from 'shared/main'
+import { Text } from '@mantine/core'
+import { clsx } from 'clsx'
+import { CellString, DataLayoutItem, Layout } from 'shared/main'
+
+function getTextClasses(
+  config: Extract<DataLayoutItem, { renderer: 'TEXT' }>['rendererConfig']
+): string {
+  // 字体大小
+  const fontSize =
+    typeof config.fontSize === 'number'
+      ? `text-[${config.fontSize}px]`
+      : config.fontSize
+        ? `text-${config.fontSize}`
+        : 'text-base'
+
+  // 颜色
+  const color = 'text-gray-900 dark:text-gray-900'
+
+  // 加粗
+  const fontWeight = config.fontWeight
+    ? `font-${config.fontWeight}`
+    : 'font-normal'
+
+  // 对齐
+  const textAlign = config.textAlign ? `text-${config.textAlign}` : 'text-left'
+
+  return clsx(fontSize, color, fontWeight, textAlign)
+}
 
 function CellText({
   cell,
-  layoutItem,
+  layoutItem: i,
 }: {
   cell: CellString | undefined
-  layoutItem: DataLayoutItem
+  layoutItem: Extract<DataLayoutItem, { renderer: 'TEXT' }>
 }) {
-  const { control } = useFormContext()
-  // if (!item)
+  const valueClass = getTextClasses(i.rendererConfig)
+  console.log(valueClass)
+
   return (
     <div className="w-full h-full overflow-hidden flex items-center justify-around">
-      <Text>
-        {layoutItem.rendererConfig?.name
-          ? layoutItem.rendererConfig?.name
-          : 'STRING'}
-      </Text>
-      <Text size="lg">{cell ? cell.value : 'DEFAULT'}</Text>
+      {/* {!!i.rendererConfig.label && <Text>i.rendererConfig?.label</Text>} */}
+      <p className={valueClass}>{cell ? cell.value : 'DEFAULT'}</p>
     </div>
   )
-  // return (
-  //   <div className="w-full h-full overflow-hidden flex items-center justify-around ">
-  //     {item.label && <div>{item.label}</div>}
-  //     <div>{item.value}</div>
-  //   </div>
-  // )
 }
 function CellTextConfig() {
-  return <main></main>
+  return (
+    <main>
+      <div>調整大小 / select</div>
+      <div>調整粗細 / select</div>
+      <div>傾斜 / switch</div>
+    </main>
+  )
 }
 
 export function CellRenderer({
   layoutItem,
-  columns,
 }: {
   layoutItem: Layout['layoutItems'][0]
-  columns: Column[]
 }) {
   //  DataLayoutItem
   if ('columnId' in layoutItem) {
@@ -58,12 +69,9 @@ export function CellRenderer({
 
 export function CellConfigRenderer({
   layoutItem,
-  columns,
 }: {
   layoutItem: Layout['layoutItems'][0]
-  columns: Column[]
 }) {
-  //  DataLayoutItem
   if ('columnId' in layoutItem) {
     if (layoutItem.renderer === 'TEXT') {
       return <CellTextConfig />

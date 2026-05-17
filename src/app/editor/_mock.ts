@@ -25,8 +25,8 @@ export const mockLayout: Layout = {
       grid: { i: 'item_name_btn', x: 0, y: 0, w: 4, h: 1, minW: 2, maxW: 6 },
       renderer: 'BUTTON',
       rendererConfig: {
-        label: '打开文件',
-        onClickCommand: 'start "" "{value}"', // 用户可自定义命令
+        // label: '打开文件',
+        // onClickCommand: 'start "" "{value}"', // 用户可自定义命令
       },
     } as DataLayoutItem,
     // 数据项：文件大小（纯文本）
@@ -34,11 +34,12 @@ export const mockLayout: Layout = {
       id: 'item_size_text',
       layoutId: 'layout_main',
       columnId: 'col_size',
-      grid: { i: 'item_size_text', x: 4, y: 0, w: 2, h: 1, minW: 1 },
+      grid: { i: 'item_size_text', x: 4, y: 0, w: 5, h: 1, minW: 1 },
       renderer: 'TEXT',
       rendererConfig: {
-        fontSize: 14,
-        color: '#666',
+        label: 'TEEEEE',
+        fontSize: '2xl',
+        color: '#ffffff',
       },
     } as DataLayoutItem,
     // 视觉项：分割线
@@ -59,7 +60,7 @@ export const mockLayout: Layout = {
       layoutId: 'layout_main',
       columnId: 'col_modified',
       grid: { i: 'item_date_text', x: 0, y: 2, w: 6, h: 1 },
-      renderer: 'TEXT',
+      renderer: 'DATE_TEXT',
       rendererConfig: {
         format: 'YYYY-MM-DD HH:mm',
       },
