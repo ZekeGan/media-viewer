@@ -18,8 +18,13 @@ import {
 } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { nanoid } from 'nanoid'
-import { Control, Controller, useFieldArray, useWatch } from 'react-hook-form'
-import { Column, DataType } from 'shared/main'
+import {
+  Controller,
+  useFieldArray,
+  useFormContext,
+  useWatch,
+} from 'react-hook-form'
+import { DataType } from 'shared/main'
 import { columnIdKey, columnTypeKey } from '@/constants/editor'
 import { ValueType } from '../page'
 
@@ -34,16 +39,18 @@ const ValidColumnTypes: DataType[] = [
   'FILE_PATH',
 ]
 
-export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
+export function ColumnSideBar() {
+  const { control } = useFormContext<ValueType>()
   const [openColumn, setOpenColumn] = useState(true)
 
+  const columns = useWatch({ control, name: 'columns' })
   const { fields, append } = useFieldArray({
     control,
     name: 'columns',
   })
-  const columns = useWatch({ control, name: 'columns' })
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>, idx: number) => {
+    if (!columns) return
     const { dataType, id } = columns[idx]
     e.dataTransfer.setData(columnTypeKey, dataType)
     e.dataTransfer.setData(columnIdKey, id)

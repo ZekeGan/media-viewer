@@ -1,11 +1,11 @@
 'use client'
 
 import { useLoadInitialData } from '@/app/editor/_hooks/useLoadInitialData'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Flex } from '@mantine/core'
-import { useForm, useWatch } from 'react-hook-form'
-import { Column } from 'shared/main'
+import { FormProvider, useForm } from 'react-hook-form'
+import { Column, Layout } from 'shared/main'
 import { useAppStore } from '@/stores/mainStore'
 import { ColumnSideBar } from './_containers/columnSideBar'
 import { ConfigSideBar } from './_containers/configSideBar'
@@ -13,65 +13,68 @@ import { EditArea } from './_containers/editArea'
 import { PreviewContainer } from './_containers/previewContainer'
 
 export type ValueType = {
-  columns: Column[]
+  columns: Column[] | undefined
+  layout: Layout | undefined
 }
 
 export default function GridEditorPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const layoutId = searchParams.get('id')
-  useLoadInitialData()
   const currentView = useAppStore(s => s.currentView)
-  // const folders = useAppStore(s => s.currentView?.folders)
-
-  const layouts = useMemo(() => {
-    if (!currentView || !layoutId) return
-    return currentView.layouts.find(l => l.id === layoutId)
-  }, [currentView, layoutId])
+  useLoadInitialData()
 
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
-  const { control, reset } = useForm<ValueType>()
-  const columns = useWatch({ control, name: 'columns' })
-
+  const methods = useForm<ValueType>()
   useEffect(() => {
-    if (!currentView) return
+    if (!currentView || !layoutId) return
 
-    reset({ columns: currentView.columns })
-  }, [currentView, reset])
+    const currentLayout = currentView.layouts.find(l => l.id === layoutId)
+    methods.reset({ columns: currentView.columns, layout: currentLayout })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, layoutId])
 
   if (!layoutId) router.prefetch('/')
-  if (!currentView || !layouts) return null
+  if (!currentView) return null
 
-  return !isPreviewMode ? (
-    <Flex className="h-full">
-      <ColumnSideBar control={control} />
+  return (
+    <FormProvider {...methods}>
+      {!isPreviewMode ? (
+        <Flex className="h-full">
+          <ColumnSideBar />
 
-      <section className="flex-1 overflow-x-scroll">
-        <div className="border-b border-gray-700">
-          <Flex className="p-2" gap={5} align="center" justify="space-between">
-            <Flex gap="sm">
-              <Button variant="default" onClick={() => setIsPreviewMode(true)}>
-                列表檢視
-              </Button>
-            </Flex>
-            <Flex gap="sm">
-              <Button variant="default">取消</Button>
-              <Button variant="default">儲存</Button>
-            </Flex>
-          </Flex>
-        </div>
-        <EditArea columns={columns} layoutItems={layouts.layoutItems} />
-      </section>
+          <section className="flex-1 overflow-x-scroll">
+            <div className="border-b border-gray-700">
+              <Flex
+                className="p-2"
+                gap={5}
+                align="center"
+                justify="space-between"
+              >
+                <Flex gap="sm">
+                  <Button
+                    variant="default"
+                    onClick={() => setIsPreviewMode(true)}
+                  >
+                    列表檢視
+                  </Button>
+                </Flex>
+                <Flex gap="sm">
+                  <Button variant="default">取消</Button>
+                  <Button variant="default">儲存</Button>
+                </Flex>
+              </Flex>
+            </div>
+            <EditArea />
+          </section>
 
-      <ConfigSideBar layouts={layouts.layoutItems} />
-    </Flex>
-  ) : (
-    <PreviewContainer
-      columns={columns}
-      layoutItems={layouts.layoutItems}
-      setIsPreviewMode={setIsPreviewMode}
-    />
+          <ConfigSideBar />
+        </Flex>
+      ) : (
+        <PreviewContainer setIsPreviewMode={setIsPreviewMode} />
+      )}
+    </FormProvider>
   )
 }
 

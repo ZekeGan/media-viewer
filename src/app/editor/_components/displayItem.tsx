@@ -8,33 +8,26 @@
 import { ReactNode } from 'react'
 import { Avatar, Badge, Button, Text } from '@mantine/core'
 import { format } from 'date-fns'
-import { Column, Layout } from 'shared/main'
+import { useFormContext } from 'react-hook-form'
+import { Cell, CellString, Column, DataLayoutItem, Layout } from 'shared/main'
 
-export const ItemWrapper = ({
-  children,
-  label,
+function CellText({
+  cell,
+  layoutItem,
 }: {
-  children: ReactNode
-  label?: string
-}) => {
-  return (
-    <main className="w-full h-full border border-gray-600 relative">
-      <div className=" absolute left-0 top-0 z-10">
-        <Badge className=" opacity-30" variant="default" size="sm">
-          {label}
-        </Badge>
-      </div>
-      {children}
-    </main>
-  )
-}
-
-export const CellText = () => {
+  cell: CellString | undefined
+  layoutItem: DataLayoutItem
+}) {
+  const { control } = useFormContext()
   // if (!item)
   return (
-    <div className="w-full h-full overflow-hidden flex items-center justify-around bg-gray-900">
-      <Text>字串</Text>
-      <div>Test</div>
+    <div className="w-full h-full overflow-hidden flex items-center justify-around">
+      <Text>
+        {layoutItem.rendererConfig?.name
+          ? layoutItem.rendererConfig?.name
+          : 'STRING'}
+      </Text>
+      <Text size="lg">{cell ? cell.value : 'DEFAULT'}</Text>
     </div>
   )
   // return (
@@ -43,6 +36,9 @@ export const CellText = () => {
   //     <div>{item.value}</div>
   //   </div>
   // )
+}
+function CellTextConfig() {
+  return <main></main>
 }
 
 export function CellRenderer({
@@ -55,7 +51,22 @@ export function CellRenderer({
   //  DataLayoutItem
   if ('columnId' in layoutItem) {
     if (layoutItem.renderer === 'TEXT') {
-      return <CellText />
+      return <CellText layoutItem={layoutItem} cell={undefined} />
+    }
+  }
+}
+
+export function CellConfigRenderer({
+  layoutItem,
+  columns,
+}: {
+  layoutItem: Layout['layoutItems'][0]
+  columns: Column[]
+}) {
+  //  DataLayoutItem
+  if ('columnId' in layoutItem) {
+    if (layoutItem.renderer === 'TEXT') {
+      return <CellTextConfig />
     }
   }
 }

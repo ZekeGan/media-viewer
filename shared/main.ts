@@ -76,10 +76,22 @@ export interface Folder {
   cells: Cell[]
 }
 
-// 一個Cell只對應一個Column
-export interface Cell {
+interface CellBase {
   id: string
   columnId: string
-  value: string | number | boolean | Date // 根據 column 去查找該欄位的型別 string | number | boolean | Date
   updateDate: Date // 新增：欄位值最後修改時間，用於精準的資料庫同步（Incremental Sync）
 }
+// 一個Cell只對應一個Column
+export interface CellString extends CellBase {
+  value: string
+}
+export interface CellDate extends CellBase {
+  value: Date
+}
+export interface CellNumber extends CellBase {
+  value: number
+}
+export interface CellBoolean extends CellBase {
+  value: boolean
+}
+export type Cell = CellDate | CellBoolean | CellNumber | CellString

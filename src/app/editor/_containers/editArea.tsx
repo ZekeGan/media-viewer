@@ -1,13 +1,20 @@
 'use client'
 
-import React, { useEffect, useMemo } from 'react'
+import React, { ReactNode, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Badge } from '@mantine/core'
+import clsx from 'clsx'
 import { nanoid } from 'nanoid'
 import GridLayout, {
   Layout as ReactGridLayout,
   LayoutItem as ReactGridLayoutItem,
 } from 'react-grid-layout'
-import { Control, useWatch } from 'react-hook-form'
+import {
+  Control,
+  useFieldArray,
+  useFormContext,
+  useWatch,
+} from 'react-hook-form'
 import {
   Column,
   DataLayoutItem,
@@ -23,60 +30,90 @@ import {
   // ItemButton,
   // ItemDate,
   // ItemNumber,
-  CellText,
-  ItemWrapper,
 } from '../_components/displayItem'
+import { useEditorContext } from '../_contexts/editorContext'
 import { ValueType } from '../page'
 
 const cols = 20
 
-export function EditArea({
-  layoutItems,
-  columns,
+const ItemWrapper = ({
+  children,
+  label,
+  isEditting,
 }: {
-  columns: Column[]
-  layoutItems: Layout['layoutItems']
-}) {
-  const searchParams = useSearchParams()
-  const layoutId = searchParams.get('id')
-  const updateLayoutItems = useAppStore(s => s.updateLayoutItems)
+  children: ReactNode
+  label?: string
+  isEditting: boolean
+}) => {
+  return (
+    <main
+      className={clsx(
+        'w-full h-full relative',
+        isEditting
+          ? 'shadow-[inset_0_0_0_2px] shadow-gray-400' // 利用 shadow-gray-500
+          : 'shadow-[inset_0_0_0_1px] shadow-gray-700' // 利用 shadow-gray-700
+      )}
+    >
+      <div className=" absolute left-0 top-0 z-10">
+        <Badge className=" opacity-30" variant="default" size="sm">
+          {label}
+        </Badge>
+      </div>
+      {children}
+    </main>
+  )
+}
+
+export function EditArea() {
+  const { control, setValue } = useFormContext<ValueType>()
+  const columns = useWatch({ control, name: 'columns' })
+  const layout = useWatch({ control, name: 'layout' })
+  const { update: updateLayoutItem, append: appendLayoutItem } = useFieldArray({
+    control,
+    name: 'layout.layoutItems',
+  })
+
+  const layoutId = useSearchParams().get('id')
+  // const updateLayoutItems = useAppStore(s => s.updateLayoutItems)
+  const { currentEdittingItemId, setCurrentEdittingItemId } = useEditorContext()
   const grids = useMemo(() => {
-    if (!layoutItems) return []
-    return layoutItems.map(l => l.grid)
-  }, [layoutItems])
+    if (!layout) return []
+    return layout.layoutItems.map(l => l.grid)
+  }, [layout])
 
   const handleChange = (grids: ReactGridLayout) => {
-    if (!layoutId) return
+    if (!layoutId || !layout) return
 
-    const newLayoutItems = layoutItems
+    const newLayoutItems = layout.layoutItems
       .map(l => {
         const item = grids.find(o => o.i === l.grid.i)
         if (!item) return l
         return { ...l, grid: item } satisfies DataLayoutItem | VisualLayoutItem
       })
       .filter(l => l)
-    updateLayoutItems(layoutId, newLayoutItems)
+    setValue('layout.layoutItems', newLayoutItems, {
+      shouldDirty: true,
+      shouldTouch: true,
+    })
   }
 
   const handleDrop = (item: ReactGridLayoutItem, e: DragEvent) => {
+    if (!layout) return
     const dataType = e.dataTransfer?.getData(columnTypeKey) as DataType
     const columnId = e.dataTransfer?.getData(columnIdKey) as DataType
 
     if (!dataType || !columnId || !layoutId) return
-    const newLayoutItems: Layout['layoutItems'] = [
-      ...layoutItems,
-      {
-        id: nanoid(),
-        layoutId: layoutId,
-        columnId: columnId,
-        grid: { ...item, i: nanoid() },
-        renderer: 'TEXT',
-      },
-    ]
-    updateLayoutItems(layoutId, newLayoutItems)
+    // const newLayoutItems: Layout['layoutItems'] = [...layout.layoutItems, ,]
+    appendLayoutItem({
+      id: nanoid(),
+      layoutId: layoutId,
+      columnId: columnId,
+      grid: { ...item, i: nanoid() },
+      renderer: 'TEXT',
+    })
   }
 
-  if (!columns) return null
+  if (!columns || !layout) return null
 
   return (
     <div className="p-5">
@@ -110,19 +147,24 @@ export function EditArea({
           autoSize={false}
           style={{ minHeight: '1000px' }}
         >
-          {layoutItems.map(l => {
-            let label
+          {layout.layoutItems.map(l => {
+            let label: string | undefined
             if ('columnId' in l) {
               label = columns.find(c => c.id === l.columnId)?.name
             }
 
             return (
-              <div key={l.grid.i} className="w-full h-full">
-                <div className="w-full h-full">
-                  <ItemWrapper label={label}>
-                    <CellRenderer columns={columns} layoutItem={l} />
-                  </ItemWrapper>
-                </div>
+              <div
+                key={l.grid.i}
+                className="w-full h-full"
+                onClick={() => setCurrentEdittingItemId(l.id)}
+              >
+                <ItemWrapper
+                  label={label}
+                  isEditting={currentEdittingItemId === l.id}
+                >
+                  <CellRenderer columns={columns} layoutItem={l} />
+                </ItemWrapper>
               </div>
             )
           })}

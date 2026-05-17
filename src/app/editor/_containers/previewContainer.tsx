@@ -1,18 +1,20 @@
-import { useState } from 'react'
 import { Button, Flex, Select, Switch } from '@mantine/core'
-import { Controller, useForm, useWatch } from 'react-hook-form'
-import { Column, Layout } from 'shared/main'
+import { Controller, useForm, useFormContext, useWatch } from 'react-hook-form'
 import { CellRenderer } from '../_components/displayItem'
+import { ValueType } from '../page'
 
 export function PreviewContainer({
-  layoutItems,
-  columns,
   setIsPreviewMode,
 }: {
-  layoutItems: Layout['layoutItems']
-  columns: Column[]
   setIsPreviewMode: React.Dispatch<React.SetStateAction<boolean>>
 }) {
+  const methods = useFormContext<ValueType>()
+  const columns = useWatch({ control: methods.control, name: 'columns' })
+  const layoutItems = useWatch({
+    control: methods.control,
+    name: 'layout.layoutItems',
+  })
+
   const { control } = useForm({
     defaultValues: {
       autoWidth: false,
@@ -21,6 +23,8 @@ export function PreviewContainer({
   })
   const rowCount = useWatch({ control, name: 'rowCount' })
   const autoWidth = useWatch({ control, name: 'autoWidth' })
+
+  if (!columns) return
   return (
     <>
       <nav className="p-2 border-b border-gray-700">

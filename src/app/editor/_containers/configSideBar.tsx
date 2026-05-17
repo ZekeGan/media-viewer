@@ -1,15 +1,27 @@
 'use client'
 
-import { useState } from 'react'
-import { ActionIcon, Avatar, Box, Card, Flex } from '@mantine/core'
+import { useMemo, useState } from 'react'
+import { ActionIcon, Box, Card, Flex } from '@mantine/core'
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import clsx from 'clsx'
-import { Control, useFieldArray, useWatch } from 'react-hook-form'
-import { Layout } from 'shared/main'
+import {
+  useFormContext,
+  useWatch,
+} from 'react-hook-form'
+import { useEditorContext } from '../_contexts/editorContext'
 import { ValueType } from '../page'
 
-export function ConfigSideBar({ layouts }: { layouts: Layout['layoutItems'] }) {
-  const [isOpen, setIsOpenSide] = useState(true)
+export function ConfigSideBar() {
+  const { currentEdittingItemId } = useEditorContext()
+  const { control } = useFormContext<ValueType>()
+  // const column = useWatch({ control, name: 'columns' })
+  const layout = useWatch({ control, name: 'layout' })
+
+  const currentLayoutItem = useMemo(() => {
+    if (!layout) return
+    return layout.layoutItems.find(i => i.id === currentEdittingItemId)
+  }, [currentEdittingItemId, layout])
+  const [isOpen, setIsOpenSide] = useState(false)
 
   return (
     <section className="h-full border-l border-gray-700 ">
@@ -29,15 +41,9 @@ export function ConfigSideBar({ layouts }: { layouts: Layout['layoutItems'] }) {
               {isOpen ? <IconArrowRight /> : <IconArrowLeft />}
             </ActionIcon>
           </Flex>
-          <Box>
-            {layouts.map(l => (
-              <Card key={l.id} p={0} radius={0} withBorder>
-                <Flex className="p-2" align="center" gap="md">
-                  <Avatar size="sm">{l.id}</Avatar>
-                </Flex>
-              </Card>
-            ))}
-          </Box>
+          <main>
+            {currentLayoutItem && <div>{currentLayoutItem.renderer}</div>}
+          </main>
         </Box>
       </Flex>
     </section>
