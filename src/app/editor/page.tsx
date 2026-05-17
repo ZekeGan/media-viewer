@@ -3,14 +3,16 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Flex } from '@mantine/core'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { Column } from 'shared/main'
 import MainLayout from '@/layout/MainLayout'
 import { useLoadInitialData } from '@/hooks/useLoadInitialData'
 import { useAppStore } from '@/stores/mainStore'
+import { CellRenderer } from './_component/displayItem'
 import { ColumnSideBar } from './_container/columnSideBar'
 import { ConfigSideBar } from './_container/configSideBar'
 import { EditArea } from './_container/editArea'
+import { PreviewContainer } from './_container/previewContainer'
 
 export type ValueType = {
   columns: Column[]
@@ -22,6 +24,7 @@ export default function GridEditorPage() {
   const layoutId = searchParams.get('id')
   useLoadInitialData()
   const currentView = useAppStore(s => s.currentView)
+  // const folders = useAppStore(s => s.currentView?.folders)
 
   const layouts = useMemo(() => {
     if (!currentView || !layoutId) return
@@ -31,6 +34,8 @@ export default function GridEditorPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   const { control, reset } = useForm<ValueType>()
+  const columns = useWatch({ control, name: 'columns' })
+
   useEffect(() => {
     if (!currentView) return
 
@@ -41,54 +46,34 @@ export default function GridEditorPage() {
   if (!currentView || !layouts) return null
 
   return !isPreviewMode ? (
-    <MainLayout>
-      <Flex className="h-full">
-        <ColumnSideBar control={control} />
+    <Flex className="h-full">
+      <ColumnSideBar control={control} />
 
-        <section className="flex-1 overflow-x-scroll">
-          <div className="border-b border-gray-700">
-            <Flex
-              className="p-2"
-              gap={5}
-              align="center"
-              justify="space-between"
-            >
-              <Flex gap="sm">
-                <Button
-                  variant="default"
-                  onClick={() => setIsPreviewMode(true)}
-                >
-                  列表檢視
-                </Button>
-              </Flex>
-              <Flex gap="sm">
-                <Button variant="default">取消</Button>
-                <Button variant="default">儲存</Button>
-              </Flex>
+      <section className="flex-1 overflow-x-scroll">
+        <div className="border-b border-gray-700">
+          <Flex className="p-2" gap={5} align="center" justify="space-between">
+            <Flex gap="sm">
+              <Button variant="default" onClick={() => setIsPreviewMode(true)}>
+                列表檢視
+              </Button>
             </Flex>
-          </div>
-          <EditArea control={control} layouts={layouts} />
-        </section>
+            <Flex gap="sm">
+              <Button variant="default">取消</Button>
+              <Button variant="default">儲存</Button>
+            </Flex>
+          </Flex>
+        </div>
+        <EditArea columns={columns} layoutItems={layouts.layoutItems} />
+      </section>
 
-        {/* <ConfigSideBar layouts={layouts} /> */}
-      </Flex>
-    </MainLayout>
+      {/* <ConfigSideBar layouts={layouts} /> */}
+    </Flex>
   ) : (
-    <MainLayout>
-      <nav className="p-2 border-b border-gray-700">
-        <Flex gap="sm" justify="space-between">
-          <Flex>
-            <Button variant="default" onClick={() => setIsPreviewMode(false)}>
-              返回
-            </Button>
-          </Flex>
-          <Flex gap="sm">
-            <Button variant="default">間距距離</Button>
-            <Button variant="default">自由寬度</Button>
-          </Flex>
-        </Flex>
-      </nav>
-    </MainLayout>
+    <PreviewContainer
+      columns={columns}
+      layoutItems={layouts.layoutItems}
+      setIsPreviewMode={setIsPreviewMode}
+    />
   )
 }
 
@@ -232,32 +217,6 @@ export default function GridEditorPage() {
 //         />
 //       </div>
 //     </section>
-
-// <div className="w-full mt-5">
-//   <div
-//     className="grid gap-0 mb-5 w-full"
-//     style={{
-//       gridColumn: cols,
-//     }}
-//   >
-//     <div style={{ gridColumn: '3 / 5', gridRow: '2' }}>
-//       {/* 指定在第 3 欄開始，寬度佔 2 格，第 2 列 */}
-//     </div>
-//     {initialLayout.map(i => (
-//       <div
-//         key={i.id}
-//         className="bg-gradient-to-br from-blue-500 to-cyan-400"
-//         style={{
-//           gridColumn: `${i.layout.x + 1}/ span ${i.layout.w}`,
-//           gridRow: `${i.layout.y + 1}/ span ${i.layout.h}`,
-//           height: `${i.layout.h * 100}px`,
-//         }}
-//       >
-//         <div className="w-full  " />
-//       </div>
-//     ))}
-//   </div>
-// </div>
 
 //  {processedLayouts.renderLayout.map(i => {
 //               const data = display.find(d => d.target === i.id)

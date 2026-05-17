@@ -1,57 +1,43 @@
-## 啟動規則
-在 
+## 計畫中的組件
 
-
-- 遊戲檔案位置GAME_PATH
-- TAG資料都放在APPDATA(C:\Users\你的使用者名稱\AppData\Roaming)中，跟著COMPANY_NAME(公司名稱)和PROJECT_NAME(專案名稱)
-
-GAME_PATH=Z:/Game
-
-COMPANY_NAME=Zeke
-
-PROJECT_NAME=game-viewer
-
-DOUJINSHI_PATH=Z:/Doujinshi
-
-## Do To List
-
-- OPTS: Game加快初次載入速度
-
-- Feat: Game圖片檢視使用Select選取
-- Feat: Dou最愛本子(加入頁面/顯示使用次數etc...)
-
-- Ex: 顯示常用doujinshi
-- Ex: 研究如何把程式讓手機/平板也能使用
-- Ex: 研議是否繼續使用APPDATA?
-
-### Done
-
-- Bug: 數量級大SideBar卡頓問題
-- Bug: 打開側邊欄初始圖片沒有加載，滾動observer觸發後才會加載
-- Bug: doujinshi detail page type顯示不完全
-- Bug: 進入views後返回gallery後想回到list，會因為hash保留而無法上一頁
-- Bug: 當從detail進入views，tool bar 有顯示的問題
-
-- Feat: 寬度縮小時(隱藏/縮小/調位)圖片
-- Feat: 搜尋Enter快捷鍵
-- Feat: Nav樣式更改，整合Game nav link
-- Feat: 搜尋doujin為無顯示找不到提示
-- Feat: 更改detail每rows顯示數量
-- Feat: 全局設置: doujinshi工具列不透明度
-- Feat: view捨棄hover顯示工具列，用鍵盤來顯示工具列
-- Feat: Doujinshi detail page 新增返回畫廊按鈕(麵包屑)
-- Feat: 垂直閱讀，可以設定是否打開border(當背景為透明或上下圖片類似無法判斷每張圖片邊)
-- Feat: Dou圖片檢視doujinshi list(例子:ex-hentai extended...)
-- Feat: Game Tag過濾根據URL變換而執行過濾
-- Feat: Game選取的標籤在上方顯示
-
-## Home Page
-
-- 儀錶板
-- 顯示統計資訊
-- (動態?)圖表
-- 天氣?
-- 快速配置
-- 資料夾(類似歌單)
-- 上次登入時間
-- 使用最多的東西
++ String
+    + [ ] text
+    + [ ] badge
+    + [ ] link
+    + markdown
+    + code
++ Number
+    + stat
+    + [ ] progress
+    + [ ] rating
+    + [ ] gauge
+    + [ ] number text
+    + chart
++ Boolean
+    + [ ] checkbox
+    + [ ] switch
+    + status dot
+    + [ ] icon
++ Date time
+    + [ ] date text : 2000/01/01
+    + [ ] relative time : 2 years ago
+    + calendar
++ Array string
+    + [ ] tags
+    + [ ] list
+    + [ ] flow text : soul.game
++ Array number
+    + chart
++ Json
+    + tree view
+    + key value table 
+    ```
+    auther: Gan
+    year: 2026
+    ```
++ File path
+    + [ ] image
+    + [ ] FOLDER LINK
+    + AUDIO PLAYER
+    + VIDEO PLAYER
+        

@@ -4,8 +4,8 @@ import React, { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import GridLayout, {
-  LayoutItem,
-  Layout as ReactLayout,
+  Layout as ReactGridLayout,
+  LayoutItem as ReactGridLayoutItem,
 } from 'react-grid-layout'
 import { Control, useWatch } from 'react-hook-form'
 import {
@@ -18,6 +18,7 @@ import {
 import { columnIdKey, columnTypeKey } from '@/constants/editor'
 import { useAppStore } from '@/stores/mainStore'
 import {
+  CellRenderer,
   // ItemBoolean,
   // ItemButton,
   // ItemDate,
@@ -30,25 +31,24 @@ import { ValueType } from '../page'
 const cols = 20
 
 export function EditArea({
-  layouts,
-  control,
+  layoutItems,
+  columns,
 }: {
-  control: Control<ValueType>
-  layouts: Layout
+  columns: Column[]
+  layoutItems: Layout['layoutItems']
 }) {
   const searchParams = useSearchParams()
   const layoutId = searchParams.get('id')
-  const columns = useWatch({ control, name: 'columns' })
   const updateLayoutItems = useAppStore(s => s.updateLayoutItems)
   const grids = useMemo(() => {
-    if (!layouts) return []
-    return layouts.layoutItems.map(l => l.grid)
-  }, [layouts])
+    if (!layoutItems) return []
+    return layoutItems.map(l => l.grid)
+  }, [layoutItems])
 
-  const handleChange = (grids: ReactLayout) => {
+  const handleChange = (grids: ReactGridLayout) => {
     if (!layoutId) return
 
-    const newLayoutItems = layouts.layoutItems
+    const newLayoutItems = layoutItems
       .map(l => {
         const item = grids.find(o => o.i === l.grid.i)
         if (!item) return l
@@ -58,14 +58,13 @@ export function EditArea({
     updateLayoutItems(layoutId, newLayoutItems)
   }
 
-  const handleDrop = (item: LayoutItem, e: DragEvent) => {
+  const handleDrop = (item: ReactGridLayoutItem, e: DragEvent) => {
     const dataType = e.dataTransfer?.getData(columnTypeKey) as DataType
     const columnId = e.dataTransfer?.getData(columnIdKey) as DataType
-    console.log(item)
 
     if (!dataType || !columnId || !layoutId) return
     const newLayoutItems: Layout['layoutItems'] = [
-      ...layouts.layoutItems,
+      ...layoutItems,
       {
         id: nanoid(),
         layoutId: layoutId,
@@ -105,27 +104,27 @@ export function EditArea({
             margin: [0, 0],
             containerPadding: [0, 0],
           }}
-          onDragStop={layouts => handleChange(layouts)}
-          onResizeStop={layouts => handleChange(layouts)}
+          onDragStop={grids => handleChange(grids)}
+          onResizeStop={grids => handleChange(grids)}
           width={1000}
           autoSize={false}
           style={{ minHeight: '1000px' }}
         >
-          {layouts.layoutItems.map(l => {
+          {layoutItems.map(l => {
+            let label
             if ('columnId' in l) {
-              const c = columns.find(c => c.id === l.columnId)
-              if (l.renderer === 'TEXT') {
-                return (
-                  <div key={l.grid.i} className="w-full h-full">
-                    <ItemWrapper label={c?.name}>
-                      <CellText />
-                    </ItemWrapper>
-                  </div>
-                )
-              }
+              label = columns.find(c => c.id === l.columnId)?.name
             }
 
-            return null
+            return (
+              <div key={l.grid.i} className="w-full h-full">
+                <div className="w-full h-full">
+                  <ItemWrapper label={label}>
+                    <CellRenderer columns={columns} layoutItem={l} />
+                  </ItemWrapper>
+                </div>
+              </div>
+            )
           })}
         </GridLayout>
       </div>

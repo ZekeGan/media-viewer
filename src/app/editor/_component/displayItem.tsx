@@ -8,6 +8,7 @@
 import { ReactNode } from 'react'
 import { Avatar, Badge, Button, Text } from '@mantine/core'
 import { format } from 'date-fns'
+import { Column, Layout } from 'shared/main'
 
 export const ItemWrapper = ({
   children,
@@ -31,7 +32,7 @@ export const ItemWrapper = ({
 export const CellText = () => {
   // if (!item)
   return (
-    <div className="w-full h-full overflow-hidden flex items-center justify-around ">
+    <div className="w-full h-full overflow-hidden flex items-center justify-around bg-gray-900">
       <Text>字串</Text>
       <div>Test</div>
     </div>
@@ -42,6 +43,21 @@ export const CellText = () => {
   //     <div>{item.value}</div>
   //   </div>
   // )
+}
+
+export function CellRenderer({
+  layoutItem,
+  columns,
+}: {
+  layoutItem: Layout['layoutItems'][0]
+  columns: Column[]
+}) {
+  //  DataLayoutItem
+  if ('columnId' in layoutItem) {
+    if (layoutItem.renderer === 'TEXT') {
+      return <CellText />
+    }
+  }
 }
 
 // export const ItemNumber = ({ item }: { item?: DisplayNumber }) => {

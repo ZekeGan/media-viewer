@@ -48,7 +48,6 @@ export function ColumnSideBar({ control }: { control: Control<ValueType> }) {
     e.dataTransfer.setData(columnTypeKey, dataType)
     e.dataTransfer.setData(columnIdKey, id)
   }
-  console.log(columns)
 
   return (
     <section className="h-full border-r border-gray-700 ">
