@@ -25,7 +25,7 @@ import {
   // ItemNumber,
   CellText,
   ItemWrapper,
-} from '../_component/displayItem'
+} from '../_components/displayItem'
 import { ValueType } from '../page'
 
 const cols = 20

@@ -4,7 +4,7 @@ import axios from 'axios'
 import { IDoujinshiData, IDoujinshiMeta, IImageData } from 'shared/type'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { doujinshiTypes } from '@/constants'
+import { doujinshiTypes } from '@/constants/doujinshi'
 import { getLabels } from '@/utils/doujinshiUtils'
 
 interface IPageSetting {

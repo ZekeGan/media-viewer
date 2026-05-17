@@ -1,5 +1,6 @@
 'use client'
 
+import DoujinshiDetailCard from '@/app/doujinshi/_components/DoujinshiDetailCard'
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -22,12 +23,11 @@ import { nanoid } from 'nanoid'
 import { IDoujinshiData, IDoujinshiMeta } from 'shared/type'
 import { ContentWidth, doujinshiTypesColor } from '@/constants/style'
 import MainLayout from '@/layout/MainLayout'
-import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
 import { Img } from '@/components/Img'
 import LoadingContainer from '@/components/LoadingContainer'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getMetaImagePath } from '@/utils/path'
-import SearchBar from './_container/SearchBar'
+import SearchBar from '../_containers/SearchBar'
 
 export default function MainPage() {
   const params = useSearchParams()

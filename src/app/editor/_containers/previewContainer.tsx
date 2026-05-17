@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Flex, Select, Switch } from '@mantine/core'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { Column, Layout } from 'shared/main'
-import { CellRenderer } from '../_component/displayItem'
+import { CellRenderer } from '../_components/displayItem'
 
 export function PreviewContainer({
   layoutItems,

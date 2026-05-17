@@ -1,3 +1,4 @@
+import { useGoTo } from '@/app/doujinshi/_hooks/useGoTo'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon,
@@ -35,7 +36,6 @@ import {
   IconSquareNumber2,
   IconTool,
 } from '@tabler/icons-react'
-import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 

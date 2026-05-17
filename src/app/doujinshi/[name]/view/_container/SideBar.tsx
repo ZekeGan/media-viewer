@@ -1,3 +1,4 @@
+import { useGoTo } from '@/app/doujinshi/_hooks/useGoTo'
 import { useEffect, useRef, useState } from 'react'
 import {
   Badge,
@@ -11,7 +12,6 @@ import {
 } from '@mantine/core'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { ObserverImg } from '@/components/ObserverImg'
-import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 import { getImagePath } from '@/utils/path'

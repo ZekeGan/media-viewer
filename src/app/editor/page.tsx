@@ -1,18 +1,16 @@
 'use client'
 
+import { useLoadInitialData } from '@/app/editor/_hooks/useLoadInitialData'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Flex } from '@mantine/core'
 import { useForm, useWatch } from 'react-hook-form'
 import { Column } from 'shared/main'
-import MainLayout from '@/layout/MainLayout'
-import { useLoadInitialData } from '@/hooks/useLoadInitialData'
 import { useAppStore } from '@/stores/mainStore'
-import { CellRenderer } from './_component/displayItem'
-import { ColumnSideBar } from './_container/columnSideBar'
-import { ConfigSideBar } from './_container/configSideBar'
-import { EditArea } from './_container/editArea'
-import { PreviewContainer } from './_container/previewContainer'
+import { ColumnSideBar } from './_containers/columnSideBar'
+import { ConfigSideBar } from './_containers/configSideBar'
+import { EditArea } from './_containers/editArea'
+import { PreviewContainer } from './_containers/previewContainer'
 
 export type ValueType = {
   columns: Column[]
@@ -66,7 +64,7 @@ export default function GridEditorPage() {
         <EditArea columns={columns} layoutItems={layouts.layoutItems} />
       </section>
 
-      {/* <ConfigSideBar layouts={layouts} /> */}
+      <ConfigSideBar layouts={layouts.layoutItems} />
     </Flex>
   ) : (
     <PreviewContainer

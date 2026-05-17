@@ -1,5 +1,8 @@
 'use client'
 
+import { GroupedFilterContainer } from '@/app/game/_containers/FilterContainer'
+import { useTranslate } from '@/app/game/_hooks/useTranslate'
+import useWindowSize from '@/app/game/_hooks/useWindowSize'
 import { ChangeEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -25,10 +28,7 @@ import { uniq } from 'ramda'
 import { IGameMeta } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
 import { HeaderHeight, MainPadding } from '@/constants/style'
-import { GroupedFilterContainer } from '@/components/FilterContainer'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
-import { useTranslate } from '@/hooks/useTranslate'
-import useWindowSize from '@/hooks/useWindowSize'
 
 export default function EditPage({ params }: { params: { id: string } }) {
   const { gameList } = useGameData()

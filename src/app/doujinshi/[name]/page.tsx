@@ -1,5 +1,8 @@
 'use client'
 
+import DoujinshiDetailCard from '@/app/doujinshi/_components/DoujinshiDetailCard'
+import { useFetchInfiniteImages } from '@/app/doujinshi/_hooks/useFetchInfiniteImages'
+import { useGoTo } from '@/app/doujinshi/_hooks/useGoTo'
 import { useEffect } from 'react'
 import {
   Anchor,
@@ -17,10 +20,7 @@ import {
 } from '@mantine/core'
 import { IconChevronRight, IconHome } from '@tabler/icons-react'
 import MainLayout from '@/layout/MainLayout'
-import DoujinshiDetailCard from '@/components/DoujinshiDetailCard'
 import { ObserverImg } from '@/components/ObserverImg'
-import { useFetchInfiniteImages } from '@/hooks/doujinshi/useFetchInfiniteImages'
-import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getLabels } from '@/utils/doujinshiUtils'
 import { getImagePath } from '@/utils/path'

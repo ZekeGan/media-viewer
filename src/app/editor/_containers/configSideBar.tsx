@@ -8,7 +8,7 @@ import { Control, useFieldArray, useWatch } from 'react-hook-form'
 import { Layout } from 'shared/main'
 import { ValueType } from '../page'
 
-export function ConfigSideBar({ layouts }: { layouts: Layout[] }) {
+export function ConfigSideBar({ layouts }: { layouts: Layout['layoutItems'] }) {
   const [isOpen, setIsOpenSide] = useState(true)
 
   return (

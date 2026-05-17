@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { IImageData } from 'shared/type'
-import { maxDoujinshiPagesLength } from '@/constants'
+import { maxDoujinshiPagesLength } from '@/constants/doujinshi'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 
 export const useFetchInfiniteImages = () => {

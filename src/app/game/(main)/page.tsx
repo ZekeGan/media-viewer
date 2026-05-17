@@ -1,5 +1,11 @@
 'use client'
 
+import {
+  FilterContainer,
+  GroupedFilterContainer,
+} from '@/app/game/_containers/FilterContainer'
+import { useSearchParamsFns } from '@/app/game/_hooks/useSearchParamsFns'
+import { useTranslate } from '@/app/game/_hooks/useTranslate'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -26,16 +32,11 @@ import { nanoid } from 'nanoid'
 import * as R from 'ramda'
 import { IGameData, IGameMeta } from 'shared/type'
 import { useGameData } from '@/context/gameContext'
-import { defaultGameListOrder } from '@/constants'
-import {
-  FilterContainer,
-  GroupedFilterContainer,
-} from '@/components/FilterContainer'
 import { Img } from '@/components/Img'
 import OpenFolderBtn from '@/components/OpenFolderBtn'
-import { useSearchParamsFns } from '@/hooks/useSearchParamsFns'
-import { useTranslate } from '@/hooks/useTranslate'
 import { getMetaImagePath } from '@/utils/path'
+
+const defaultGameListOrder = 'game_name' as keyof IGameData
 
 const OrderSelectConfig: { value: keyof IGameData; label: string }[] = [
   { value: 'author', label: '照作者排序' },

@@ -1,9 +1,9 @@
+import { useGoTo } from '@/app/doujinshi/_hooks/useGoTo'
 import { useEffect, useRef } from 'react'
 import { Center, Paper, ScrollArea, Stack } from '@mantine/core'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import LoadingContainer from '@/components/LoadingContainer'
 import { ObserverImg } from '@/components/ObserverImg'
-import { useGoTo } from '@/hooks/doujinshi/useGoTo'
 import { useDoujinshiStore } from '@/stores/doujinshiStore'
 import { getImagePath } from '@/utils/path'
 

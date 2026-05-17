@@ -17,8 +17,8 @@ import {
 import { IDoujinshiData, IDoujinshiMeta } from 'shared/type'
 import { doujinshiTypesColor } from '@/constants/style'
 import { getMetaImagePath } from '@/utils/path'
-import { Img } from './Img'
-import OpenFolderBtn from './OpenFolderBtn'
+import { Img } from '../../../components/Img'
+import OpenFolderBtn from '../../../components/OpenFolderBtn'
 
 export default function DoujinshiDetailCard({
   doujinshi,
