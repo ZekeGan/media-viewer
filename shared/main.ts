@@ -65,15 +65,16 @@ interface DataLayoutItemBase extends LayoutItemBase {
   rendererConfig?: Record<string, any>
 }
 
-interface TextLayoutItem extends DataLayoutItemBase {
+export interface TextLayoutItem extends DataLayoutItemBase {
   renderer: 'TEXT'
   rendererConfig: {
     label?: string
-    fontSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | number // number 表示自定义 px
+    fontSize?: 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl'
     color?: string // Tailwind 颜色类名，如 'gray-700' 或任意颜色值
     fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold'
     textAlign?: 'left' | 'center' | 'right'
-    truncate?: boolean // 是否截断（单行加省略号）
+    truncate?: boolean
+    padding?: number
   }
 }
 interface DateTextLayoutItem extends DataLayoutItemBase {

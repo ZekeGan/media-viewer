@@ -65,17 +65,16 @@ const ItemWrapper = ({
 }
 
 export function EditArea() {
+  const { currentEdittingItemId, setCurrentEdittingItemId } = useEditorContext()
   const { control, setValue } = useFormContext<ValueType>()
   const columns = useWatch({ control, name: 'columns' })
   const layout = useWatch({ control, name: 'layout' })
-  const { update: updateLayoutItem, append: appendLayoutItem } = useFieldArray({
+  const { append: appendLayoutItem } = useFieldArray({
     control,
     name: 'layout.layoutItems',
   })
 
   const layoutId = useSearchParams().get('id')
-  // const updateLayoutItems = useAppStore(s => s.updateLayoutItems)
-  const { currentEdittingItemId, setCurrentEdittingItemId } = useEditorContext()
   const grids = useMemo(() => {
     if (!layout) return []
     return layout.layoutItems.map(l => l.grid)
@@ -83,7 +82,6 @@ export function EditArea() {
 
   const handleChange = (grids: ReactGridLayout) => {
     if (!layoutId || !layout) return
-
     const newLayoutItems = layout.layoutItems
       .map(l => {
         const item = grids.find(o => o.i === l.grid.i)
@@ -101,15 +99,14 @@ export function EditArea() {
     if (!layout) return
     const dataType = e.dataTransfer?.getData(columnTypeKey) as DataType
     const columnId = e.dataTransfer?.getData(columnIdKey) as DataType
-
     if (!dataType || !columnId || !layoutId) return
-    // const newLayoutItems: Layout['layoutItems'] = [...layout.layoutItems, ,]
     appendLayoutItem({
       id: nanoid(),
       layoutId: layoutId,
       columnId: columnId,
       grid: { ...item, i: nanoid() },
       renderer: 'TEXT',
+      rendererConfig: {},
     })
   }
 
@@ -163,7 +160,7 @@ export function EditArea() {
                   label={label}
                   isEditting={currentEdittingItemId === l.id}
                 >
-                  <CellRenderer columns={columns} layoutItem={l} />
+                  <CellRenderer layoutItem={l} />
                 </ItemWrapper>
               </div>
             )

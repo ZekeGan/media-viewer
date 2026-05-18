@@ -18,28 +18,40 @@ export const mockLayout: Layout = {
   name: 'default layout',
   layoutItems: [
     // 数据项：文件名（渲染为按钮）
-    {
-      id: 'item_name_btn',
-      layoutId: 'layout_main',
-      columnId: 'col_name',
-      grid: { i: 'item_name_btn', x: 0, y: 0, w: 4, h: 1, minW: 2, maxW: 6 },
-      renderer: 'BUTTON',
-      rendererConfig: {
-        // label: '打开文件',
-        // onClickCommand: 'start "" "{value}"', // 用户可自定义命令
-      },
-    } as DataLayoutItem,
+    // {
+    //   id: 'item_name_btn',
+    //   layoutId: 'layout_main',
+    //   columnId: 'col_name',
+    //   grid: { i: 'item_name_btn', x: 0, y: 0, w: 4, h: 1, minW: 2, maxW: 6 },
+    //   renderer: 'BUTTON',
+    //   rendererConfig: {
+    //     // label: '打开文件',
+    //     // onClickCommand: 'start "" "{value}"', // 用户可自定义命令
+    //   },
+    // } as DataLayoutItem,
     // 数据项：文件大小（纯文本）
     {
-      id: 'item_size_text',
+      id: 'item_size_text0',
       layoutId: 'layout_main',
-      columnId: 'col_size',
-      grid: { i: 'item_size_text', x: 4, y: 0, w: 5, h: 1, minW: 1 },
+      columnId: 'col_name',
+      grid: { i: 'item_size_text0', x: 4, y: 0, w: 5, h: 1, minW: 1 },
       renderer: 'TEXT',
       rendererConfig: {
         label: 'TEEEEE',
-        fontSize: '2xl',
+        fontSize: 'xs',
         color: '#ffffff',
+      },
+    } as DataLayoutItem,
+    {
+      id: 'item_size_text1',
+      layoutId: 'layout_main',
+      columnId: 'col_path',
+      grid: { i: 'item_size_text1', x: 4, y: 5, w: 5, h: 1, minW: 1 },
+      renderer: 'TEXT',
+      rendererConfig: {
+        label: 'DEFA',
+        fontSize: '2xl',
+        color: '#50d71e',
       },
     } as DataLayoutItem,
     // 视觉项：分割线

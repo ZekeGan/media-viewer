@@ -27,9 +27,9 @@ export default function GridEditorPage() {
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   const methods = useForm<ValueType>()
+
   useEffect(() => {
     if (!currentView || !layoutId) return
-
     const currentLayout = currentView.layouts.find(l => l.id === layoutId)
     methods.reset({ columns: currentView.columns, layout: currentLayout })
     // eslint-disable-next-line react-hooks/exhaustive-deps

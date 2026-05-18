@@ -81,7 +81,7 @@ export function PreviewContainer({
                     height: `${i.grid.h * 50}px`,
                   }}
                 >
-                  <CellRenderer columns={columns} layoutItem={i} />
+                  <CellRenderer layoutItem={i} />
                 </div>
               ))}
             </div>
