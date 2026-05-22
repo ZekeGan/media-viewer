@@ -14,6 +14,8 @@ export interface WindowView {
   columns: Column[]
   config: {
     dataSearchDepth: number
+    colCount: number
+    autoWidth: boolean
   }
 }
 
@@ -62,7 +64,7 @@ export type DataRendererType =
 interface DataLayoutItemBase extends LayoutItemBase {
   columnId: string
   renderer: DataRendererType
-  rendererConfig?: Record<string, any>
+  rendererConfig: Record<string, any>
 }
 
 export interface TextLayoutItem extends DataLayoutItemBase {
@@ -77,24 +79,37 @@ export interface TextLayoutItem extends DataLayoutItemBase {
     padding?: number
   }
 }
-interface DateTextLayoutItem extends DataLayoutItemBase {
+export interface DateTextLayoutItem extends DataLayoutItemBase {
   renderer: 'DATE_TEXT'
   rendererConfig: {
-    label?: string
     format?: string
   }
 }
 export type DataLayoutItem = TextLayoutItem | DateTextLayoutItem
 
-export type VisualRendererType = 'DIVIDER' // 等等
+export type VisualRendererType = 'DIVIDER' | 'LABEL' // 等等
 interface VisualLayoutItemBase extends LayoutItemBase {
   renderer: VisualRendererType
-  rendererConfig?: Record<string, any>
+  rendererConfig: Record<string, any>
 }
 
-interface DividerLayoutItem extends VisualLayoutItemBase {}
+export interface DividerLayoutItem extends VisualLayoutItemBase {
+  renderer: 'DIVIDER'
+  rendererConfig: {
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+    labelPosition?: 'center' | 'left' | 'right'
+    label?: string
+    orientation?: 'horizontal' | 'vertical'
+  }
+}
+interface LabelLayoutItem extends VisualLayoutItemBase {
+  renderer: 'LABEL'
+  rendererConfig: {
+    label: string
+  }
+}
 
-export type VisualLayoutItem = DividerLayoutItem
+export type VisualLayoutItem = DividerLayoutItem | LabelLayoutItem
 //*
 
 //* Folder
@@ -118,7 +133,7 @@ export interface CellString extends CellBase {
   value: string
 }
 export interface CellDate extends CellBase {
-  value: Date
+  value: string
 }
 export interface CellNumber extends CellBase {
   value: number

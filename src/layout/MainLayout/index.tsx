@@ -84,8 +84,17 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                   </Stack>
                 </HoverCard.Dropdown>
               </HoverCard>
+
               <HoverAnchor href="/doujinshi">
                 <Text>同人誌</Text>
+              </HoverAnchor>
+
+              <HoverAnchor href="/editor?id=layout_main">
+                <Text>Editor</Text>
+              </HoverAnchor>
+
+              <HoverAnchor href="/view">
+                <Text>view</Text>
               </HoverAnchor>
             </Group>
 

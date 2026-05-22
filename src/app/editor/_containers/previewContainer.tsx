@@ -1,7 +1,7 @@
 import { Button, Flex, Select, Switch } from '@mantine/core'
 import { Controller, useForm, useFormContext, useWatch } from 'react-hook-form'
-import { CellRenderer } from '../_components/displayItem'
 import { ValueType } from '../page'
+import { LayoutItemRenderer } from '@/components/layoutItem'
 
 export function PreviewContainer({
   setIsPreviewMode,
@@ -18,10 +18,10 @@ export function PreviewContainer({
   const { control } = useForm({
     defaultValues: {
       autoWidth: false,
-      rowCount: '3',
+      colCount: '3',
     },
   })
-  const rowCount = useWatch({ control, name: 'rowCount' })
+  const colCount = useWatch({ control, name: 'colCount' })
   const autoWidth = useWatch({ control, name: 'autoWidth' })
 
   if (!columns) return
@@ -37,7 +37,7 @@ export function PreviewContainer({
           <Flex gap="sm" align="center">
             <Controller
               control={control}
-              name="rowCount"
+              name="colCount"
               render={({ field }) => (
                 <Select
                   {...field}
@@ -59,7 +59,7 @@ export function PreviewContainer({
 
       <main
         className="w-full grid"
-        style={{ gridTemplateColumns: `repeat(${rowCount}, 1fr)`, gap: '20px' }}
+        style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)`, gap: '20px' }}
       >
         {Array.from({ length: 10 }).map((i, idx) => {
           const maxW = Math.max(...layoutItems.map(i => i.grid.w))
@@ -81,7 +81,7 @@ export function PreviewContainer({
                     height: `${i.grid.h * 50}px`,
                   }}
                 >
-                  <CellRenderer layoutItem={i} />
+                  <LayoutItemRenderer layoutItem={i} />
                 </div>
               ))}
             </div>

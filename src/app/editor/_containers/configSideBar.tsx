@@ -5,7 +5,7 @@ import { ActionIcon, Box, Card, Flex } from '@mantine/core'
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { useFormContext, useWatch } from 'react-hook-form'
-import { CellConfigRenderer } from '../_components/displayItem'
+import { LayoutItemConfigPanel } from '../../../components/layoutItem'
 import { useEditorContext } from '../_contexts/editorContext'
 import { ValueType } from '../page'
 
@@ -41,7 +41,7 @@ export function ConfigSideBar() {
           </Flex>
           <main>
             {currentLayoutItem && (
-              <CellConfigRenderer layoutItem={currentLayoutItem} />
+              <LayoutItemConfigPanel layoutItem={currentLayoutItem} />
             )}
           </main>
         </Box>

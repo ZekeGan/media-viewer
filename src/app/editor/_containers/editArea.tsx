@@ -24,13 +24,7 @@ import {
 } from 'shared/main'
 import { columnIdKey, columnTypeKey } from '@/constants/editor'
 import { useAppStore } from '@/stores/mainStore'
-import {
-  CellRenderer,
-  // ItemBoolean,
-  // ItemButton,
-  // ItemDate,
-  // ItemNumber,
-} from '../_components/displayItem'
+import { LayoutItemRenderer } from '../../../components/layoutItem'
 import { useEditorContext } from '../_contexts/editorContext'
 import { ValueType } from '../page'
 
@@ -160,7 +154,7 @@ export function EditArea() {
                   label={label}
                   isEditting={currentEdittingItemId === l.id}
                 >
-                  <CellRenderer layoutItem={l} />
+                  <LayoutItemRenderer layoutItem={l} />
                 </ItemWrapper>
               </div>
             )
