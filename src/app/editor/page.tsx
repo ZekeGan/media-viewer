@@ -1,12 +1,13 @@
 'use client'
 
-import { useLoadInitialData } from '@/app/editor/_hooks/useLoadInitialData'
 import React, { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Flex } from '@mantine/core'
 import { FormProvider, useForm } from 'react-hook-form'
 import { Column, Layout } from 'shared/main'
-import { useAppStore } from '@/stores/mainStore'
+import { useLoadInitialData } from '@/hooks/useLoadInitialData'
+import { useColumnStore } from '@/stores/columnStore'
+import { useLayoutStore } from '@/stores/layoutStore'
 import { ColumnSideBar } from './_containers/columnSideBar'
 import { ConfigSideBar } from './_containers/configSideBar'
 import { EditArea } from './_containers/editArea'
@@ -17,26 +18,38 @@ export type ValueType = {
   layout: Layout | undefined
 }
 
-export default function GridEditorPage() {
-  const router = useRouter()
+const useInitializeForm = () => {
   const searchParams = useSearchParams()
+  const columns = useColumnStore(s => s.columns)
+  const layouts = useLayoutStore(s => s.layouts)
   const layoutId = searchParams.get('id')
-  const currentView = useAppStore(s => s.currentView)
-  useLoadInitialData()
-
-  const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   const methods = useForm<ValueType>()
 
+  // column
   useEffect(() => {
-    if (!currentView || !layoutId) return
-    const currentLayout = currentView.layouts.find(l => l.id === layoutId)
-    methods.reset({ columns: currentView.columns, layout: currentLayout })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, layoutId])
+    if (!columns) return
+    methods.reset({ columns: Object.keys(columns).map(k => columns[k]) })
+  }, [columns, methods])
 
-  if (!layoutId) router.prefetch('/')
-  if (!currentView) return null
+  // layout
+  useEffect(() => {
+    if (!layoutId) return
+    methods.reset({ layout: layouts[layoutId] })
+  }, [layoutId, layouts, methods])
+
+  return methods
+}
+
+export default function GridEditorPage() {
+  useLoadInitialData()
+  const methods = useInitializeForm()
+  const router = useRouter()
+  const layoutId = useSearchParams().get('id')
+
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
+
+  if (!layoutId) router.push('/')
 
   return (
     <FormProvider {...methods}>
