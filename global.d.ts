@@ -1,3 +1,4 @@
+import { WindowView } from 'shared/main'
 import { IDoujinshiMeta, ISystem } from 'shared/type'
 
 declare module '*.css' {
@@ -13,6 +14,8 @@ declare global {
       openFolder: (folderPath: string) => Promise<void>
       saveTags: (tags: any) => Promise<void>
       getSystemData: () => Promise<ISystem>
+
+      getWindowViewList: () => Promise<WindowView[]>
     }
   }
 }

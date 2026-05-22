@@ -6,6 +6,7 @@ import {
   registerGameIPC,
   registerOsIPC,
   registerSystemIPC,
+  registerWindowViewIPC,
 } from './ipc'
 
 const _filename = fileURLToPath(import.meta.url)
@@ -63,6 +64,7 @@ app.whenReady().then(() => {
   registerGameIPC()
   registerOsIPC()
   registerSystemIPC()
+  registerWindowViewIPC()
 
   createWindow()
 })

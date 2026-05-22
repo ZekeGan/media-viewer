@@ -6,4 +6,7 @@ contextBridge.exposeInMainWorld('electronApi', {
   openFolder: (path: string) => ipcRenderer.invoke('os:open-folder', path),
   // saveTags: (tags: any) => ipcRenderer.invoke('system:save-tags', tags),
   getSystemData: () => ipcRenderer.invoke('system:get-system-data'),
+
+  // v2
+  getWindowViewList: () => ipcRenderer.invoke('window-view:get-all'),
 })
