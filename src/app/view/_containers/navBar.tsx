@@ -57,7 +57,7 @@ export function Navbar() {
         {Object.keys(views).map(k => (
           <div
             key={views[k].id}
-            className="relatove h-full p-2 -mb-px cursor-pointer hover:bg-[#2e2e2e]"
+            className="relative h-full p-2 -mb-px cursor-pointer hover:bg-[#2e2e2e]"
             style={{
               backgroundColor:
                 activeViewId === views[k].id ? colors.dark[7] : '',

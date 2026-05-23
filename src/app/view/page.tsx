@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ScrollArea } from '@mantine/core'
+import { Container, ScrollArea } from '@mantine/core'
 import { LayoutItemRenderer } from '@/components/layoutItem'
 import { useFolderStore } from '@/stores/folderStore'
 import { useLayoutStore } from '@/stores/layoutStore'
@@ -16,15 +16,15 @@ export default function GridEditorPage() {
   if (!currentView || !currentLayout) return
 
   return (
-    <main className="w-screen h-screen flex flex-col">
+    <Container fluid p={0} w="100vw" h="100vh" className="">
       <Navbar />
 
       <ScrollArea type="scroll" scrollbarSize={2}>
         <main
-          className="w-full grid"
+          className="w-full grid p-2"
           style={{
             gridTemplateColumns: `repeat(${currentView.config.colCount}, 1fr)`,
-            gap: '20px',
+            gap: '5px',
           }}
         >
           {Object.keys(folders).map(k => {
@@ -38,6 +38,7 @@ export default function GridEditorPage() {
                   display: 'grid',
                   gridTemplateColumns: `repeat(${maxW}, ${currentView.config.autoWidth ? '1fr' : '50px'})`,
                   gridAutoRows: '50px',
+                  gridGap: 0,
                 }}
               >
                 {currentLayout.layoutItems.map(i => (
@@ -57,6 +58,6 @@ export default function GridEditorPage() {
           })}
         </main>
       </ScrollArea>
-    </main>
+    </Container>
   )
 }
