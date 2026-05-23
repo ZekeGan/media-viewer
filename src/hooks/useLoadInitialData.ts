@@ -1,4 +1,3 @@
-// hooks/useLoadInitialData.ts
 import { useEffect } from 'react'
 import { useColumnStore } from '@/stores/columnStore'
 import { useFolderStore } from '@/stores/folderStore'
@@ -6,8 +5,9 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { useAppStore } from '@/stores/mainStore'
 
 export const useLoadInitialData = () => {
-  const currentView = useAppStore(state => state.currentView)
+  const setViews = useAppStore(state => state.setViews)
   const setView = useAppStore(state => state.setView)
+  const activeViewId = useAppStore(state => state.activeViewId)
   const setFolders = useFolderStore(s => s.setFolders)
   const setLayouts = useLayoutStore(s => s.setLayouts)
   const setColumns = useColumnStore(s => s.setColumns)
@@ -15,22 +15,36 @@ export const useLoadInitialData = () => {
 
   useEffect(() => {
     const updateSlice = async () => {
-      if (!currentView) return
-      setFolders(currentView.folders)
-      setColumns(currentView.columns)
-      setLayouts(currentView.layouts)
-      currentView.layouts.forEach(l => {
+      if (!activeViewId) return
+
+      const view = await window.electronApi.getView(activeViewId)
+      console.log(view)
+
+      setView(view)
+      setFolders(view.folders)
+      setColumns(view.columns)
+      setLayouts(view.layouts)
+      view.layouts.forEach(l => {
         setLayoutItems(l.id, l.layoutItems)
       })
     }
     updateSlice()
-  }, [currentView, setColumns, setFolders, setLayoutItems, setLayouts])
+  }, [
+    activeViewId,
+    setColumns,
+    setFolders,
+    setLayoutItems,
+    setLayouts,
+    setView,
+  ])
 
   useEffect(() => {
     const load = async () => {
       const views = await window.electronApi.getViewList()
-      setView(views)
+      console.log('views', views)
+
+      setViews(views)
     }
     load()
-  }, [setView])
+  }, [setView, setViews])
 }

@@ -49,6 +49,10 @@ export default function GridEditorPage() {
 
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
+  const save = async () => {
+    await window.electronApi.createView('')
+  }
+
   if (!layoutId) router.push('/')
 
   return (
@@ -75,7 +79,9 @@ export default function GridEditorPage() {
                 </Flex>
                 <Flex gap="sm">
                   <Button variant="default">取消</Button>
-                  <Button variant="default">儲存</Button>
+                  <Button variant="default" onClick={() => save()}>
+                    儲存
+                  </Button>
                 </Flex>
               </Flex>
             </div>

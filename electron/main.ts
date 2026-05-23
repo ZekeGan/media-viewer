@@ -58,6 +58,7 @@ process.on('unhandledRejection', (reason, promise) => {
 })
 
 const storage = new JsonStorage(app.getPath('userData'))
+await storage.initDir()
 const folderSync = new FolderSyncService(storage)
 const viewService = new ViewService(storage, folderSync)
 

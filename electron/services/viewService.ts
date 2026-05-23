@@ -19,14 +19,56 @@ export class ViewService {
     return this.Storage.getAllViews()
   }
 
-  async getView(id: string) {
-    return this.Storage.getView(id)
+  async getView(viewId: string) {
+    const views = await this.Storage.getAllViews()
+    let view = views.find(d => d.id === viewId)
+    if (!view) return
+    console.log(view)
+
+    const folderIds = await this.Storage.getFolderIdsByView(viewId)
+    console.log(folderIds)
+
+    const folders = (
+      await Promise.all(folderIds.map(id => this.Storage.getFolder(id)))
+    ).filter(f => !!f)
+    console.log('folders:', folders)
+    view.folders = folders
+
+    const columns = await this.Storage.getColumnsByView(viewId)
+    view.columns = columns
+
+    const layouts = await this.Storage.getLayoutByView(viewId)
+    view.layouts = layouts
+    console.log('get')
+
+    return view
+  }
+
+  async saveView(view: View) {
+    await this.Storage.saveView(view)
   }
 
   async createView(targetFolderPath: string, dataSearchDepth: number = 1) {
     const viewId = uuidv4()
-    // 根據提供路徑for該路徑下的所有資料
-    // 如果有資料則跳過 沒有則創建資料
+
+    // 創建 View
+    const defaultData: View = {
+      id: viewId,
+      selectedLayoutId: '',
+      targetFolderPath,
+      name: 'DEFAULT_NAME',
+      layouts: [],
+      folders: [],
+      columns: [],
+      config: {
+        dataSearchDepth,
+        colCount: 0,
+        autoWidth: false,
+      },
+    }
+    await this.Storage.saveView(defaultData)
+
+    // 創建 column
     const systemColumns: Column[] = [
       {
         id: uuidv4(),
@@ -50,24 +92,8 @@ export class ViewService {
         isSystem: true,
       },
     ]
-    // TODO 儲存預設 column
+    await Promise.all(systemColumns.map(c => this.Storage.saveColumn(c)))
 
-    const defaultData: View = {
-      id: uuidv4(),
-      selectedLayoutId: '',
-      targetFolderPath,
-      name: 'DEFAULT_NAME',
-      layouts: [],
-      folders: [],
-      columns: [],
-      config: {
-        dataSearchDepth,
-        colCount: 0,
-        autoWidth: false,
-      },
-    }
-    await this.FolderSync.syncView(viewId, targetFolderPath)
-
-    await this.Storage.createView(defaultData)
+    await this.FolderSync.syncView(viewId, targetFolderPath, 1)
   }
 }

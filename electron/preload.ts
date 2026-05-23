@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { View } from '../shared/main'
 
 contextBridge.exposeInMainWorld('electronApi', {
   getGameList: () => ipcRenderer.invoke('game:list'),
@@ -9,4 +10,8 @@ contextBridge.exposeInMainWorld('electronApi', {
 
   // v2
   getViewList: () => ipcRenderer.invoke('view:get-all'),
+  getView: (viewId: string) => ipcRenderer.invoke('view:get', viewId),
+  saveView: (viewId: string) => ipcRenderer.invoke('view:save', viewId),
+  createView: (path: string, depth?: number) =>
+    ipcRenderer.invoke('view:create', path, depth),
 })

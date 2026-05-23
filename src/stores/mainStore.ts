@@ -5,7 +5,8 @@ interface AppState {
   views: Record<string, View>
   activeViewId: string | null
   currentView: View | null
-  setView: (views: View[]) => void
+  setViews: (views: View[]) => void
+  setView: (views: View) => void
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -13,7 +14,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   views: {},
   currentView: null,
 
-  setView: views => {
+  setViews: views => {
     const viewsMap: Record<string, View> = Object.fromEntries(
       views.map(f => [f.id, f])
     )
@@ -22,7 +23,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({
       views: viewsMap,
       activeViewId: firstViewId,
-      currentView: firstViewId ? viewsMap[firstViewId] : null,
     })
   },
+  setView: view => set({ currentView: view }),
 }))

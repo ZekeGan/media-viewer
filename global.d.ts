@@ -16,6 +16,9 @@ declare global {
       getSystemData: () => Promise<ISystem>
 
       getViewList: () => Promise<View[]>
+      getView: (viewId: string) => Promise<View>
+      saveView: (view: View) => Promise<void>
+      createView: (path: string, depth?: number) => Promise<void>
     }
   }
 }

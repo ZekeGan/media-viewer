@@ -45,7 +45,7 @@ export class FolderSyncService {
   ): Promise<void> {
     // 1. 扫描文件系统，获取当前所有文件夹的路径及父子关系（临时）
     const currentInfos = await this.scanFileSystem(rootPath, maxDepth)
-    console.log(currentInfos)
+    // console.log(currentInfos)
 
     // 2. 获取全局已有的 Folder 列表（用于去重）
     const allFolders = await this.storage.getAllFolders()
@@ -82,15 +82,15 @@ export class FolderSyncService {
       }
       currentFolderIds.push(folder.id)
     }
+    // console.log(currentFolderIds)
 
     // 4. 批量保存 Folder（全局）
     if (foldersToSave.length > 0) {
-        await this.storage.batchSaveFolders(foldersToSave)
+      await this.storage.batchUpdateFolders(foldersToSave)
     }
 
     // 5. 更新视图与 Folder 的关联
-    const existingFolderIds =
-      await this.storage.getFolderIdsByView(viewId)
+    const existingFolderIds = await this.storage.getFolderIdsByView(viewId)
     const toAdd = currentFolderIds.filter(id => !existingFolderIds.includes(id))
     const toRemove = existingFolderIds.filter(
       id => !currentFolderIds.includes(id)

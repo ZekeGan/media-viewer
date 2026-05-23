@@ -1,34 +1,31 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { Folder, View } from '../../shared/main'
-import { mockView } from '../_mock'
+import { Column, Folder, Layout, View } from '../../shared/main'
 import { IDataStorage } from './IDataStorage'
 
 export class JsonStorage implements IDataStorage {
   private basePath: string
   private viewFile: string
-  private viewDir: string
   private folderDir: string
   private viewFolderDir: string
   private columnDir: string
+  private layoutDir: string
 
-  private async initDir() {
-    await fs.mkdir(this.basePath)
-    await fs.mkdir(this.viewDir)
-    await fs.mkdir(this.folderDir)
-    await fs.mkdir(this.viewFolderDir)
-    await fs.mkdir(this.columnDir)
+  public async initDir() {
+    await fs.mkdir(this.basePath, { recursive: true })
+    await fs.mkdir(this.folderDir, { recursive: true })
+    await fs.mkdir(this.viewFolderDir, { recursive: true })
+    await fs.mkdir(this.columnDir, { recursive: true })
+    await fs.mkdir(this.layoutDir, { recursive: true })
   }
 
   constructor(userDataPath: string) {
     this.basePath = path.join(userDataPath, 'app-data')
-    this.viewDir = path.join(this.basePath, 'view')
     this.viewFile = path.join(this.basePath, 'view.json')
     this.folderDir = path.join(this.basePath, 'folder')
-    this.viewFolderDir = path.join(userDataPath, 'viewFolder')
     this.columnDir = path.join(this.basePath, 'column')
-
-    this.initDir()
+    this.viewFolderDir = path.join(this.basePath, 'viewFolder')
+    this.layoutDir = path.join(this.basePath, 'layout')
   }
 
   // ===== util =====
@@ -38,32 +35,33 @@ export class JsonStorage implements IDataStorage {
       return JSON.parse(data)
     } catch (err: any) {
       if (err.code === 'ENOENT') return defaultData
+      console.error(err.message)
       throw err
     }
   }
 
   private async writeJsonFile(path: string, data: any): Promise<void> {
-    await fs.writeFile(path, JSON.stringify(data, null, 2))
+    try {
+      await fs.writeFile(path, JSON.stringify(data, null, 2))
+    } catch (err: any) {
+      console.error(err.message)
+      throw err
+    }
   }
 
   // ===== View =====
   public async getAllViews(): Promise<View[]> {
-    const data = this.readJsonFile<View[]>(this.viewFile, [])
-    return [mockView]
+    return await this.readJsonFile<View[]>(this.viewFile, [])
   }
 
-  public async getView(id: string): Promise<View | undefined> {
+  public async getView(viewId: string): Promise<View | undefined> {
     const views = await this.getAllViews()
-    return views.find(d => d.id === id)
+    return views.find(d => d.id === viewId)
   }
 
-  public async createView(): Promise<void> {
-    throw new Error('Method not implemented.')
-  }
-
-  public async updateView(view: View): Promise<void> {
+  public async saveView(view: View): Promise<void> {
     const views = await this.getAllViews()
-    const idx = views.findIndex(d => d.id === view.id)
+    const idx = views.findIndex(v => v.id === view.id)
 
     if (idx >= 0) views[idx] = view
     else views.push(view)
@@ -97,17 +95,22 @@ export class JsonStorage implements IDataStorage {
   }
 
   public async getFolder(id: string): Promise<Folder | undefined> {
-    const dataPath = path.join(this.basePath, `${id}.json`)
-    return await this.readJsonFile<Folder | undefined>(dataPath, undefined)
+    const file = path.join(this.folderDir, `${id}.json`)
+    return await this.readJsonFile<Folder | undefined>(file, undefined)
   }
 
-  public async saveFolder(folder: Folder): Promise<void> {
+  public async updateFolder(folder: Folder): Promise<void> {
     const folderFile = path.join(this.folderDir, `${folder.id}.json`)
     await this.writeJsonFile(folderFile, folder)
   }
 
-  public async batchSaveFolders(folders: Folder[]): Promise<void> {
-    await Promise.all(folders.map(f => this.saveFolder(f)))
+  public async batchUpdateFolders(folders: Folder[]): Promise<void> {
+    await Promise.all(folders.map(f => this.updateFolder(f)))
+  }
+
+  // TODO
+  deleteFolder(id: string): Promise<void> {
+    throw new Error('Method not implemented.')
   }
 
   // ===== viewFolder =====
@@ -137,4 +140,61 @@ export class JsonStorage implements IDataStorage {
   }
 
   // ===== column =====
+  public async getColumnsByView(viewId: string): Promise<Column[]> {
+    const file = path.join(this.columnDir, `${viewId}.json`)
+    return await this.readJsonFile<Column[]>(file, [])
+  }
+  // TODO
+  public async saveColumn(column: Column): Promise<void> {
+    if (!column.viewId) throw new Error('Column missing windowViewId')
+    const columnsFile = path.join(this.columnDir, `${column.viewId}.json`)
+    const columns = await this.readJsonFile<Column[]>(columnsFile, [])
+    const index = columns.findIndex(c => c.id === column.id)
+
+    if (index >= 0) columns[index] = column
+    else columns.push(column)
+
+    await this.writeJsonFile(columnsFile, columns)
+  }
+
+  deleteColumn(id: string): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+
+  // ===== layout =====
+  public async getLayoutByView(viewId: string): Promise<Layout[]> {
+    const file = path.join(this.layoutDir, `${viewId}.json`)
+    return await this.readJsonFile<Layout[]>(file, [])
+  }
+
+  // TODO
+  createLayout(layout: Layout): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+  updateLayout(id: string): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+  deleteLayout(id: string): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+
+  // ===== layoutItem =====
+  getLayoutItems(layoutId: string): Promise<Layout['layoutItems']> {
+    throw new Error('Method not implemented.')
+  }
+  createLayoutItem(
+    layoutId: string,
+    layoutItem: Layout['layoutItems'][0]
+  ): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+  updateLayoutItems(
+    layoutId: string,
+    layoutItems: Layout['layoutItems']
+  ): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+  deleteLayoutItem(layoutItemId: string): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
 }
