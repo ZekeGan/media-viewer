@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import MainLayout from '@/layout/MainLayout'
+import { LayoutItemRenderer } from '@/components/layoutItem'
+import { useLoadInitialData } from '@/hooks/useLoadInitialData'
 import { useAppStore } from '@/stores/mainStore'
-import { useLoadInitialData } from '../../hooks/useLoadInitialData'
-import { CellRenderer } from '../editor/_components/displayItem'
 
 export default function GridEditorPage() {
   useLoadInitialData()
-  
+
   const currentView = useAppStore(s => s.currentView)
   const currentLayout = useMemo(() => {
     if (!currentView) return
@@ -46,7 +46,7 @@ export default function GridEditorPage() {
                     height: `${i.grid.h * 50}px`,
                   }}
                 >
-                  <CellRenderer layoutItem={i} />
+                  <LayoutItemRenderer layoutItem={i} />
                 </div>
               ))}
             </div>

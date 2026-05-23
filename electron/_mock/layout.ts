@@ -1,4 +1,4 @@
-import { DataLayoutItem, Layout, VisualLayoutItem } from 'shared/main'
+import { DataLayoutItem, Layout, VisualLayoutItem } from '../../shared/main'
 
 const text1: DataLayoutItem = {
   id: 'item_size_text0',
@@ -42,15 +42,12 @@ const divider1: VisualLayoutItem = {
   layoutId: 'layout_main',
   grid: { i: 'divider_1', x: 0, y: 1, w: 12, h: 1 },
   renderer: 'DIVIDER',
-  rendererConfig: {
-    lineColor: '#ccc',
-    lineStyle: 'dashed',
-    margin: 8,
-  },
+  rendererConfig: {},
 }
 
 const layout1: Layout = {
   id: 'layout_main',
+  viewId: 'view_001',
   name: 'default layout',
   layoutItems: [text1, text2, divider1, date1],
 }

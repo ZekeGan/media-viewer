@@ -28,7 +28,7 @@ export const useLoadInitialData = () => {
 
   useEffect(() => {
     const load = async () => {
-      const views = await window.electronApi.getWindowViewList()
+      const views = await window.electronApi.getViewList()
       setView(views)
     }
     load()

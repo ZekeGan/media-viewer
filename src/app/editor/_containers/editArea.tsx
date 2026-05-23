@@ -16,10 +16,8 @@ import {
   useWatch,
 } from 'react-hook-form'
 import {
-  Column,
   DataLayoutItem,
   DataType,
-  Layout,
   VisualLayoutItem,
 } from 'shared/main'
 import { columnIdKey, columnTypeKey } from '@/constants/editor'

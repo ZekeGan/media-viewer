@@ -8,5 +8,5 @@ contextBridge.exposeInMainWorld('electronApi', {
   getSystemData: () => ipcRenderer.invoke('system:get-system-data'),
 
   // v2
-  getWindowViewList: () => ipcRenderer.invoke('window-view:get-all'),
+  getViewList: () => ipcRenderer.invoke('view:get-all'),
 })

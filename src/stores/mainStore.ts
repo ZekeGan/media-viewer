@@ -1,11 +1,11 @@
-import { WindowView } from 'shared/main'
+import { View } from 'shared/main'
 import { create } from 'zustand'
 
 interface AppState {
-  views: Record<string, WindowView>
+  views: Record<string, View>
   activeViewId: string | null
-  currentView: WindowView | null
-  setView: (views: WindowView[]) => void
+  currentView: View | null
+  setView: (views: View[]) => void
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -14,7 +14,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   currentView: null,
 
   setView: views => {
-    const viewsMap: Record<string, WindowView> = Object.fromEntries(
+    const viewsMap: Record<string, View> = Object.fromEntries(
       views.map(f => [f.id, f])
     )
 

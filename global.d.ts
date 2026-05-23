@@ -1,4 +1,4 @@
-import { WindowView } from 'shared/main'
+import { View } from 'shared/main'
 import { IDoujinshiMeta, ISystem } from 'shared/type'
 
 declare module '*.css' {
@@ -15,7 +15,7 @@ declare global {
       saveTags: (tags: any) => Promise<void>
       getSystemData: () => Promise<ISystem>
 
-      getWindowViewList: () => Promise<WindowView[]>
+      getViewList: () => Promise<View[]>
     }
   }
 }

@@ -6,8 +6,11 @@ import {
   registerGameIPC,
   registerOsIPC,
   registerSystemIPC,
-  registerWindowViewIPC,
+  registerViewIPC,
 } from './ipc'
+import { FolderSyncService } from './services/folderSyncService'
+import { ViewService } from './services/viewService'
+import { JsonStorage } from './storage/JsonStorage'
 
 const _filename = fileURLToPath(import.meta.url)
 const _dirname = path.dirname(_filename)
@@ -54,6 +57,10 @@ process.on('unhandledRejection', (reason, promise) => {
   // console.error('Unhandled Rejection:', reason)
 })
 
+const storage = new JsonStorage(app.getPath('userData'))
+const folderSync = new FolderSyncService(storage)
+const viewService = new ViewService(storage, folderSync)
+
 app.whenReady().then(() => {
   protocol.handle('media', req => {
     const url = new URL(req.url)
@@ -64,7 +71,7 @@ app.whenReady().then(() => {
   registerGameIPC()
   registerOsIPC()
   registerSystemIPC()
-  registerWindowViewIPC()
+  registerViewIPC(viewService)
 
   createWindow()
 })

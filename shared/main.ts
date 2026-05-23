@@ -4,7 +4,7 @@ import { LayoutItem as ReactGridLayoutItem } from 'react-grid-layout'
 // 都會根據FOLDERPATH去FOR該資料夾底下所有資料夾 然後每個資料夾都會有個資料夾ID
 // 再拿ID去資料庫找資料 就算路徑修改也不會有問題 除非ID被刪
 
-export interface WindowView {
+export interface View {
   id: string
   name: string
   targetFolderPath: string
@@ -32,7 +32,7 @@ export type DataType =
 //* Column
 export interface Column {
   id: string
-  // windowViewId: string
+  viewId: string
   name: string
   dataType: DataType
   isSystem?: boolean // 新增：是否為系統內建欄位（如：建立時間，不可刪除）
@@ -43,6 +43,7 @@ export interface Column {
 export interface Layout {
   id: string
   name: string
+  viewId: string
   // updateDate: Date
   layoutItems: (DataLayoutItem | VisualLayoutItem)[]
 }
@@ -117,7 +118,7 @@ export type VisualLayoutItem = DividerLayoutItem | LabelLayoutItem
 // 深度搜尋該子資料夾可設定深度
 export interface Folder {
   id: string
-  parentFolderId: string
+  parentFolderId: string | null
   lastReadPath: string // 用於交叉驗證，防止資料夾複製造成的 ID 重複衝突
   updateDate: Date
   cells: Cell[]
@@ -126,6 +127,7 @@ export interface Folder {
 interface CellBase {
   id: string
   columnId: string
+  folderId: string
   updateDate: Date // 新增：欄位值最後修改時間，用於精準的資料庫同步（Incremental Sync）
 }
 // 一個Cell只對應一個Column

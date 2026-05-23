@@ -1,8 +1,12 @@
 import { ipcMain } from 'electron'
-import { getAllWindowView } from '../services/windowView'
+import { ViewService } from '../services/viewService'
 
-export function registerWindowViewIPC() {
-  ipcMain.handle('window-view:get-all', () => getAllWindowView())
+
+export function registerViewIPC(service: ViewService) {
+  ipcMain.handle('view:get-all', () => {
+    service.createView('D://MediaViewerData//Game')
+    return service.getAllViews()
+  })
   //   ipcMain.handle('window-view:get', (_, id: string) => {})
   //   ipcMain.handle('window-view:create', () => {})
   //   ipcMain.handle('window-view:update', () => {})
