@@ -41,11 +41,10 @@ export class FolderSyncService {
   async syncView(
     viewId: string,
     rootPath: string,
-    maxDepth: number = 2
+    maxDepth: number = 1
   ): Promise<void> {
     // 1. 扫描文件系统，获取当前所有文件夹的路径及父子关系（临时）
     const currentInfos = await this.scanFileSystem(rootPath, maxDepth)
-    // console.log(currentInfos)
 
     // 2. 获取全局已有的 Folder 列表（用于去重）
     const allFolders = await this.storage.getAllFolders()

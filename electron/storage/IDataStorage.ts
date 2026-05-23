@@ -23,13 +23,12 @@ export interface IDataStorage {
 
   // column
   getColumnsByView(viewId: string): Promise<Column[]>
-  saveColumn(column: Column): Promise<void>
+  saveColumnsByView(viewId: string, columns: Column[]): Promise<void>
   deleteColumn(id: string): Promise<void>
 
   // layout
-  getLayoutByView(viewId: string): Promise<Layout[]>
-  createLayout(layout: Layout): Promise<void>
-  updateLayout(id: string): Promise<void>
+  getLayoutsByView(viewId: string): Promise<Layout[]>
+  saveLayout(layout: Layout): Promise<void>
   deleteLayout(id: string): Promise<void>
 
   // ===== layoutItem =====

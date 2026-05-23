@@ -44,7 +44,7 @@ export interface Layout {
   id: string
   name: string
   viewId: string
-  // updateDate: Date
+  updateDate: Date
   layoutItems: (DataLayoutItem | VisualLayoutItem)[]
 }
 

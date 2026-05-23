@@ -42,7 +42,7 @@ export class JsonStorage implements IDataStorage {
 
   private async writeJsonFile(path: string, data: any): Promise<void> {
     try {
-      await fs.writeFile(path, JSON.stringify(data, null, 2))
+      await fs.writeFile(path, JSON.stringify(data, null, 2), 'utf8')
     } catch (err: any) {
       console.error(err.message)
       throw err
@@ -144,17 +144,18 @@ export class JsonStorage implements IDataStorage {
     const file = path.join(this.columnDir, `${viewId}.json`)
     return await this.readJsonFile<Column[]>(file, [])
   }
-  // TODO
-  public async saveColumn(column: Column): Promise<void> {
-    if (!column.viewId) throw new Error('Column missing windowViewId')
-    const columnsFile = path.join(this.columnDir, `${column.viewId}.json`)
-    const columns = await this.readJsonFile<Column[]>(columnsFile, [])
-    const index = columns.findIndex(c => c.id === column.id)
 
-    if (index >= 0) columns[index] = column
-    else columns.push(column)
+  public async saveColumnsByView(
+    viewId: string,
+    columns: Column[]
+  ): Promise<void> {
+    const columnsFile = path.join(this.columnDir, `${viewId}.json`)
+    const cols = await this.readJsonFile<Column[]>(columnsFile, [])
+    for (const col of columns) {
+      cols.push(col)
+    }
 
-    await this.writeJsonFile(columnsFile, columns)
+    await this.writeJsonFile(columnsFile, cols)
   }
 
   deleteColumn(id: string): Promise<void> {
@@ -162,18 +163,23 @@ export class JsonStorage implements IDataStorage {
   }
 
   // ===== layout =====
-  public async getLayoutByView(viewId: string): Promise<Layout[]> {
+  public async getLayoutsByView(viewId: string): Promise<Layout[]> {
     const file = path.join(this.layoutDir, `${viewId}.json`)
     return await this.readJsonFile<Layout[]>(file, [])
   }
 
-  // TODO
-  createLayout(layout: Layout): Promise<void> {
-    throw new Error('Method not implemented.')
+  public async saveLayout(layout: Layout): Promise<void> {
+    if (!layout.viewId) throw new Error('Layout missing viewId')
+    const layouts = await this.getLayoutsByView(layout.viewId)
+    const idx = layouts.findIndex(l => l.id === layout.id)
+
+    if (idx >= 0) layouts[idx] = layout
+    else layouts.push(layout)
+
+    const file = path.join(this.layoutDir, `${layout.viewId}.json`)
+    await this.writeJsonFile(file, layouts)
   }
-  updateLayout(id: string): Promise<void> {
-    throw new Error('Method not implemented.')
-  }
+
   deleteLayout(id: string): Promise<void> {
     throw new Error('Method not implemented.')
   }

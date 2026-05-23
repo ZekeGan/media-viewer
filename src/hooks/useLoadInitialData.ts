@@ -16,6 +16,7 @@ export const useLoadInitialData = () => {
   useEffect(() => {
     const updateSlice = async () => {
       if (!activeViewId) return
+      console.log(activeViewId)
 
       const view = await window.electronApi.getView(activeViewId)
       console.log(view)
@@ -23,7 +24,7 @@ export const useLoadInitialData = () => {
       setView(view)
       setFolders(view.folders)
       setColumns(view.columns)
-      setLayouts(view.layouts)
+      setLayouts(view.selectedLayoutId, view.layouts)
       view.layouts.forEach(l => {
         setLayoutItems(l.id, l.layoutItems)
       })
