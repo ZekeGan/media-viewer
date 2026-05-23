@@ -12,7 +12,7 @@ export function registerViewIPC(service: ViewService) {
   ipcMain.handle('view:save', (_, view: View) => service.saveView(view))
   ipcMain.handle('view:create', (_, path: string, depth: number) => {
     // service.createView(targetFolderPath, dataSearchDepth)
-    service.createView('D://MediaViewerData//Game', depth)
+    service.createView(path, depth)
   })
   //   ipcMain.handle('window-view:get', (_, id: string) => {})
   //   ipcMain.handle('window-view:create', () => {})

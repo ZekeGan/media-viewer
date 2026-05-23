@@ -22,6 +22,7 @@ export class ViewService {
     const colPathId: string = uuidv4()
     const colUpdateDateId: string = uuidv4()
     const layoutId = uuidv4()
+    const name = targetFolderPath.split('\\').at(-1) ?? 'DEFAULT_NAME'
 
     // 創建 column
     const columns: Column[] = [
@@ -105,7 +106,7 @@ export class ViewService {
       id: viewId,
       selectedLayoutId: layoutId,
       targetFolderPath,
-      name: 'DEFAULT_NAME',
+      name,
       layouts: [],
       folders: [],
       columns: [],

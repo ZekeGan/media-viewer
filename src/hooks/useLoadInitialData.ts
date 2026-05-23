@@ -6,7 +6,7 @@ import { useAppStore } from '@/stores/mainStore'
 
 export const useLoadInitialData = () => {
   const setViews = useAppStore(state => state.setViews)
-  const setView = useAppStore(state => state.setView)
+  const setCurrentView = useAppStore(state => state.setCurrentView)
   const activeViewId = useAppStore(state => state.activeViewId)
   const setFolders = useFolderStore(s => s.setFolders)
   const setLayouts = useLayoutStore(s => s.setLayouts)
@@ -21,7 +21,7 @@ export const useLoadInitialData = () => {
       const view = await window.electronApi.getView(activeViewId)
       console.log(view)
 
-      setView(view)
+      setCurrentView(view)
       setFolders(view.folders)
       setColumns(view.columns)
       setLayouts(view.selectedLayoutId, view.layouts)
@@ -36,16 +36,14 @@ export const useLoadInitialData = () => {
     setFolders,
     setLayoutItems,
     setLayouts,
-    setView,
+    setCurrentView,
   ])
 
   useEffect(() => {
     const load = async () => {
       const views = await window.electronApi.getViewList()
-      console.log('views', views)
-
       setViews(views)
     }
     load()
-  }, [setView, setViews])
+  }, [setViews])
 }

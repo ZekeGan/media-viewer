@@ -14,7 +14,7 @@ export function DateTextRenderer({
   layoutItem: DateTextLayoutItem
 }) {
   const cfg = layoutItem.rendererConfig ?? {}
-  const formatStr = cfg.format ?? '/MM/DD'
+  const formatStr = cfg.format ?? 'yyyy/MM/dd'
 
   let displayValue = ''
   if (true) {

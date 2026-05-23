@@ -2,12 +2,14 @@ import { BrowserWindow, app, net, protocol } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import {
+  registerDialogIPC,
   registerDoujinshiIPC,
   registerGameIPC,
   registerOsIPC,
   registerSystemIPC,
   registerViewIPC,
 } from './ipc'
+import { DialogService } from './services/dialogService'
 import { FolderSyncService } from './services/folderSyncService'
 import { ViewService } from './services/viewService'
 import { JsonStorage } from './storage/JsonStorage'
@@ -45,7 +47,7 @@ function createWindow() {
     }
   })
 
-  win.loadURL('http://localhost:3000/editor?id=layout_main')
+  win.loadURL('http://localhost:3000/view')
 }
 
 process.on('uncaughtException', error => {
@@ -61,6 +63,7 @@ const storage = new JsonStorage(app.getPath('userData'))
 await storage.initDir()
 const folderSync = new FolderSyncService(storage)
 const viewService = new ViewService(storage, folderSync)
+const dialogService = new DialogService()
 
 app.whenReady().then(() => {
   protocol.handle('media', req => {
@@ -73,6 +76,7 @@ app.whenReady().then(() => {
   registerOsIPC()
   registerSystemIPC()
   registerViewIPC(viewService)
+  registerDialogIPC(dialogService)
 
   createWindow()
 })

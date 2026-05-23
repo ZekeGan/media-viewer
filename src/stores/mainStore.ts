@@ -6,7 +6,8 @@ interface AppState {
   activeViewId: string | null
   currentView: View | null
   setViews: (views: View[]) => void
-  setView: (views: View) => void
+  setCurrentView: (views: View) => void
+  setActiveViewId: (id: string) => void
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -25,5 +26,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
       activeViewId: firstViewId,
     })
   },
-  setView: view => set({ currentView: view }),
+  setCurrentView: view => set({ currentView: view }),
+  setActiveViewId: id => set({ activeViewId: id }),
 }))

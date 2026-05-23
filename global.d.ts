@@ -9,16 +9,21 @@ declare module '*.css' {
 declare global {
   interface Window {
     electronApi: {
+      // old
       getGameList: () => Promise<IGameMeta[]>
       getDoujinshiList: () => Promise<IDoujinshiMeta[]>
       openFolder: (folderPath: string) => Promise<void>
       saveTags: (tags: any) => Promise<void>
       getSystemData: () => Promise<ISystem>
 
+      // v2
       getViewList: () => Promise<View[]>
       getView: (viewId: string) => Promise<View>
       saveView: (view: View) => Promise<void>
       createView: (path: string, depth?: number) => Promise<void>
+
+      // dialog
+      selectFolder: () => Promise<string | null>
     }
   }
 }

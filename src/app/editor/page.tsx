@@ -8,6 +8,7 @@ import { Column, Layout } from 'shared/main'
 import { useLoadInitialData } from '@/hooks/useLoadInitialData'
 import { useColumnStore } from '@/stores/columnStore'
 import { useLayoutStore } from '@/stores/layoutStore'
+import { useAppStore } from '@/stores/mainStore'
 import { ColumnSideBar } from './_containers/columnSideBar'
 import { ConfigSideBar } from './_containers/configSideBar'
 import { EditArea } from './_containers/editArea'
@@ -22,7 +23,7 @@ const useInitializeForm = () => {
   const searchParams = useSearchParams()
   const columns = useColumnStore(s => s.columns)
   const layouts = useLayoutStore(s => s.layouts)
-  const layoutId = searchParams.get('id')
+  const activeViewId = useAppStore(s => s.activeViewId)
 
   const methods = useForm<ValueType>()
 
@@ -34,9 +35,9 @@ const useInitializeForm = () => {
 
   // layout
   useEffect(() => {
-    if (!layoutId) return
-    methods.reset({ layout: layouts[layoutId] })
-  }, [layoutId, layouts, methods])
+    if (!activeViewId) return
+    methods.reset({ layout: layouts[activeViewId] })
+  }, [activeViewId, layouts, methods])
 
   return methods
 }
@@ -45,15 +46,12 @@ export default function GridEditorPage() {
   useLoadInitialData()
   const methods = useInitializeForm()
   const router = useRouter()
-  const layoutId = useSearchParams().get('id')
 
   const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   const save = async () => {
     await window.electronApi.createView('')
   }
-
-  if (!layoutId) router.push('/')
 
   return (
     <FormProvider {...methods}>
