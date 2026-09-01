@@ -90,49 +90,6 @@ The technology stack may change as the project evolves.
 
 ---
 
-## 🚀 Getting Started
-
-### Requirements
-
-* Node.js 18+
-* pnpm
-
-### Installation
-
-```bash
-git clone https://github.com/ZekeGan/media-viewer.git
-cd media-viewer
-pnpm install
-```
-
-### Environment Variables
-
-Create `.env.local` in the project root:
-
-```env
-COMPANY_NAME=project-root-name
-PROJECT_NAME=project-name
-GAME_PATH=game-path
-DOUJINSHI_PATH=doujinshi-path
-```
-
-Adjust the values for your local environment.
-
-### Development
-
-```bash
-pnpm run dev:next
-```
-
-For Electron development:
-
-```bash
-pnpm run dev:electron
-```
-
----
-
-
 ## 👤 Author
 
 **Zeke Gan**
