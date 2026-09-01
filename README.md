@@ -1,47 +1,113 @@
-# 
+# Media Viewer
+
+> A local-first media and file viewer with customizable layouts.
+
+Media Viewer is an experimental desktop application for organizing and viewing local files and media.
+
+The main idea is to explore a different way of browsing file collections:
+
+**Keep the data and presentation separate, and let the user decide how the data should be displayed.**
+
+The project is currently in an **early development stage**.
+
+Many parts of the application, including the UI, storage strategy, layout system, and feature set, are still being explored and may change significantly.
 
 ---
 
-## Overview
-這是一個基於 Electron 開發的自訂欄位檔案管理工具，它將「排版佈局」與「資料內容」完全解耦，允許使用者透過拖拽畫布自由設計每個資料夾的欄位呈現方式；並採用「實體隱藏檔案備份、本地 SQLite 快取索引」的混合架構，完美兼顧了路徑任意搬移的資料可攜性，與大數據量下的極速查詢效能。
+## 💡 Concept
 
+Traditional file managers usually provide a fixed set of views such as:
+
+* List
+* Grid
+* Details
+
+Media Viewer explores a more flexible approach where the **same data can be presented through different layouts**.
+
+The current concept is:
+
+```text
+Local Folder
+     │
+     ▼
+    Data
+     │
+     ▼
+   Layout
+     │
+     ▼
+Components
+```
+
+The layout determines which data is displayed and how it should be presented.
+
+For example, different components can be used to display different types of data:
+
+```text
+String      → Text / Badge / Link
+Number      → Stat / Progress / Rating
+Boolean     → Checkbox / Switch / Status
+Date        → Date / Relative Time
+Array       → Tags / List / Chart
+JSON        → Tree / Key-Value
+File Path   → Image / Audio / Video
+```
+
+The long-term direction is to introduce **SQLite as a local data store and index**:
+
+```text
+Local Folder
+     │
+     ▼
+    Data
+     │
+     ▼
+   SQLite
+     │
+     ▼
+   Layout
+     │
+     ▼
+Components
+```
+
+This would allow the filesystem to remain the source of local files while SQLite handles application data and indexing.
 
 ---
 
-## Features
+## 🛠️ Tech Stack
 
+The current implementation uses:
 
+* Electron — Desktop application
+* Next.js / React — UI
+* TypeScript — Type safety
+* Zustand — Client state management
+* SQLite — Local indexing and metadata (in development)
+* Mantine / Tailwind CSS — UI and styling
 
----
-
-## Tech Stack
-
-
-
----
-
-## Architecture Highlights
-
-
+The technology stack may change as the project evolves.
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### Prerequisites
+### Requirements
 
-- Node.js 18+
-
+* Node.js 18+
+* pnpm
 
 ### Installation
 
 ```bash
+git clone https://github.com/ZekeGan/media-viewer.git
+cd media-viewer
 pnpm install
 ```
 
-
 ### Environment Variables
-Create a `.env.local` file in the root directory:
+
+Create `.env.local` in the project root:
 
 ```env
 COMPANY_NAME=project-root-name
@@ -50,16 +116,29 @@ GAME_PATH=game-path
 DOUJINSHI_PATH=doujinshi-path
 ```
 
-### Run Locally
+Adjust the values for your local environment.
+
+### Development
 
 ```bash
-pnpm run dev
+pnpm run dev:next
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+For Electron development:
+
+```bash
+pnpm run dev:electron
+```
 
 ---
 
-## Author
 
-**Zeke Gan** — [GitHub](https://github.com/ZekeGan)
+## 👤 Author
+
+**Zeke Gan**
+
+[GitHub](https://github.com/ZekeGan)
+
+---
+
+> **This project is an experiment. The implementation is expected to change.**
