@@ -38,3 +38,7 @@ next-env.d.ts
 
 # other
 *.bat
+
+.local-backups/
+.test-output/
+

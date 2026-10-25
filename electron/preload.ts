@@ -1,21 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { View } from '../shared/main'
-
-contextBridge.exposeInMainWorld('electronApi', {
-  // old
-  getGameList: () => ipcRenderer.invoke('game:list'),
-  getDoujinshiList: () => ipcRenderer.invoke('doujinshi:list'),
-  openFolder: (path: string) => ipcRenderer.invoke('os:open-folder', path),
-  // saveTags: (tags: any) => ipcRenderer.invoke('system:save-tags', tags),
-  getSystemData: () => ipcRenderer.invoke('system:get-system-data'),
-
-  // v2
-  getViewList: () => ipcRenderer.invoke('view:get-all'),
-  getView: (viewId: string) => ipcRenderer.invoke('view:get', viewId),
-  saveView: (viewId: string) => ipcRenderer.invoke('view:save', viewId),
-  createView: (path: string, depth?: number) =>
-    ipcRenderer.invoke('view:create', path, depth),
-
-  // dialog
-  selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
-})
+import type { MediaApi, Request, Response, ScanProgress } from '../shared/model'
+const api: MediaApi = {
+  request: (request: Request): Promise<Response> => ipcRenderer.invoke('library:request', request),
+  onProgress(callback) {
+    const listener = (_event: Electron.IpcRendererEvent, progress: ScanProgress) => callback(progress)
+    ipcRenderer.on('library:progress', listener)
+    return () => ipcRenderer.removeListener('library:progress', listener)
+  },
+}
+contextBridge.exposeInMainWorld('media', api)
