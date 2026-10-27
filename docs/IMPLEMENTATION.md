@@ -1,66 +1,52 @@
-# POC 實作狀態
+# 執行與驗證
 
-使用者已指示完成至 POC 結束，並在完成後選擇設計風格。核心功能、復原與草稿保護已實作；驗收對照見 [POC 收尾紀錄](POC_ACCEPTANCE.md)。首次大量建檔仍偏慢，以下保留實測限制；MVP 功能另行規畫。
+本頁只維護操作入口與驗證選擇。現況模組見 [ARCHITECTURE](ARCHITECTURE.md)，功能行為見 [任務索引](README.md)，待辦見 [WORK_ITEMS](WORK_ITEMS.md)。版本／套件以 package.json 與 lockfile 為準，避免多處抄錄。
 
-## 啟動與檢查
+## 命令
 
-Windows x64，Node 24、pnpm 10。首次執行 `pnpm install`（postinstall 安裝 Electron 執行檔），開發用 `pnpm dev`；`pnpm build` 包含型別檢查並產生 `out/`，`pnpm start` 開啟建置版本。尚未製作安裝包。
-
-- `pnpm test`：受控資料樹的儲存／搬移／清理／匯入驗證。
-- `pnpm test:ui`：先 build，再啟動隔離 userData 的 Electron 驗證操作，截圖存於 `.test-output/screens/`。
-- 不需每次全部重跑；儲存修改跑資料測試，互動修改跑相關 UI 情境。
-
-## 架構與檔案
-
-| 責任 | 入口 |
+| 命令 | 用途 |
 | --- | --- |
-| Electron 視窗、安全協定、檔案對話框、受控 IPC | `electron/main.ts`、`electron/preload.ts` |
-| 專案、掃描、清理、重連與舊資料匯入 | `electron/library.ts` |
-| 安全路徑、原子置換、版本檢查、備份 | `electron/files.ts` |
-| Windows 批次隱藏屬性，路徑經 stdin 傳入 | `electron/hidden.ts` |
-| 共用資料契約與執行期檢查 | `shared/model.ts` |
-| 重用排序與名稱／路徑子字串篩選 | `shared/search.ts` |
-| 清單、設定、詳情、問題與清理預覽 | `src/App.tsx` |
-| CELL 組裝與真實資料預覽／清單呈現 | `src/Editor.tsx`、`src/Card.tsx` |
+| `pnpm dev` | Electron＋Vite 開發 |
+| `pnpm build` | `tsc --noEmit` 後建置 Electron／renderer |
+| `pnpm start` | 預覽已建置應用 |
+| `pnpm typecheck` | 單獨型別檢查；若本輪已 build 成功，不再重跑 |
+| `pnpm exec tsx --test tests/<name>.test.ts` | 受影響資料測試 |
+| `pnpm test` | 所有 `tests/*.test.ts`，適用跨模組風險／交付 |
+| `pnpm test:workspace` | 現行完整 Electron UI：`tests/workspace-ui.ts`；需相符建置 |
 
-Electron 44、React 18、Vite 7、electron-vite 5、Mantine 8、react-grid-layout 2。Vite 版本依 electron-vite 的相容範圍選擇。Next.js、舊 store／IPC／mock 與未使用依賴已移除；單一 pnpm lockfile。SQLite 尚未加入，POC 直接讀可攜檔到記憶體；之後加入可重建索引，不能把資料庫改成唯一來源。
+`test:ui` 與 `test:workspace` 是同一 runner，選一個即可。不要臆造 lint／舊 UI script；需新命令先查 package.json。未改依賴且環境可用，不例行安裝或更新套件。
 
-## 已實作流程
+## 驗證選擇
 
-1. 建立／重連專案，根為第 1 層；顯示 1–N 或只顯示 N。遍歷但不顯示的祖先仍有記錄；略過 junction／symlink 及自己的資料目錄。
-2. 預設名稱、目前路徑、共用文字與開啟資料夾四種 CELL。拖入、移動、縮放、顏色、欄位綁定、真實資料預覽、復原／重做及取消。可引用掃描資料夾已有的文字 attributeId，不以同名 key 合併身分。
-3. 詳情編輯共用文字、保存圖片原檔；保存成功即時更新。缺值只顯示佔位，不回寫假資料。每列預設 2、每頁 100，可調整；名稱／路徑任意子字串搜尋。
-4. 可攜身分、跨專案搬移、重複 ID 阻擋寫入及明確分配副本新 ID。專案媒體分類僅影響專案設定，不改資料夾原值。
-5. 清理預覽、明確確認、已知檔案逐一驗證、未知檔保留及部分失敗報告。單筆清理後以保留專案內相對路徑停止記錄；移走後確認原位置不存在才過期。搬入其他專案時為新資料夾。
-6. 舊 JSON 匯入先預覽與備份，只轉換可確認的 USER／STRING 欄位；重試不覆寫新修改。舊版面與其他型別留在備份，並非完整遷移。
-7. 根記錄／專案設定損壞時，可連回原根並明確選擇備份復原；兩份候選資料身分先通過檢查才寫入。編輯文字、模板、專案設定或新增專案時，關閉／重新載入會提示未保存內容；操作進行中先等待或取消掃描。
+先列本次可能失敗的行為，再選能直接暴露它的檢查。以下是依風險選擇，並非每輪累加全做。
 
-## 實體契約與復原
+| 改動 | 最小有效驗證 | 何時擴大 |
+| --- | --- | --- |
+| 只改文件／Agent 流程 | 改動範圍、有效本機連結、diff／空白；不啟動應用 | 涉及可執行設定時查其有效性 |
+| 文案／低風險樣式 | 目標區域檢視；無畫面則明說未執行 | 尺寸、焦點、可捲動範圍改變才加相關尺寸／互動 |
+| 共用型別／純邏輯 | 對應測試＋typecheck，或需要建置時以 build 取代 typecheck | 呼叫契約跨模組才補相關端 |
+| 導覽／CELL／窗格互動 | 受影響模式與狀態保存的目標操作；需要打包程式時 build 一次 | 共用選取／歷史／模板改動才補其他模式 |
+| main／preload／媒體協定 | build＋受控 Electron 路徑；來源／邊界與錯誤處理 | IPC／共用串流變更再加相關媒體 |
+| 可攜寫入／身分／覆寫／遷移／清理 | 受控資料樹的成功及失敗／取消／復原路徑，確認原檔及無關資料保留 | 涵蓋專案或資料契約擴大，才跑完整資料回歸 |
+| 跨模組／明確發版驗收 | build、完整資料測試、適用的現行 UI runner | 性能／平台／真實樣本有具體風險才另測 |
 
-每個受管資料夾有 `.media-viewer/folder.json`（kind、schemaVersion、folderId、revision、attributes、assets、projectOverrides）。Windows 根建立時設隱藏，子項在掃描收尾批次設定；取消也會處理已完成項目，失敗回報並重試。圖片複製至 `assets/<assetId>.<ext>`；專案根內的 `projects/<projectId>.json` 保存模板、欄位綁定、掃描與列表設定。本機 `poc-projects.json` 只記根位置與 projectId。完整格式以 `shared/model.ts` 為準。
+不要用只鏡像實作的測試替代行為驗證。儲存安全所需檢查不能因「最小」而刪減，詳見 [STORAGE_OPTIONS](STORAGE_OPTIONS.md)。
 
-保存採暫存檔、同步寫入、`.bak` 與置換，revision 或內容變更時拒絕覆蓋。初次寫入也建立基準備份。損壞的單筆可由詳情恢復，失效專案有根／設定復原入口，原損壞檔另存 `.damaged`，有效備份保留。這些未知／損壞副本不自動刪除。清理全部只涵蓋已連結、可存取且可驗證歸屬的記錄；離線根、未連結副本及舊資料備份需另外處理。
+## 測試定位與失敗處理
 
-## 驗證與尚未驗收項目
+| 入口 | 涵蓋 |
+| --- | --- |
+| `tests/library.test.ts` | 可攜讀寫、清理／復原、重疊專案、副本／遷移、取消與路徑限制 |
+| `tests/explorer.test.ts` | 型別值／覆寫、搜尋、媒體串流、字幕、遊戲動作與來源固定回應 |
+| `tests/workspace.test.ts` | UI 設定、排序、併發及失敗保留 |
+| `tests/revision.test.ts` | 模式／方案、有效記錄與遊戲邊界、小數尺寸、Windows 保留目錄大小寫 |
+| `tests/workspace-ui.ts` | 目前外框／瀏覽／媒體整合；測試資料與截圖在 `.test-output/` |
+| `tests/performance.ts` | 獨立規模實驗；僅性能工作按需執行，不作日常門檻 |
 
-已通過：13 項資料測試，包含原有儲存／搬移／清理情境，並補上根與設定復原、磁碟滿故障注入、取消重試、特殊字元隱藏／junction、Windows 真實拒寫 ACL。正式 Electron 操作已驗證 1,005 筆分頁不重複／漏項、文字保存、可攜圖片實際解碼、搜尋、拖放、縮放、復原／重做、關閉時保留詳情／模板草稿、專案復原入口與 800px 無水平溢出。詳細命令結果見開發紀錄。測試僅使用 `.test-output/`，未掃描使用者媒體。
+資料與 UI 測試只使用自建測試樹及隔離的 userData，勿指向使用者收藏。UI runner 用專案根 `args: ['.']` 啟動，配合 `MEDIA_VIEWER_TEST_DATA`；檢查 runner 的媒體生成條件，勿把缺環境工具誤報為產品失敗。
 
-Windows 受控實測（包含 Hidden 設定，硬碟負載會影響結果）：
+先辨別產品、環境或測試定位器失敗，保留失敗輸出／截圖，縮到相關情境再修正。未改應用來源不重複 build；修測試定位器先重跑失敗路徑。只有剩餘跨區風險或交付門檻才再跑整套。其他舊 UI 腳本是歷史材料，不列為現行必跑項。
 
-| 數量 | 首次建檔 | 重掃 | 記憶體篩選＋排序 p95 |
-| --- | --- | --- | --- |
-| 1,000 | 47.74 秒 | 1.10 秒 | 3.08ms |
-| 10,000 | 392.98 秒 | 5.78 秒 | 18.29ms |
+## 驗證紀錄的使用
 
-另外，1,005 筆 UI 搜尋到兩次畫面更新的觀察為 63.7ms（10 個查詢取最大值，含自動化往返，非大量統計）。記憶體量測使用 100 次查詢，不等同完整 UI 延遲。
-
-可用 `pnpm exec tsx tests/performance.ts` 重現；壓力觀察設定 `POC_PERF_COUNT=10000`，不列入每輪例行測試。批次隱藏、8 筆有限並行與排序重用已完成；磁碟同步是首次建檔主要剩餘成本。與前版 46.15 秒相比，本機首次建立未證實加速，仍是明確體驗限制。保留同步寫入與備份，不以省略持久性保障達成數字。
-
-正式發布前仍待驗證真實斷電／裝置故障、真實填滿磁碟、跨設備長期使用與安裝包；首次大量建檔需持續改善。現有版本檢查可偵測常見衝突，不能宣稱對不合作的外部程式具跨程序交易鎖。自訂圖片只在詳情展示，圖片 CELL 與其他型別、私有覆寫建立 UI、媒體不符圖示、SQLite／完整查詢／閱讀播放屬後續範圍。
-
-## 舊程式保留
-
-改動前的程式與套件設定已封存於 `.local-backups/before-poc-20261025-203043.zip`（不提交 Git），包含當時未提交內容。不要將封存檔整包蓋回目前工作樹。`PLAN.md` 及舊現況分析僅作歷史參考。
-
-
-
+本輪交付只回報實際執行的檢查及限制；沒有跑的明寫「未執行」。[0.5.0](RELEASE_0_5_0.md)、[前輪階段](STAGES_2_3.md) 與 [POC 驗收](POC_ACCEPTANCE.md) 是歷史證據，不能當本輪通過；原基準／備份資訊保存在 [整理前實作頁](history/agent-docs-before-cleanup.md#implementation)，不需每次讀取。

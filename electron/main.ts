@@ -1,16 +1,25 @@
-import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, protocol, shell } from 'electron'
+import { spawn } from 'node:child_process'
 import path from 'node:path'
+import fs from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
+import { imageTypes } from '../shared/images'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Library } from './library'
 import { safePath } from './files'
 import type { Request, Response } from '../shared/model'
+import { WorkspaceStore } from './workspace'
+import type { WorkspaceCommand, WindowAction } from '../shared/workspace'
+import { Explorer } from './explorer'
+import type { ExplorerRequest } from '../shared/explorer'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const rendererRoot = path.resolve(directory, '../renderer')
-protocol.registerSchemesAsPrivileged(['app', 'media'].map(scheme => ({ scheme, privileges: { standard: true, secure: true, supportFetchAPI: true } })))
+protocol.registerSchemesAsPrivileged(['app', 'media'].map(scheme => ({ scheme, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })))
 let win: BrowserWindow | undefined
 let library: Library
 let pendingRequests = 0
+const rootChoices=new Map<string,{path:string;expires:number}>()
 const devUrl = process.env.ELECTRON_RENDERER_URL
 function trusted(url: string) { try { return devUrl ? new URL(url).origin === new URL(devUrl).origin : new URL(url).protocol === 'app:' && new URL(url).hostname === 'ui' } catch { return false } }
 async function selectFolder() {
@@ -22,14 +31,16 @@ async function dispatch(request: Request): Promise<Response> {
   switch (request.action) {
     case 'snapshot': break
     case 'scan': await library.scan(); break
-    case 'create': { const root = await selectFolder(); if (root) await library.create(root, request.input); break }
-    case 'link': { const root = await selectFolder(); if (root) await library.link(root); break }
+    case 'chooseRoot': { const root=await selectFolder();if(root){for(const [id,item]of rootChoices)if(item.expires<Date.now())rootChoices.delete(id);if(rootChoices.size>=10)rootChoices.delete(rootChoices.keys().next().value!);const token=randomUUID();rootChoices.set(token,{path:root,expires:Date.now()+60*60*1000});extra.rootSelection={token,path:root}}else extra.cancelled=true;break }
+    case 'create': { const choice=request.rootToken?rootChoices.get(request.rootToken):undefined;if(request.rootToken&&(!choice||choice.expires<Date.now()))throw new Error('資料夾選擇已失效，請重新選擇');const root=choice?.path??await selectFolder();if(root){await library.create(root,request.input);if(request.rootToken)rootChoices.delete(request.rootToken)}else extra.cancelled=true;break }
+    case 'link': { const root = await selectFolder(); if (root) await library.link(root); else extra.cancelled = true; break }
     case 'unlink': await library.unlink(request.projectId); break
     case 'saveProject': await library.saveProject(request.project); break
     case 'saveFolder': await library.saveValues(request.rowId, request.revision, request.values); break
     case 'image': {
-      const selected = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '圖片', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] })
+      const selected = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '圖片', extensions: Object.keys(imageTypes) }] })
       if (!selected.canceled) await library.addImage(request.rowId, request.revision, selected.filePaths[0])
+      else extra.cancelled=true
       break
     }
     case 'open': { const row = await library.checkedRow(request.rowId); const error = await shell.openPath(row.path); if (error) throw new Error(error); break }
@@ -54,6 +65,39 @@ else {
     library = new Library(app.getPath('userData'), progress => win?.webContents.send('library:progress', progress))
     let startupError = ''
     try { await library.init() } catch (e) { startupError = String(e); console.error(e) }
+    const workspace = new WorkspaceStore(app.getPath('userData')); await workspace.init()
+    const checkSender = (event: Electron.IpcMainInvokeEvent) => {
+      if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame || !trusted(event.senderFrame.url)) throw new Error('拒絕未授權的操作')
+    }
+    const projectIds = () => library.snapshot().projects.map(p => p.projectId)
+    const explorer = new Explorer(library,app.getPath('userData'),{
+      choose: async kind => { const result=await dialog.showOpenDialog(win!,{properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='folder'?{}:{filters:[{name:kind==='exe'?'程式':'字幕',extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
+      open: async file=>{const error=await shell.openPath(file);if(error)throw new Error(error)},
+      launch: (file,args)=>new Promise<void>((resolve,reject)=>{const child=spawn(file,args,{cwd:path.dirname(file),shell:false,detached:true,stdio:'ignore',windowsHide:false});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve()})}),
+      thumbnail: async (file,mime)=>{
+        if(mime?.startsWith('video/')){const image=await nativeImage.createThumbnailFromPath(file,{width:160,height:90});if(image.isEmpty())throw new Error('無影片縮圖');return image.toJPEG(78)}
+        const img=nativeImage.createFromPath(file)
+        if(!img.isEmpty()){const {width,height}=img.getSize();return img.resize(width>=height?{width:320}:{height:320}).toJPEG(78)}
+        if(!win||win.isDestroyed()||!trusted(win.webContents.getURL()))throw new Error('圖片解碼器尚未就緒')
+        const encoded=(await fs.readFile(file)).toString('base64')
+        const bytes=await win.webContents.executeJavaScript(`(async()=>{const bytes=Uint8Array.from(atob(${JSON.stringify(encoded)}),c=>c.charCodeAt(0));const bitmap=await createImageBitmap(new Blob([bytes],{type:${JSON.stringify(mime??'application/octet-stream')}}));try{if(!bitmap.width||!bitmap.height||bitmap.width*bitmap.height>100000000)throw new Error('圖片尺寸過大');const scale=Math.min(1,320/Math.max(bitmap.width,bitmap.height));const canvas=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width*scale)),Math.max(1,Math.round(bitmap.height*scale)));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);return Array.from(new Uint8Array(await(await canvas.convertToBlob({type:'image/jpeg',quality:.78})).arrayBuffer()))}finally{bitmap.close()}})()`)
+        return Buffer.from(bytes)
+      },
+    })
+    app.on('will-quit',()=>explorer.index.close())
+    ipcMain.handle('explorer:request',async(event,request:ExplorerRequest)=>{checkSender(event);pendingRequests++;try{return await library.run(()=>explorer.request(request))}finally{pendingRequests--}})
+    ipcMain.handle('explorer:subtitleDrop',async(event,rowId:string,file:string)=>{checkSender(event);pendingRequests++;try{return await library.run(()=>explorer.droppedSubtitle(rowId,file))}finally{pendingRequests--}})
+    ipcMain.handle('workspace:read', async event => { checkSender(event); pendingRequests++; try { return await workspace.read(projectIds()) } finally { pendingRequests-- } })
+    ipcMain.handle('workspace:update', async (event, command: WorkspaceCommand) => { checkSender(event); pendingRequests++; try { return await workspace.update(command, projectIds()) } finally { pendingRequests-- } })
+    ipcMain.handle('window:action', (event, action: WindowAction) => {
+      checkSender(event)
+      if (!['state', 'minimize', 'toggleMaximize', 'close'].includes(action)) throw new Error('不支援的視窗操作')
+      if (action === 'minimize') win!.minimize()
+      if (action === 'toggleMaximize') { if (win!.isMaximized()) win!.unmaximize(); else win!.maximize() }
+      const state = { maximized: win!.isMaximized() }
+      if (action === 'close') win!.close()
+      return state
+    })
     protocol.handle('app', async request => {
       try {
         const url = new URL(request.url)
@@ -66,6 +110,7 @@ else {
     protocol.handle('media', async request => {
       try {
         const url = new URL(request.url), parts = url.pathname.split('/').filter(Boolean)
+        if (['file','thumb'].includes(url.hostname) && parts.length===2) { const response=await explorer.stream(parts[0],parts[1],request,url.hostname==='thumb');response.headers.set('Access-Control-Allow-Origin',devUrl?new URL(devUrl).origin:'app://ui');response.headers.set('Access-Control-Expose-Headers','Content-Range, Accept-Ranges');return response }
         if (url.hostname !== 'asset' || parts.length !== 2) return new Response(null, { status: 403 })
         const asset = await library.asset(parts[0], parts[1])
         return net.fetch(pathToFileURL(asset.file).toString())
@@ -79,7 +124,10 @@ else {
       try { return await library.run(() => dispatch(request)) }
       finally { pendingRequests-- }
     })
-    win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
+    win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, frame: false, backgroundColor: '#202124', show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
+    win.setMenu(null)
+    const publishWindowState = () => win?.webContents.send('window:state', { maximized: win.isMaximized() })
+    win.on('maximize', publishWindowState); win.on('unmaximize', publishWindowState)
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     win.on('close', event => {
       if (pendingRequests) {

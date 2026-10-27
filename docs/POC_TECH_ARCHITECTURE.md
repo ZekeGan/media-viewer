@@ -1,5 +1,8 @@
 # POC 技術架構與選型（提案，尚未實作）
 
+> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](README.md)、[待查收](WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
+
+
 整理日期：2026-10-25。以 [已核定方向](DECISIONS.md) C-66／C-67、[POC 設計書](POC_DESIGN_PACKAGE.md) 為準。React + Vite、Mantine、可攜權威資料／SQLite 索引及 Windows x64 已獲使用者同意；具體檔案 schema、Electron 版本與性能仍需驗證。現有程式只用來定位遷移工作，不作為目標模型範式；現況見 [ARCHITECTURE.md](ARCHITECTURE.md)。開發前集中審查見 [審查包](POC_PREDEV_REVIEW.md)。
 
 ## 一、選型

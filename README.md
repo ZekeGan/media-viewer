@@ -10,6 +10,8 @@ The main idea is to explore a different way of browsing file collections:
 
 The project is currently in an **early development stage**.
 
+Version **0.5.0** includes CARD/TABLE/TREE browsing, typed fields and SQLite search, media viewers and E-Hentai metadata import, with refined workspace controls and protected folder navigation. Start with the [documentation index](docs/README.md), [current review guide](docs/RELEASE_0_5_0.md) and [changelog](CHANGELOG.md); visual previews remain exploratory. Supported formats and verification limits are recorded there.
+
 The Electron + React + Vite POC core flow and recovery work are implemented. See the [acceptance record](docs/POC_ACCEPTANCE.md) and [visual style options](docs/DESIGN_STYLE_OPTIONS.md). See [implementation, commands and remaining acceptance work](docs/IMPLEMENTATION.md). Run `pnpm install`, then `pnpm dev`. The [POC design](docs/POC_DESIGN_PACKAGE.md) and [wireframes](docs/POC_WIREFRAMES.md) describe the target; they are not a claim that all acceptance checks have passed.
 
 ---
@@ -53,7 +55,7 @@ JSON        → Tree / Key-Value
 File Path   → Image / Audio / Video
 ```
 
-SQLite is the confirmed direction for a rebuildable local search index; it is not implemented yet. The portable folder records and project definitions remain the source of truth:
+SQLite is implemented as a rebuildable local search index. The portable folder records and project definitions remain the source of truth:
 
 ```text
 Folders ──→ portable folder records ──┐
@@ -75,7 +77,7 @@ The current implementation uses:
 * React 18 + Vite 7 — UI
 * TypeScript — Type safety
 * React hooks — POC client state
-* SQLite — Planned local index; not implemented
+* SQLite — Rebuildable local index using Node SQLite
 * Mantine 8 + plain CSS — UI and styling
 
 The technology stack may change as the project evolves.

@@ -1,3 +1,4 @@
+// Historical C-87 UI harness; selectors target the earlier UI. Current entry: pnpm test:ui.
 import { _electron as electron } from 'playwright-core'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -33,6 +34,7 @@ const attemptClose = () => app.evaluate(({ BrowserWindow, dialog }) => new Promi
 }))
 try {
   const page = await app.firstWindow(); page.on('pageerror', e => errors.push(e.message))
+  await page.getByRole('button', { name: '開啟專案 POC 測試收藏', exact: true }).click()
   await page.getByRole('heading', { name: 'POC 測試收藏' }).waitFor()
   assert.equal(await page.locator('.folder-card').count(), 100)
   const allRows = await page.locator('.folder-card').allTextContents()
@@ -45,21 +47,22 @@ try {
   const inputSamples: number[] = []
   for (const query of ['測試 000', '測試 001', '作品 A', '測試 003', '測試 004', '作品 B', '測試 006', '測試 007', '測試 008', '測試 009']) {
     const start = await page.evaluate(() => performance.now())
-    await page.getByRole('textbox', { name: '搜尋名稱或路徑' }).fill(query)
+    await page.getByRole('textbox', { name: '搜尋名稱或路徑' }).fill(JSON.stringify(query))
     await page.waitForFunction(expected => document.querySelectorAll('.folder-card').length === expected, query.startsWith('作品') ? 1 : 10)
     const end = await page.evaluate(() => new Promise<number>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(performance.now())))))
     inputSamples.push(end - start)
   }
   inputSamples.sort((a, b) => a - b)
   await fs.writeFile(path.join(base, 'ui-performance.json'), JSON.stringify({ rows: 1005, samples: inputSamples, p95Ms: inputSamples[9], includesAutomationAndPaint: true }, null, 2))
-  await page.getByRole('textbox', { name: '搜尋名稱或路徑' }).fill('作品 A')
+  await page.getByRole('textbox', { name: '搜尋名稱或路徑' }).fill('"作品 A"')
   assert.equal(await page.locator('.folder-card').count(), 1)
   await page.getByRole('button', { name: '詳情／編輯' }).click()
+  await page.getByRole('tab',{name:'欄位／圖片',exact:true}).click()
   await page.getByLabel('title', { exact: true }).fill('測試作品名稱')
   await page.getByText('尚未保存', { exact: true }).waitFor()
   assert.match(await attemptClose(), /尚未保存/)
   assert.equal(await page.getByLabel('title', { exact: true }).inputValue(), '測試作品名稱')
-  await page.getByRole('button', { name: '保存共用文字' }).click()
+  await page.getByRole('button', { name: '保存欄位資料' }).click()
   await page.locator('.folder-card').getByText('測試作品名稱').waitFor()
   const imageFile = path.join(root, 'cover.png')
   await fs.writeFile(imageFile, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9X8AAAAASUVORK5CYII=', 'base64'))
@@ -69,7 +72,7 @@ try {
   }, imageFile)
   await page.getByRole('button', { name: '選擇圖片並保存原檔' }).click()
   await page.waitForFunction(() => { const image = document.querySelector('.images img') as HTMLImageElement | null; return image?.complete && image.naturalWidth === 1 })
-  await page.keyboard.press('Escape')
+  await page.locator('.folder-panel-header').getByRole('button',{name:'關閉',exact:true}).click()
   await page.getByRole('button', { name: 'CELL 編輯器', exact: true }).click()
   await page.getByRole('heading', { name: 'CELL 積木編輯器' }).waitFor()
   await page.locator('.palette-item').first().dragTo(page.locator('.canvas'), { targetPosition: { x: 50, y: 250 } })
