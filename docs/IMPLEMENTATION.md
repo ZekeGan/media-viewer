@@ -16,6 +16,8 @@
 
 `test:ui` 與 `test:workspace` 是同一 runner，選一個即可。不要臆造 lint／舊 UI script；需新命令先查 package.json。未改依賴且環境可用，不例行安裝或更新套件。
 
+應用視窗聚焦時按 `F12` 可開啟／關閉 DevTools；開發與已建置版本均可使用。修改主程序後須重新啟動應用，長按不重複切換。
+
 ## 驗證選擇
 
 先列本次可能失敗的行為，再選能直接暴露它的檢查。以下是依風險選擇，並非每輪累加全做。
@@ -41,6 +43,10 @@
 | `tests/workspace.test.ts` | UI 設定、排序、併發及失敗保留 |
 | `tests/revision.test.ts` | 模式／方案、有效記錄與遊戲邊界、小數尺寸、Windows 保留目錄大小寫 |
 | `tests/workspace-ui.ts` | 目前外框／瀏覽／媒體整合；測試資料與截圖在 `.test-output/` |
+| `tests/gallery-performance-ui.ts` | `pnpm exec tsx tests/gallery-performance-ui.ts`：1,200 張受控圖片的首批／首圖時間、捲動幀距、DOM／請求上界、相簿與漫畫翻組及開啟；`GALLERY_BENCH_BASELINE=1` 僅供比較，略過新能力斷言 |
+| `tests/gallery.test.ts` | 圖庫可見範圍、鍵盤焦點保留、比例到達後欄位穩定與調寬 |
+| `tests/media-ui.ts` | `pnpm exec tsx tests/media-ui.ts`：隔離影片自動播放偏好、切專案／關窗停止與過期事件、相簿兩模式捲動穩定、搜尋範圍／開啟；使用 FFmpeg 受控影音 |
+| `tests/reader-ui.ts` | 閱讀器專項：`pnpm exec tsx tests/reader-ui.ts`；視窗／最大化與全螢幕還原、無上下留白、縮小下限／細節放大／平移、沉浸隱藏、固定 RTL 圖示、頁碼框與翻頁焦點；同樣使用隔離資料與 FFmpeg 測試圖片 |
 | `tests/performance.ts` | 獨立規模實驗；僅性能工作按需執行，不作日常門檻 |
 
 資料與 UI 測試只使用自建測試樹及隔離的 userData，勿指向使用者收藏。UI runner 用專案根 `args: ['.']` 啟動，配合 `MEDIA_VIEWER_TEST_DATA`；檢查 runner 的媒體生成條件，勿把缺環境工具誤報為產品失敗。

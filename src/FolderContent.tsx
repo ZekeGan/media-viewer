@@ -24,6 +24,8 @@ export function FolderContent({
   act,
   busy,
   configure,
+  subtitleSettingsOpen,
+  closeSubtitleSettings,
 }: {
   row: FolderRow
   project: Project
@@ -32,27 +34,36 @@ export function FolderContent({
   act: (r: Request) => Promise<Response | undefined>
   busy: boolean
   configure: () => void
+  subtitleSettingsOpen: boolean
+  closeSubtitleSettings: () => void
 }) {
   const [content, setContent] = useState<ContentResult>(),
     [error, setError] = useState(''),
+    [reload, setReload] = useState(0),
     [, setReader] = useState(false)
   useEffect(() => {
     let alive = true
     setContent(undefined)
     setError('')
-    window.explorer
-      .request({ action: 'content', rowId: row.rowId })
-      .then((r) => {
-        if (alive) setContent(r.content)
-      })
-      .catch((e) => {
-        if (alive) setError(String(e))
-      })
+    const paged=['album','manga'].includes(project.mediaCategory)
+    void (async()=>{
+      let cursor:string|undefined
+      do{
+        const response=await window.explorer.request({action:'content',rowId:row.rowId,...(paged?{limit:cursor?256:96,cursor}:{})})
+        if(!alive)return
+        const chunk=response.content;if(!chunk)throw new Error('無法取得資料夾內容')
+        const append=!!cursor
+        setContent(previous=>append&&previous?{...chunk,entries:[...previous.entries,...chunk.entries],notices:[...previous.notices,...chunk.notices]}:chunk)
+        cursor=chunk.nextCursor
+        // Yield between chunks so navigation and the first screen can render.
+        if(cursor)await new Promise(resolve=>setTimeout(resolve,50))
+      }while(alive&&cursor)
+    })().catch(e=>{if(alive)setError(String(e))})
     return () => {
       alive = false
     }
-  }, [row.rowId, row.path])
-  if (error)
+  }, [row.rowId, row.path, project.mediaCategory, reload])
+  if (error&&!content)
     return (
       <p role="alert" className="media-content-error">
         {error}
@@ -62,7 +73,7 @@ export function FolderContent({
   if (project.mediaCategory === 'video')
     return (
       <Suspense fallback={<p>載入播放器…</p>}>
-        <VideoViewer row={row} entries={content.entries} run={run} />
+        <VideoViewer key={row.rowId} row={row} entries={content.entries} run={run} autoplay={project.videoAutoplay!==false} settingsOpened={subtitleSettingsOpen} closeSettings={closeSubtitleSettings} />
       </Suspense>
     )
   const cover =
@@ -214,6 +225,7 @@ export function FolderContent({
   }
   return (
     <div className="media-content">
+      {error&&<p role="alert" className="media-content-error">部分內容讀取未完成，已載入的圖片仍可查看。{error}<Button size="compact-xs" variant="subtle" onClick={()=>setReload(value=>value+1)}>重新載入</Button></p>}
       <div className="media-info-template">
         {project.mediaCategory === 'manga' && first && (
           <img
@@ -237,6 +249,7 @@ export function FolderContent({
       {['manga', 'album'].includes(project.mediaCategory) ? (
         <Gallery
           entries={content.entries}
+          loading={!!content.nextCursor&&!error}
           manga={project.mediaCategory === 'manga'}
           prefs={row.record?.details?.reading}
           onReader={setReader}

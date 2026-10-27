@@ -94,3 +94,82 @@ test('1000-row SQLite warm substring benchmark includes one-character Chinese qu
  explorer.index.sync(s);const samples:number[]=[],queries=['遊','000','name:"遊戲"','tag:中文,game','-name:999','path:media']
  for(let i=0;i<30;i++){const start=performance.now();explorer.index.search(queries[i%queries.length],undefined,0,100);samples.push(performance.now()-start)}samples.sort((a,b)=>a-b);const p95=samples[Math.floor(samples.length*.95)];console.log(`SQLite 1,000-row warm p95 ${p95.toFixed(2)}ms (main query only, 30 samples)`);assert.ok(p95<200,`p95 ${p95}ms`)
 })
+
+test('multiple optional image CELL slots remain independent and survive portable relink; failed writes roll back assets',async t=>{
+ const {root,media,local,lib,explorer}=await fixture(t)
+ let snapshot=await lib.create(media,{name:'Images',mediaCategory:'album',depth:{mode:'through',level:1}})
+ let p=snapshot.projects[0].project!
+ const base=p.cells[0],one={...base,cellId:'image-one',attributeId:'slot-one',kind:'image' as const,grid:{x:0,y:4,w:6,h:3}},two={...base,cellId:'image-two',attributeId:'slot-two',kind:'image' as const,grid:{x:6,y:4,w:6,h:3}},divider={...base,cellId:'divider',kind:'divider' as const,grid:{x:0,y:7,w:12,h:1}}
+ p={...p,cells:[...p.cells,one,two,divider]};validateProject(p)
+ snapshot=await lib.saveProject(p)
+ let row=snapshot.rows[0];assert.equal(row.record!.assets.length,0)
+ const file=path.join(root,'one.png');await fs.writeFile(file,Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64'))
+ snapshot=await lib.addImage(row.rowId,row.record!.revision,file,'image-one');row=snapshot.rows[0]
+ const first=row.record!.details!.cellImages!['slot-one'];assert.ok(first);assert.equal(row.record!.details!.cellImages!['slot-two'],undefined)
+ snapshot=await lib.addImage(row.rowId,row.record!.revision,file,'image-two');row=snapshot.rows[0]
+ const second=row.record!.details!.cellImages!['slot-two'];assert.ok(second);assert.notEqual(first,second);assert.equal(row.record!.details!.cellImages!['slot-one'],first)
+ await explorer.request({action:'cellImage',rowId:row.rowId,revision:row.record!.revision,cellId:'image-two',assetId:first})
+ row=lib.snapshot().rows[0];assert.equal(row.record!.details!.cellImages!['slot-two'],first)
+ const {folderFile}=await import('../electron/files'),before=await fs.readFile(folderFile(media),'utf8')
+ await assert.rejects(explorer.request({action:'cellImage',rowId:row.rowId,revision:row.record!.revision,cellId:'missing',assetId:first}))
+ await assert.rejects(lib.addImage(row.rowId,row.record!.revision,file,'missing'))
+ await assert.rejects(explorer.request({action:'cellImage',rowId:row.rowId,revision:row.record!.revision,cellId:'image-one',assetId:'missing'}))
+ assert.equal(await fs.readFile(folderFile(media),'utf8'),before)
+ const reopened=new Library(path.join(root,'relinked'),undefined,false);await reopened.init();const restored=await reopened.link(media)
+ assert.equal(restored.rows[0].record!.details!.cellImages!['slot-one'],first)
+ assert.equal(restored.projects[0].project!.cells.filter(c=>c.kind==='image').length,2)
+ const assetDir=path.join(media,DATA_DIR,'assets'),names=await fs.readdir(assetDir)
+ await fs.unlink(folderFile(media)+'.bak');await fs.mkdir(folderFile(media)+'.bak')
+ await assert.rejects(lib.addImage(row.rowId,row.record!.revision,file,'image-one'))
+ assert.deepEqual(await fs.readdir(assetDir),names);assert.equal(await fs.readFile(folderFile(media),'utf8'),before)
+ assert.equal((await readFolder(media)).assets.length,2)
+})
+
+test('Steam import is namespaced, preserves manual values and rejects a source conflict without writes',async t=>{
+ const {media,lib,explorer}=await fixture(t)
+ await lib.create(media,{name:'Steam',mediaCategory:'game',depth:{mode:'through',level:1}})
+ const payload={'620':{success:true,data:{steam_appid:620,name:'Portal 2',type:'game',short_description:'Description',developers:['Valve'],release_date:{date:'18 Apr, 2011'}}}}
+ const original=globalThis.fetch;globalThis.fetch=(async()=>new Response(JSON.stringify(payload))) as typeof fetch
+ try{
+  let row=lib.snapshot().rows[0]
+  const result=await explorer.request({action:'metadataPreview',source:'620'}),preview=result.preview!
+  await explorer.request({action:'metadataApply',rowId:row.rowId,revision:row.record!.revision,token:preview.token,keys:['TITLE','STORE_RELEASE_DATE'],image:false})
+  row=lib.snapshot().rows[0];assert.equal(row.record!.attributes.find(a=>a.attributeId==='steam-title')!.value,'Portal 2')
+  assert.equal(row.record!.attributes.find(a=>a.attributeId==='steam-store_release_date')!.value,'18 Apr, 2011')
+  await explorer.request({action:'attributes',rowId:row.rowId,revision:row.record!.revision,values:[{attributeId:'steam-title',key:'TITLE',type:'string',value:'Manual',source:'manual'}],private:false})
+  row=lib.snapshot().rows[0]
+  const {folderFile}=await import('../electron/files'),before=await fs.readFile(folderFile(media),'utf8')
+  await assert.rejects(explorer.request({action:'metadataApply',rowId:row.rowId,revision:row.record!.revision,token:preview.token,keys:['TITLE'],image:false}),/來源衝突/)
+  assert.equal(await fs.readFile(folderFile(media),'utf8'),before)
+ }finally{globalThis.fetch=original}
+})
+
+test('paged contents show an ordered first batch, remain row-bound and recheck changed paths',async t=>{
+ const {root,media,lib,explorer}=await fixture(t)
+ for(let start=0;start<450;start+=30)await Promise.all(Array.from({length:Math.min(30,450-start)},(_,index)=>fs.writeFile(path.join(media,`Image ${start+index+1}.jpg`),'IMAGE')))
+ const state=await lib.create(media,{name:'Many',mediaCategory:'album',depth:{mode:'through',level:1}}),row=state.rows[0],first=await explorer.content(row.rowId,96)
+ assert.equal(first.entries.length,96);assert.equal(first.total,450);assert.equal(first.entries[0].name,'Image 1.jpg');assert.equal(first.entries.at(-1)!.name,'Image 96.jpg');assert.ok(first.nextCursor)
+ await assert.rejects(explorer.content(row.rowId,0),/分批/);await assert.rejects(explorer.content(row.rowId,501),/分批/)
+ const other=await lib.create(media,{name:'Other',mediaCategory:'album',depth:{mode:'through',level:1}}),otherId=other.rows.find(r=>r.projectId!==row.projectId)!.rowId
+ await assert.rejects(explorer.content(otherId,96,first.nextCursor),/已失效/)
+ const outside=path.join(root,'outside');await fs.mkdir(outside);await fs.writeFile(path.join(outside,'secret.txt'),'KEEP');await fs.unlink(path.join(media,'Image 100.jpg'));await fs.symlink(outside,path.join(media,'Image 100.jpg'),process.platform==='win32'?'junction':'dir')
+ let cursor:string|undefined=first.nextCursor;const all=[...first.entries],notices:string[]=[]
+ while(cursor){const chunk=await explorer.content(row.rowId,128,cursor);all.push(...chunk.entries);notices.push(...chunk.notices);cursor=chunk.nextCursor}
+ assert.equal(all.length,449);assert.equal(new Set(all.map(entry=>entry.id)).size,449);assert.ok(notices.some(message=>message.includes('Image 100.jpg')));assert.equal(await fs.readFile(path.join(outside,'secret.txt'),'utf8'),'KEEP')
+ assert.equal(all.at(-1)!.name,'Image 450.jpg')
+})
+test('warm thumbnails bypass cold work; cancelled queued work is skipped and shared requests decode once',async t=>{
+ const {media,lib,explorer}=await fixture(t),jpeg=Buffer.from([255,216,255,0,255,217])
+ for(const name of ['warm.jpg','slow.jpg','cancel.jpg','shared.jpg'])await fs.writeFile(path.join(media,name),'IMAGE')
+ const state=await lib.create(media,{name:'Thumbnails',mediaCategory:'album',depth:{mode:'through',level:1}}),row=state.rows[0],content=await explorer.content(row.rowId)
+ const calls:string[]=[],desktop=(explorer as any).desktop as DesktopOperations;let release!:()=>void,started!:()=>void
+ const gate=new Promise<void>(resolve=>release=resolve),active=new Promise<void>(resolve=>started=resolve)
+ desktop.thumbnail=async file=>{const name=path.basename(file);calls.push(name);if(name==='slow.jpg'){started();await gate}return jpeg}
+ const stream=(name:string,signal?:AbortSignal)=>{const entry=content.entries.find(entry=>entry.name===name)!;return explorer.stream(row.rowId,entry.id,new Request(entry.thumb!,{signal}),true)}
+ assert.equal((await stream('warm.jpg')).status,200)
+ const slow=stream('slow.jpg');await active
+ let timeout:ReturnType<typeof setTimeout>|undefined
+ try{const warm=await Promise.race([stream('warm.jpg'),new Promise<never>((_,reject)=>timeout=setTimeout(()=>reject(new Error('warm thumbnail blocked behind decoder')),1000))]);assert.equal(warm.status,200);assert.match(warm.headers.get('Cache-Control')!,/immutable/);assert.deepEqual(Buffer.from(await warm.arrayBuffer()),jpeg)}finally{clearTimeout(timeout)}
+ const controller=new AbortController(),cancel=stream('cancel.jpg',controller.signal),shared1=stream('shared.jpg'),shared2=stream('shared.jpg');await new Promise(resolve=>setTimeout(resolve,30));controller.abort();release()
+ const results=await Promise.all([slow,cancel,shared1,shared2]);assert.equal(results[1].status,404);assert.equal(calls.includes('cancel.jpg'),false);assert.equal(calls.filter(name=>name==='shared.jpg').length,1);assert.equal(calls.filter(name=>name==='warm.jpg').length,1)
+})

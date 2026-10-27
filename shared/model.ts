@@ -1,7 +1,7 @@
 import type { ActionTemplate, FolderDetails } from './explorer'
 import { imageTypes } from './images'
 export const DATA_DIR = '.media-viewer'
-export type CellKind = 'name' | 'path' | 'field-text' | 'field-tags' | 'field-number' | 'field-date' | 'image' | 'open-folder'
+export type CellKind = 'name' | 'path' | 'field-text' | 'field-tags' | 'field-number' | 'field-date' | 'image' | 'divider' | 'open-folder'
 export interface Cell {
   cellId: string; kind: CellKind; attributeId?: string
   grid: { x: number; y: number; w: number; h: number }
@@ -23,6 +23,7 @@ export interface Project {
   contentCells?: Record<string, Cell[]>; actionTemplates?: ActionTemplate[]
   layoutPresets?: { id:string; name:string; cells:Cell[] }[]; activeLayoutId?:string
   scanAll?: boolean
+  videoAutoplay?: boolean
   cardView?: { mode:'multi'|'single'; level:number|'all' }
   traversal?: Record<string, boolean>; savedSearches?: { id: string; name: string; query: string }[]
 }
@@ -32,6 +33,7 @@ export interface ScanProgress { visited: number; created: number; errors: number
 export interface Snapshot { projects: LinkedProject[]; rows: FolderRow[]; problems: string[]; structure?: FolderRow[]; progress: ScanProgress; legacyAvailable: boolean }
 export interface CleanupPreview { token: string; paths: string[]; skipped: string[]; count: number; scope: 'folder' | 'private' | 'all' }
 export interface CleanupResult { removed: number; failed: string[]; skipped: string[] }
+export interface ProjectRemovalPreview { token:string; projectId:string; name:string; paths:string[]; skipped:string[]; privateCount:number; rootCleanup?:boolean; recoveryPath?:string }
 export interface ProjectInput { name: string; mediaCategory: string; depth: Project['depth']; scanAll?:boolean }
 export interface LegacyPreview { token: string; projects: { id: string; name: string; root: string; values: number }[]; warnings: string[] }
 export type Request =
@@ -39,14 +41,16 @@ export type Request =
   | { action: 'create'; input: ProjectInput; rootToken?:string }
   | { action: 'saveProject'; project: Project }
   | { action: 'unlink'; projectId: string }
+  | { action: 'removeProjectPreview'; projectId:string }
+  | { action: 'removeProject'; token:string }
   | { action: 'restoreProject'; projectId: string }
   | { action: 'saveFolder'; rowId: string; revision: number; values: Record<string, string> }
-  | { action: 'image'; rowId: string; revision: number }
+  | { action: 'image'; rowId: string; revision: number; cellId?:string }
   | { action: 'open' | 'restore' | 'copyIdentity' | 'resume'; rowId: string }
   | { action: 'cleanupPreview'; rowId: string; scope: 'folder' | 'private' }
   | { action: 'cleanup'; token: string; restart: boolean }
   | { action: 'legacyImport'; token: string; ids: string[]; depth: Project['depth'] }
-export interface Response { snapshot: Snapshot; preview?: CleanupPreview; cleanup?: CleanupResult; legacy?: LegacyPreview; message?: string; cancelled?: boolean; rootSelection?:{token:string;path:string} }
+export interface Response { snapshot: Snapshot; preview?: CleanupPreview; cleanup?: CleanupResult; removalPreview?:ProjectRemovalPreview; removal?:CleanupResult; legacy?: LegacyPreview; message?: string; cancelled?: boolean; rootSelection?:{token:string;path:string} }
 export interface MediaApi { request(request: Request): Promise<Response>; onProgress(callback: (progress: ScanProgress) => void): () => void }
 
 const obj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -63,14 +67,16 @@ export function validateDetails(v: unknown): asserts v is FolderDetails {
   if (!obj(v) || v.schemaVersion !== 1 || JSON.stringify(v).length > 2000000) throw new Error('內容設定不合法')
   if (v.boundary && (!obj(v.boundary) || !['root','not-game','candidate'].includes(v.boundary.state) || !Array.isArray(v.boundary.engines) || !v.boundary.engines.every((x: unknown) => text(x,100)) || !Array.isArray(v.boundary.evidence) || !v.boundary.evidence.every((x: unknown) => text(x,500)))) throw new Error('遊戲邊界設定不合法')
   if (v.bannerAssetId !== undefined && !id(v.bannerAssetId)) throw new Error('封面身分不合法')
+  if(v.cellImages!==undefined&&(!obj(v.cellImages)||Object.keys(v.cellImages).length>1000||!Object.entries(v.cellImages).every(([slot,asset])=>id(slot)&&id(asset))))throw new Error('圖片組件設定不合法')
   if (v.reading && (!obj(v.reading) || (v.reading.page !== undefined && !integer(v.reading.page,0,1000000)) || (v.reading.fit !== undefined && !['width','height','original'].includes(v.reading.fit)) || ['spread','rtl','firstSingle'].some(k => v.reading[k] !== undefined && typeof v.reading[k] !== 'boolean'))) throw new Error('閱讀設定不合法')
   if (v.targets && (!obj(v.targets) || !Object.entries(v.targets).every(([k,t]) => id(k) && obj(t) && ['exe','folder'].includes(t.kind) && text(t.path,10000) && typeof t.relative === 'boolean' && (!t.relative || relative(t.path)) && Array.isArray(t.args) && t.args.length <= 100 && t.args.every((a: unknown) => text(a,10000) && !String(a).includes('\0'))))) throw new Error('任務設定不合法')
   if (v.subtitles && (!Array.isArray(v.subtitles) || !v.subtitles.every(s => obj(s) && id(s.id) && text(s.name,255) && relative(s.relativePath) && /^subtitles\/[\w-]+\.(srt|vtt)$/.test(s.relativePath)))) throw new Error('字幕記錄不合法')
   if (v.playback && (!obj(v.playback) || Object.keys(v.playback).length > 10000 || !Object.entries(v.playback).every(([k,p]) => id(k) && obj(p) && typeof p.time === 'number' && Number.isFinite(p.time) && p.time >= 0 && p.time < 1e9 && (!p.subtitle || text(p.subtitle,200)) && (!p.settings || obj(p.settings) && Object.values(p.settings).every(s => obj(s) && typeof s.offset === 'number' && Number.isFinite(s.offset) && Math.abs(s.offset) <= 86400 && integer(s.size,10,80) && typeof s.bottom === 'number' && s.bottom >= 0 && s.bottom <= 80 && /^#[0-9a-f]{6}$/i.test(s.color) && /^#[0-9a-f]{6}$/i.test(s.background) && ['utf-8','big5','shift_jis'].includes(s.encoding)))))) throw new Error('播放設定不合法')
 }
 export function validateProject(v: unknown): asserts v is Project {
-  if(obj(v)&&(v.scanAll!==undefined&&typeof v.scanAll!=='boolean'||v.cardView!==undefined&&(!obj(v.cardView)||!['multi','single'].includes(v.cardView.mode)||!(integer(v.cardView.level,1,50)||v.cardView.mode==='multi'&&v.cardView.level==='all'))))throw new Error('CARD 顯示範圍不合法')
-  if (!obj(v) || v.kind !== 'media-viewer.project' || v.schemaVersion !== 1 || !id(v.projectId) || !id(v.rootFolderId) || !integer(v.revision, 1, Number.MAX_SAFE_INTEGER) || !text(v.name, 100) || !v.name.trim() || !text(v.mediaCategory, 40) || !obj(v.depth) || !['through', 'exact'].includes(v.depth.mode) || !integer(v.depth.level, 1, 50) || !obj(v.list) || !integer(v.list.itemsPerRow, 1, 6) || !integer(v.list.pageSize, 1, 500) || !Array.isArray(v.excludedRelativePaths) || !v.excludedRelativePaths.every(relative) || !Array.isArray(v.fieldBindings) || !v.fieldBindings.every(f => obj(f) && text(f.alias, 100) && id(f.attributeId) && text(f.type, 40)) || !Array.isArray(v.cells) || v.cells.length > 50 || !v.cells.every(c => obj(c) && id(c.cellId) && ['name', 'path', 'field-text', 'field-tags', 'field-number', 'field-date', 'image', 'open-folder'].includes(c.kind) && (!c.kind.startsWith('field-') || id(c.attributeId)) && obj(c.grid) && integer(c.grid.x, 0, 11) && integer(c.grid.y, 0, 99) && integer(c.grid.w, 1, 12) && integer(c.grid.h, 1, 100) && c.grid.x + c.grid.w <= 12 && c.grid.y + c.grid.h <= 100 && obj(c.style) && /^#[0-9a-f]{6}$/i.test(c.style.textColor) && (c.style.backgroundColor==='transparent'||/^#[0-9a-f]{6}$/i.test(c.style.backgroundColor)))) throw new Error('專案設定不合法或版本不支援')
+  if(obj(v)&&v.videoAutoplay!==undefined&&typeof v.videoAutoplay!=='boolean')throw new Error('影片自動播放設定不合法')
+  if(obj(v)&&(v.scanAll!==undefined&&typeof v.scanAll!=='boolean'||v.cardView!==undefined&&(!obj(v.cardView)||!['multi','single'].includes(v.cardView.mode)||!(integer(v.cardView.level,1,Number.MAX_SAFE_INTEGER)||v.cardView.mode==='multi'&&v.cardView.level==='all'))))throw new Error('CARD 顯示範圍不合法')
+  if (!obj(v) || v.kind !== 'media-viewer.project' || v.schemaVersion !== 1 || !id(v.projectId) || !id(v.rootFolderId) || !integer(v.revision, 1, Number.MAX_SAFE_INTEGER) || !text(v.name, 100) || !v.name.trim() || !text(v.mediaCategory, 40) || !obj(v.depth) || !['through', 'exact'].includes(v.depth.mode) || !integer(v.depth.level, 1, 50) || !obj(v.list) || !integer(v.list.itemsPerRow, 1, 6) || !integer(v.list.pageSize, 1, 500) || !Array.isArray(v.excludedRelativePaths) || !v.excludedRelativePaths.every(relative) || !Array.isArray(v.fieldBindings) || !v.fieldBindings.every(f => obj(f) && text(f.alias, 100) && id(f.attributeId) && text(f.type, 40)) || !Array.isArray(v.cells) || v.cells.length > 50 || !v.cells.every(c => obj(c) && id(c.cellId) && ['name', 'path', 'field-text', 'field-tags', 'field-number', 'field-date', 'image', 'divider', 'open-folder'].includes(c.kind) && (!c.kind.startsWith('field-') || id(c.attributeId)) && (c.kind!=='image'||c.attributeId===undefined||id(c.attributeId)) && obj(c.grid) && integer(c.grid.x, 0, 11) && integer(c.grid.y, 0, 99) && integer(c.grid.w, 1, 12) && integer(c.grid.h, 1, 100) && c.grid.x + c.grid.w <= 12 && c.grid.y + c.grid.h <= 100 && obj(c.style) && /^#[0-9a-f]{6}$/i.test(c.style.textColor) && (c.style.backgroundColor==='transparent'||/^#[0-9a-f]{6}$/i.test(c.style.backgroundColor)))) throw new Error('專案設定不合法或版本不支援')
   if (new Set(v.cells.map(c => c.cellId)).size !== v.cells.length || new Set(v.fieldBindings.map(f => f.alias.toLowerCase())).size !== v.fieldBindings.length) throw new Error('組件 ID 或欄位別名重複')
   if (v.layoutPresets !== undefined) {
     if (!Array.isArray(v.layoutPresets)||!v.layoutPresets.length||v.layoutPresets.length>30||new Set(v.layoutPresets.map(p=>p.id)).size!==v.layoutPresets.length||new Set(v.layoutPresets.map(p=>typeof p.name==='string'?p.name.toLocaleLowerCase():p.name)).size!==v.layoutPresets.length||!v.layoutPresets.every(p=>obj(p)&&id(p.id)&&text(p.name,100)&&p.name.trim()))throw new Error('版面方案不合法或名稱重複')
@@ -86,8 +92,8 @@ export function validateProject(v: unknown): asserts v is Project {
     if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) throw new Error('組件不能重疊')
   }
 }
-export function defaultCells(makeId: () => string, attributeId: string): Cell[] {
-  return (['name', 'path', 'field-text', 'open-folder'] as const).map((kind, y) => ({ cellId: makeId(), kind, ...(kind === 'field-text' ? { attributeId } : {}), grid: { x: 0, y, w: 12, h: 1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }))
+export function defaultCells(makeId: () => string, attributeId?: string): Cell[] {
+  return (['name', 'path', ...(attributeId?['field-text' as const]:[]), 'open-folder'] as const).map((kind, y) => ({ cellId: makeId(), kind, ...(kind === 'field-text' ? { attributeId } : {}), grid: { x: 0, y, w: 12, h: 1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }))
 }
 export function fieldValue(row: FolderRow, attributeId: string): unknown {
   const override = row.record?.projectOverrides[row.projectId]?.find(a => a.attributeId === attributeId)

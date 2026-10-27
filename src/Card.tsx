@@ -3,7 +3,8 @@ import { fieldValue, type Cell, type FolderRow, type Project } from '../shared/m
 import { visibleCells } from '../shared/layouts'
 export function CellContent({ cell, row, open, preview = false }: { cell: Cell; row?: FolderRow; open?: () => void; preview?: boolean }) {
   if (cell.kind === 'open-folder') return <Button size="compact-sm" variant="light" style={{ color: 'inherit' }} disabled={!row || preview} onClick={e=>{e.stopPropagation();open?.()}} onDoubleClick={e=>e.stopPropagation()} onKeyDown={e=>e.stopPropagation()}>開啟資料夾</Button>
-  if (cell.kind === 'image') { const asset=row?.record?.assets.find(a=>a.assetId===row.record?.details?.bannerAssetId)??row?.record?.assets[0];return asset?<img className="cell-image" src={`media://asset/${row!.rowId}/${asset.assetId}`} alt={asset.originalName}/>:<span>（沒有自訂圖片）</span> }
+  if(cell.kind==='divider')return <hr className="cell-divider"/>
+  if(cell.kind==='image'){const selected=row?.record?.details?.cellImages?.[cell.attributeId??cell.cellId],asset=selected?row?.record?.assets.find(a=>a.assetId===selected):cell.attributeId?undefined:row?.record?.assets.find(a=>a.assetId===row.record?.details?.bannerAssetId)??row?.record?.assets[0];return asset?<img className="cell-image" src={`media://asset/${row!.rowId}/${asset.assetId}`} alt={asset.originalName}/>:preview?<span>選用圖片 · 可留空</span>:null}
   const value = cell.kind === 'name' ? row?.name : cell.kind === 'path' ? row?.path : row && cell.attributeId ? fieldValue(row, cell.attributeId) : undefined
   const label = typeof value === 'string' ? value : value == null ? '' : `⚠ 型別不符：${String(value)}`
   if(cell.kind==='field-tags') return Array.isArray(value)?<Group gap={4}>{value.map((v,i)=><Badge key={i} color="gray" variant="light">{String(v)}</Badge>)}</Group>:<span>{value==null?'': '⚠ 型別不符'}</span>

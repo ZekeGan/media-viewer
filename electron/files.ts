@@ -3,7 +3,7 @@ import path from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { DATA_DIR, type FolderRecord, validateFolder } from '../shared/model'
+import { DATA_DIR, type FolderRecord, validateFolder, validateProject } from '../shared/model'
 
 export const missing = (e: unknown) => (e as NodeJS.ErrnoException)?.code === 'ENOENT'
 export const message = (e: unknown) => e instanceof Error ? e.message : String(e)
@@ -52,12 +52,42 @@ export async function readFolder(dir: string): Promise<FolderRecord> {
   await safePath(dir, folderFile(dir))
   const record = await readJson(folderFile(dir)); validateFolder(record); return record
 }
+// A directory can remain after cleanup because removed-project archives are kept.
+// Only empty metadata or verified archives are safe to pair with a fresh identity.
+async function reusableMetadata(dir: string): Promise<boolean> {
+  const meta = path.join(dir, DATA_DIR)
+  await safePath(dir, meta)
+  for (const entry of await fs.readdir(meta, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() || !entry.isDirectory() || entry.name.toLowerCase() !== 'projects') return false
+    const projects = path.join(meta, entry.name)
+    await safePath(dir, projects)
+    for (const archive of await fs.readdir(projects, { withFileTypes: true })) {
+      const name = /^([\w-]+)\.json(?:\.bak)?\.removed-([\w-]+)$/.exec(archive.name)
+      if (!archive.isFile() || archive.isSymbolicLink() || !name) return false
+      const file = path.join(projects, archive.name)
+      await safePath(dir, file)
+      let project: unknown
+      try { project = await readJson(file) } catch (error) { if (error instanceof SyntaxError) return false; throw error }
+      try { validateProject(project) } catch { return false }
+      if (project.projectId !== name[1]) return false
+    }
+  }
+  return true
+}
 export async function ensureFolder(dir: string, hide = true): Promise<{ record: FolderRecord; created: boolean }> {
   const meta = path.join(dir, DATA_DIR)
-  if (await exists(meta)) return { record: await readFolder(dir), created: false }
+  const reuse = await exists(meta)
+  if (reuse) {
+    try { return { record: await readFolder(dir), created: false } }
+    catch (error) { if (!missing(error)) throw error }
+    if (await exists(`${folderFile(dir)}.bak`)) throw new Error('資料夾記錄遺失，但復原備份仍存在；請重新連結並從備份復原，未建立新身分')
+    if (!await reusableMetadata(dir)) throw new Error('資料夾記錄遺失，但仍有專案、資產或未知資料；原檔保留，請復原原記錄後再試')
+    // Recheck after inspecting archives; never intentionally replace a new record.
+    if (await exists(folderFile(dir))) return { record: await readFolder(dir), created: false }
+  }
   const record: FolderRecord = { kind: 'media-viewer.folder', schemaVersion: 1, folderId: randomUUID(), revision: 1, attributes: [], projectOverrides: {}, assets: [] }
   await safePath(dir, meta)
-  try { await fs.mkdir(meta) } catch (e) { if ((e as NodeJS.ErrnoException).code === 'EEXIST') return { record: await readFolder(dir), created: false }; throw e }
+  if (!reuse) try { await fs.mkdir(meta) } catch (e) { if ((e as NodeJS.ErrnoException).code === 'EEXIST') return { record: await readFolder(dir), created: false }; throw e }
   try {
     await atomicJson(folderFile(dir), record)
     if (hide && process.platform === 'win32') await promisify(execFile)('attrib.exe', ['+H', meta], { windowsHide: true })

@@ -6,8 +6,8 @@ import {Library} from '../electron/library'
 import {WorkspaceStore} from '../electron/workspace'
 import {ensureFolder,exists,folderFile,projectFile} from '../electron/files'
 import {DATA_DIR,validateProject} from '../shared/model'
-import {browserRows} from '../shared/browse'
-import {saveCardPreset} from '../shared/layouts'
+import {browserRows,folderBreadcrumbs,maxBrowseDepth} from '../shared/browse'
+import {editorFields,saveCardPreset} from '../shared/layouts'
 async function fixture(t:{after:(fn:()=>Promise<void>)=>void}){
  const base=path.resolve('.test-output');await fs.mkdir(base,{recursive:true});const root=await fs.mkdtemp(path.join(base,'revision-')),media=path.join(root,'media');await fs.mkdir(media)
  t.after(async()=>{const target=await fs.realpath(root);assert.ok(target.startsWith(base+path.sep));await fs.rm(target,{recursive:true,force:true})})
@@ -29,7 +29,32 @@ test('all-depth inventory and independent CARD/TREE/TABLE display; presets keep 
  assert.equal(await fs.readFile(projectFile(media,p.projectId)+'.bak','utf8'),before)
  await assert.rejects(lib.saveProject(changed),/衝突/)
  assert.throws(()=>validateProject({...p,cardView:{mode:'single',level:'all'}}))
+ validateProject({...p,cardView:{mode:'single',level:51}})
+ assert.throws(()=>validateProject({...p,cardView:{mode:'single',level:Number.MAX_SAFE_INTEGER+1}}))
  assert.throws(()=>validateProject({...p,layoutPresets:[{id:'one',name:'A',cells:p.cells},{id:'two',name:'a',cells:p.cells}],activeLayoutId:'one'}))
+})
+
+test('breadcrumbs stay inside the project and depth uses indexed folders, not protected children',async t=>{
+ const{media,lib}=await fixture(t),s=await lib.create(media,{name:'Navigation',mediaCategory:'album',depth:{mode:'through',level:1},scanAll:true}),root=s.structure![0]
+ const a={...root,rowId:'a',name:'A',path:path.join(media,'A'),depth:2},b={...root,rowId:'b',name:'B',path:path.join(media,'A','B'),depth:3},other={...root,rowId:'other',name:'A-other',path:path.join(media,'A-other'),depth:2},protectedChild={...b,rowId:'protected',path:path.join(b.path,'Game_Data'),depth:4,readonly:true}
+ const rows=[root,other,b,a,protectedChild]
+ assert.deepEqual(folderBreadcrumbs(rows,media,b.path.replaceAll('\\','/').toUpperCase()).map(r=>r.rowId),[root.rowId,'a','b'])
+ assert.deepEqual(folderBreadcrumbs(rows,media,media+'-outside/child').map(r=>r.rowId),[root.rowId])
+ assert.equal(maxBrowseDepth(rows),3)
+ assert.equal(maxBrowseDepth([]),1)
+})
+
+test('editor field sources distinguish shared and current-project private data without importing foreign overrides',async t=>{
+ const{media,lib}=await fixture(t),s=await lib.create(media,{name:'Fields',mediaCategory:'album',depth:{mode:'through',level:1}}),root=s.structure![0],id=root.projectId
+ const attribute=(attributeId:string,type='string')=>({attributeId,key:attributeId,type,value:'original',source:'manual'})
+ const record={...root.record!,attributes:[attribute('common'),attribute('unsupported','boolean')],projectOverrides:{[id]:[attribute('common'),attribute('private-only')],foreign:[attribute('foreign-only')]}}
+ const rows=[{...root,record},{...root,projectId:'foreign',record:{...record,attributes:[attribute('foreign-row')]}}]
+ assert.deepEqual(editorFields(rows,id).map(f=>({id:f.attributeId,shared:f.shared,private:f.private,conflict:f.conflict})),[{id:'common',shared:true,private:true,conflict:false},{id:'private-only',shared:false,private:true,conflict:false}])
+ const conflicting={...record,projectOverrides:{[id]:[attribute('common','number')]}}
+ assert.equal(editorFields([{...root,record:conflicting}],id)[0].conflict,true)
+ assert.equal(record.attributes[0].value,'original')
+ const data={...record,attributes:[{...attribute('zero','number'),value:0},{...attribute('empty'),value:'   '},{...attribute('empty-tags','tags'),value:[]}],projectOverrides:{}}
+ assert.deepEqual(editorFields([{...root,record:data}],id).map(field=>[field.attributeId,field.hasData]),[['zero',true],['empty',false],['empty-tags',false]])
 })
 test('navigation reads existing records beyond legacy depth without initializing missing or damaged records',async t=>{
  const{media,lib}=await fixture(t),a=path.join(media,'A'),b=path.join(a,'B');await fs.mkdir(b,{recursive:true})
@@ -44,7 +69,8 @@ test('navigation reads existing records beyond legacy depth without initializing
 test('game root opens but protected children never gain records through navigation',async t=>{
  const{media,lib}=await fixture(t),game=path.join(media,'Game'),internal=path.join(game,'Game_Data');await fs.mkdir(internal,{recursive:true});await fs.writeFile(path.join(game,'Game.exe'),'ORIGINAL');await fs.writeFile(path.join(game,'UnityPlayer.dll'),'ORIGINAL')
  let s=await lib.create(media,{name:'Games',mediaCategory:'game',depth:{mode:'through',level:1},scanAll:true});const root=s.structure!.find(r=>r.name==='Game')!;assert.ok(root.boundary)
- s=await lib.visit(root.rowId);const child=s.structure!.find(r=>r.path===internal)!
+ s=await lib.visit(root.rowId);assert.equal(s.structure!.some(r=>r.path===internal),false)
+ s=await lib.saveProject({...s.projects[0].project!,traversal:{[root.record!.folderId]:true}});const child=s.structure!.find(r=>r.path===internal)!
  await assert.rejects(lib.visit(child.rowId),/遊戲邊界保護/);assert.equal(await exists(path.join(internal,DATA_DIR)),false);assert.equal(await fs.readFile(path.join(game,'Game.exe'),'utf8'),'ORIGINAL')
 })
 test('fractional Windows resize values normalize; invalid updates preserve settings and reload',async t=>{
@@ -59,4 +85,14 @@ test('Windows all-depth scans never enter case-renamed metadata directories', {s
  const source=path.resolve(media,DATA_DIR),target=path.resolve(media,DATA_DIR.toUpperCase());assert.ok(source.startsWith(media+path.sep)&&target.startsWith(media+path.sep))
  await fs.rename(source,target);s=await lib.scan();assert.equal(s.rows.length,1);assert.equal(await exists(path.join(target,DATA_DIR)),false)
  await lib.visit(s.rows[0].rowId);assert.equal(lib.snapshot().structure!.length,1)
+})
+
+test('new projects do not invent TITLE; explicitly configured fields survive reconnect',async t=>{
+ const{root,media,lib}=await fixture(t),state=await lib.create(media,{name:'Empty fields',mediaCategory:'manga',depth:{mode:'through',level:1}})
+ const project=state.projects[0].project!
+ assert.deepEqual(project.fieldBindings,[]);assert.deepEqual(project.cells.map(c=>c.kind),['name','path','open-folder'])
+ assert.deepEqual(state.rows[0].record!.attributes,[])
+ await lib.saveProject({...project,fieldBindings:[{alias:'TITLE',attributeId:'user-title',type:'string'}]})
+ const fresh=new Library(path.join(root,'fresh-fields'),undefined,false);await fresh.init()
+ assert.equal((await fresh.link(media)).projects[0].project!.fieldBindings[0].attributeId,'user-title')
 })

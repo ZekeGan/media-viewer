@@ -35,11 +35,13 @@ async function dispatch(request: Request): Promise<Response> {
     case 'create': { const choice=request.rootToken?rootChoices.get(request.rootToken):undefined;if(request.rootToken&&(!choice||choice.expires<Date.now()))throw new Error('資料夾選擇已失效，請重新選擇');const root=choice?.path??await selectFolder();if(root){await library.create(root,request.input);if(request.rootToken)rootChoices.delete(request.rootToken)}else extra.cancelled=true;break }
     case 'link': { const root = await selectFolder(); if (root) await library.link(root); else extra.cancelled = true; break }
     case 'unlink': await library.unlink(request.projectId); break
+    case 'removeProjectPreview': extra.removalPreview=await library.previewRemoveProject(request.projectId);break
+    case 'removeProject': extra.removal=await library.removeProject(request.token);break
     case 'saveProject': await library.saveProject(request.project); break
     case 'saveFolder': await library.saveValues(request.rowId, request.revision, request.values); break
     case 'image': {
       const selected = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '圖片', extensions: Object.keys(imageTypes) }] })
-      if (!selected.canceled) await library.addImage(request.rowId, request.revision, selected.filePaths[0])
+      if (!selected.canceled) await library.addImage(request.rowId, request.revision, selected.filePaths[0],request.cellId)
       else extra.cancelled=true
       break
     }
@@ -74,13 +76,12 @@ else {
       choose: async kind => { const result=await dialog.showOpenDialog(win!,{properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='folder'?{}:{filters:[{name:kind==='exe'?'程式':'字幕',extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
       open: async file=>{const error=await shell.openPath(file);if(error)throw new Error(error)},
       launch: (file,args)=>new Promise<void>((resolve,reject)=>{const child=spawn(file,args,{cwd:path.dirname(file),shell:false,detached:true,stdio:'ignore',windowsHide:false});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve()})}),
-      thumbnail: async (file,mime)=>{
+      thumbnail: async (file,mime,url)=>{
         if(mime?.startsWith('video/')){const image=await nativeImage.createThumbnailFromPath(file,{width:160,height:90});if(image.isEmpty())throw new Error('無影片縮圖');return image.toJPEG(78)}
-        const img=nativeImage.createFromPath(file)
-        if(!img.isEmpty()){const {width,height}=img.getSize();return img.resize(width>=height?{width:320}:{height:320}).toJPEG(78)}
-        if(!win||win.isDestroyed()||!trusted(win.webContents.getURL()))throw new Error('圖片解碼器尚未就緒')
-        const encoded=(await fs.readFile(file)).toString('base64')
-        const bytes=await win.webContents.executeJavaScript(`(async()=>{const bytes=Uint8Array.from(atob(${JSON.stringify(encoded)}),c=>c.charCodeAt(0));const bitmap=await createImageBitmap(new Blob([bytes],{type:${JSON.stringify(mime??'application/octet-stream')}}));try{if(!bitmap.width||!bitmap.height||bitmap.width*bitmap.height>100000000)throw new Error('圖片尺寸過大');const scale=Math.min(1,320/Math.max(bitmap.width,bitmap.height));const canvas=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width*scale)),Math.max(1,Math.round(bitmap.height*scale)));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);return Array.from(new Uint8Array(await(await canvas.convertToBlob({type:'image/jpeg',quality:.78})).arrayBuffer()))}finally{bitmap.close()}})()`)
+        if(!win||win.isDestroyed()||!trusted(win.webContents.getURL())||!url?.startsWith('media://file/'))throw new Error('圖片解碼器尚未就緒')
+        // Decode asynchronously from the already-scoped stream. No original image
+        // buffer/base64 crosses IPC, and full bitmap decoding stays off main.
+        const bytes=await win.webContents.executeJavaScript(`(async()=>{const response=await fetch(${JSON.stringify(url)});if(!response.ok)throw new Error('圖片來源已失效');const bitmap=await createImageBitmap(await response.blob(),{resizeWidth:320,resizeQuality:'low'});try{if(!bitmap.width||!bitmap.height||bitmap.width*bitmap.height>100000000)throw new Error('圖片尺寸過大');const scale=Math.min(1,320/Math.max(bitmap.width,bitmap.height));const canvas=new OffscreenCanvas(Math.max(1,Math.round(bitmap.width*scale)),Math.max(1,Math.round(bitmap.height*scale)));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);return Array.from(new Uint8Array(await(await canvas.convertToBlob({type:'image/jpeg',quality:.78})).arrayBuffer()))}finally{bitmap.close()}})()`)
         return Buffer.from(bytes)
       },
     })
@@ -126,6 +127,12 @@ else {
     })
     win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, frame: false, backgroundColor: '#202124', show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
     win.setMenu(null)
+    const contents = win.webContents
+    contents.on('before-input-event', (event, input) => {
+      if (input.key !== 'F12') return
+      event.preventDefault()
+      if (input.type === 'keyDown' && !input.isAutoRepeat) contents.toggleDevTools()
+    })
     const publishWindowState = () => win?.webContents.send('window:state', { maximized: win.isMaximized() })
     win.on('maximize', publishWindowState); win.on('unmaximize', publishWindowState)
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -141,7 +148,9 @@ else {
       if (choice === 1) event.preventDefault()
     })
     win.webContents.on('will-navigate', (event, url) => { if (!trusted(url)) event.preventDefault() })
-    win.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+    const allowFullscreen=(contents:Electron.WebContents|null,permission:string,details:{isMainFrame?:boolean;requestingUrl?:string})=>permission==='fullscreen'&&!!contents&&contents===win?.webContents&&details.isMainFrame===true&&trusted(details.requestingUrl??'')&&trusted(contents.getURL())
+    win.webContents.session.setPermissionCheckHandler((contents,permission,_origin,details)=>allowFullscreen(contents,permission,details))
+    win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>callback(allowFullscreen(contents,permission,details)))
     win.once('ready-to-show', () => win?.show())
     await win.loadURL(devUrl ?? 'app://ui/index.html')
   }).catch(error => { console.error(error); dialog.showErrorBox('啟動失敗', String(error)); app.quit() })

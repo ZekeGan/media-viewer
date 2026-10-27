@@ -27,3 +27,50 @@ export async function ehMetadata(source:string,fetcher:typeof fetch=fetch):Promi
   }
   return{preview,cover}
 }
+
+export async function steamMetadata(source:string,fetcher:typeof fetch=fetch):Promise<{preview:Omit<MetadataPreview,'token'>;cover?:{bytes:Buffer;mime:string;ext:string}}>{
+  if(typeof source!=='string'||source.length>2048)throw new Error('Steam 網址或 App ID 不合法')
+  let appId=source.trim()
+  if(!/^[1-9]\d{0,9}$/.test(appId)){
+    let url:URL;try{url=new URL(appId)}catch{throw new Error('請輸入 Steam 商店網址或 App ID')}
+    const match=/^\/app\/([1-9]\d{0,9})(?:\/[^/]*)?\/?$/.exec(url.pathname)
+    if(url.protocol!=='https:'||url.hostname!=='store.steampowered.com'||url.port||url.username||url.password||!match)throw new Error('只接受 Steam 官方 /app/ 商店網址或 App ID')
+    appId=match[1]
+  }
+  if(Number(appId)>4294967295)throw new Error('Steam App ID 超出範圍')
+  const response=await fetcher('https://store.steampowered.com/api/appdetails?appids='+appId+'&l=english',{signal:AbortSignal.timeout(15000),redirect:'error'})
+  const item=JSON.parse((await limitedBytes(response,2*1024*1024)).toString())[appId],data=item?.data
+  if(item?.success!==true||!data||String(data.steam_appid)!==appId||typeof data.name!=='string'||!data.name.trim())throw new Error('無法取得 Steam 商店資料：遊戲可能尚未公開、已下架或此地區無法查看')
+  const clean=(value:unknown)=>decode(value).replace(/<[^>]*>/g,'').slice(0,10000)
+  const tags=(value:unknown)=>Array.isArray(value)?value.filter(v=>typeof v==='string'&&v.length>0&&v.length<=100).slice(0,200):[]
+  const values:MetadataPreview['values']=[
+    {key:'TITLE',type:'string',value:clean(data.name)},
+    {key:'APP_ID',type:'number',value:Number(appId)},
+    {key:'STORE_URL',type:'string',value:'https://store.steampowered.com/app/'+appId+'/'},
+    {key:'PRODUCT_TYPE',type:'string',value:clean(data.type)},
+    {key:'DESCRIPTION',type:'string',value:clean(data.short_description)},
+    {key:'DEVELOPERS',type:'tags',value:tags(data.developers)},
+    {key:'PUBLISHERS',type:'tags',value:tags(data.publishers)},
+    {key:'GENRES',type:'tags',value:tags(Array.isArray(data.genres)?data.genres.map((g:{description?:unknown})=>g?.description):[])},
+  ]
+  if(typeof data.release_date?.date==='string'&&data.release_date.date)values.push({key:'STORE_RELEASE_DATE',type:'string',value:clean(data.release_date.date)})
+  if(data.release_date?.coming_soon===true)values.push({key:'RELEASE_STATUS',type:'string',value:'尚未發售'})
+  const preview:Omit<MetadataPreview,'token'>={provider:'steam',title:clean(data.name).slice(0,200),source:'https://store.steampowered.com/app/'+appId+'/',values}
+  let cover:{bytes:Buffer;mime:string;ext:string}|undefined
+  if(typeof data.header_image==='string'){
+    try{
+      const image=new URL(data.header_image)
+      const allowed=['shared.fastly.steamstatic.com','shared.akamai.steamstatic.com','cdn.akamai.steamstatic.com','cdn.cloudflare.steamstatic.com','cdn.fastly.steamstatic.com']
+      if(image.protocol!=='https:'||!allowed.includes(image.hostname)||image.port||image.username||image.password||!image.pathname.startsWith('/store_item_assets/steam/apps/'+appId+'/')&&!image.pathname.startsWith('/steam/apps/'+appId+'/'))throw new Error('Steam 封面來源未允許')
+      const bytes=await limitedBytes(await fetcher(image,{signal:AbortSignal.timeout(15000),redirect:'error'}),10*1024*1024)
+      const [ext,mime]=bytes[0]===255&&bytes[1]===216?['jpg','image/jpeg']:bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?['png','image/png']:[]
+      if(!ext||!mime)throw new Error('封面格式未支援')
+      cover={bytes,ext,mime};preview.image='data:'+mime+';base64,'+bytes.toString('base64')
+    }catch{preview.values.push({key:'COVER_STATUS',type:'string',value:'封面無法取得；可略過或手動匯入'})}
+  }
+  return{preview,cover}
+}
+export async function metadata(source:string,fetcher:typeof fetch=fetch){
+  if(typeof source!=="string")throw new Error("來源網址不合法")
+  return /^\d+$/.test(source.trim())||/^https:\/\/store\.steampowered\.com(?:\/|$)/i.test(source.trim())?steamMetadata(source,fetcher):ehMetadata(source,fetcher)
+}

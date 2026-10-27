@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { Library } from '../electron/library'
-import { atomicJson, exists, folderFile, readFolder, readJson, safePath } from '../electron/files'
-import { DATA_DIR, type Project } from '../shared/model'
+import {randomUUID} from 'node:crypto'
+import { atomicJson, exists, folderFile, readFolder, readJson, safePath, saveFolder, projectFile, ensureFolder, restoreJson } from '../electron/files'
+import { DATA_DIR, defaultCells, validateFolder, type Project } from '../shared/model'
 import { hideDirectories } from '../electron/hidden'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -19,6 +20,77 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }) {
   return { root, p1, p2, lib }
 }
 const input = { name: '漫畫', mediaCategory: 'manga', depth: { mode: 'through' as const, level: 2 } }
+test('project removal previews are read-only; stale plans fail before writes; shared data and archived backups survive',async t=>{
+ const {p1,p2,lib}=await fixture(t)
+ let state=await lib.create(p1,input),first=state.projects[0].project!
+ state=await lib.create(p1,{...input,name:'Other'});const other=state.projects[1].project!;await lib.create(p2,input)
+ const dir=path.join(p1,'A'),record=await readFolder(dir)
+ record.attributes=[{attributeId:'common',key:'shared',type:'string',value:'COMMON',source:'manual'}]
+ record.projectOverrides={[first.projectId]:[{attributeId:'mine',key:'private',type:'string',value:'PRIVATE',source:'manual'}],[other.projectId]:[{attributeId:'other',key:'private',type:'string',value:'OTHER',source:'manual'}]}
+ await saveFolder(dir,record,record.revision);await fs.writeFile(path.join(dir,'original.txt'),'MEDIA');await fs.writeFile(path.join(dir,DATA_DIR,'unknown.bin'),'UNKNOWN')
+ const before=await fs.readFile(folderFile(dir)),definition=await fs.readFile(projectFile(p1,first.projectId))
+ const cancelled=await lib.previewRemoveProject(first.projectId);assert.equal(cancelled.privateCount,1);assert.deepEqual(await fs.readFile(folderFile(dir)),before)
+ await lib.saveProject({...first,name:'Changed'});await assert.rejects(lib.removeProject(cancelled.token),/預覽後資料已變更/);assert.deepEqual(await fs.readFile(folderFile(dir)),before)
+ const preview=await lib.previewRemoveProject(first.projectId),currentDefinition=await fs.readFile(projectFile(p1,first.projectId)),result=await lib.removeProject(preview.token)
+ assert.deepEqual(result.failed,[]);assert.equal(lib.snapshot().projects.length,2);assert.ok(lib.snapshot().projects.some(p=>p.projectId===other.projectId))
+ const after=await readFolder(dir);assert.equal(after.projectOverrides[first.projectId],undefined);assert.equal(after.projectOverrides[other.projectId][0].value,'OTHER');assert.equal(after.attributes[0].value,'COMMON')
+ assert.deepEqual(await fs.readFile(folderFile(dir)+'.bak'),before);assert.deepEqual(await fs.readFile(projectFile(p1,first.projectId)+'.removed-'+preview.token),currentDefinition)
+ assert.ok((await fs.readdir(path.dirname(projectFile(p1,first.projectId)))).some(name=>name.includes('.bak.removed-')))
+ assert.equal(await exists(projectFile(p1,first.projectId)),false);assert.equal(await fs.readFile(path.join(dir,'original.txt'),'utf8'),'MEDIA');assert.equal(await fs.readFile(path.join(dir,DATA_DIR,'unknown.bin'),'utf8'),'UNKNOWN')
+ state=await lib.link(p1);assert.equal(state.projects.some(p=>p.projectId===first.projectId),false);assert.ok(definition.length)
+})
+test('project removal stops on private-write failure, keeps active settings and can retry with backups',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!,dir=path.join(p1,'A'),record=await readFolder(dir)
+ record.projectOverrides[project.projectId]=[{attributeId:'mine',key:'private',type:'string',value:'PRIVATE',source:'manual'}];await saveFolder(dir,record,record.revision)
+ const before=await fs.readFile(folderFile(dir)),preview=await lib.previewRemoveProject(project.projectId),rename=fs.rename.bind(fs)
+ t.mock.method(fs,'rename',async(source:Parameters<typeof fs.rename>[0],target:Parameters<typeof fs.rename>[1])=>{if(String(target)===folderFile(dir))throw Object.assign(new Error('simulated write denied'),{code:'EACCES'});return rename(source,target)})
+ const result=await lib.removeProject(preview.token);assert.equal(result.failed.length,1);assert.equal(await exists(projectFile(p1,project.projectId)),true);assert.equal(lib.snapshot().projects.length,1);assert.deepEqual(await fs.readFile(folderFile(dir)),before)
+ t.mock.restoreAll();const retry=await lib.previewRemoveProject(project.projectId);assert.deepEqual((await lib.removeProject(retry.token)).failed,[]);assert.deepEqual(await fs.readFile(folderFile(dir)+'.bak'),before)
+})
+async function createTextProject(lib:Library,root:string,options= input){const state=await lib.create(root,options),project=state.projects.find(p=>p.root===root)!.project!,attributeId=randomUUID();return lib.saveProject({...project,fieldBindings:[{alias:'title',attributeId,type:'string'}],cells:defaultCells(randomUUID,attributeId)})}
+
+test('creating again after cleanup tolerates preserved project archives without reviving an old root identity',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,input),old=state.projects[0].project!,childBytes=await fs.readFile(folderFile(path.join(p1,'A')))
+ const common=await readFolder(p1);common.attributes=[{attributeId:'common',key:'shared',type:'string',value:'KEEP',source:'manual'}];await saveFolder(p1,common,common.revision)
+ const preview=await lib.previewRemoveProject(old.projectId);assert.deepEqual((await lib.removeProject(preview.token)).failed,[])
+ const dir=path.join(p1,DATA_DIR,'projects'),archives=new Map(await Promise.all((await fs.readdir(dir)).map(async name=>[name,await fs.readFile(path.join(dir,name))] as const)))
+ await fs.unlink(folderFile(p1));await fs.unlink(folderFile(p1)+'.bak')
+ await assert.rejects(lib.link(p1),/請重新新增專案/);assert.equal(await exists(folderFile(p1)),false)
+ const next=await lib.create(p1,{...input,name:'New'}),project=next.projects[0].project!
+ assert.notEqual(project.rootFolderId,old.rootFolderId);assert.notEqual(project.projectId,old.projectId);assert.equal(next.projects.length,1)
+ for(const [name,bytes]of archives)assert.deepEqual(await fs.readFile(path.join(dir,name)),bytes)
+ assert.deepEqual(await fs.readFile(folderFile(path.join(p1,'A'))),childBytes)
+ assert.equal((await lib.link(p1)).projects.length,1)
+})
+test('only empty metadata or verified removed-project archives allow missing-record initialization',async t=>{
+ const {root,p1,p2,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!
+ await fs.mkdir(path.join(p2,DATA_DIR,'projects'),{recursive:true});const fresh=await ensureFolder(p2,false);assert.ok(fresh.created);assert.equal((await ensureFolder(p2,false)).record.folderId,fresh.record.folderId)
+ const cases=[{name:'unknown',file:'unknown.txt',bytes:'KEEP'},{name:'active',file:'projects/'+project.projectId+'.json',bytes:JSON.stringify(project)},{name:'corrupt',file:'projects/'+project.projectId+'.json.removed-token',bytes:'{broken'},{name:'mismatch',file:'projects/other.json.removed-token',bytes:JSON.stringify(project)},{name:'assets',file:'assets/picture.png',bytes:'IMAGE'}]
+ for(const sample of cases){
+  const dir=path.join(root,'unsafe-'+sample.name),file=path.join(dir,DATA_DIR,sample.file);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,sample.bytes)
+  await assert.rejects(ensureFolder(dir,false),/原檔保留/);assert.equal(await exists(folderFile(dir)),false);assert.equal(await fs.readFile(file,'utf8'),sample.bytes)
+ }
+ const linked=path.join(root,'linked'),outside=path.join(root,'outside-archives');await fs.mkdir(path.join(linked,DATA_DIR),{recursive:true});await fs.mkdir(outside);await fs.symlink(outside,path.join(linked,DATA_DIR,'projects'),process.platform==='win32'?'junction':'dir')
+ await assert.rejects(ensureFolder(linked,false),/原檔保留/);assert.deepEqual(await fs.readdir(outside),[])
+})
+test('a missing root with a valid backup requires explicit recovery and preserves identity',async t=>{
+ const {root,p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!,backup=await fs.readFile(folderFile(p1)+'.bak'),registry=await fs.readFile(path.join(lib.userData,'poc-projects.json'))
+ await fs.unlink(folderFile(p1));await assert.rejects(lib.create(p1,input),/備份.*復原/)
+ assert.equal(await exists(folderFile(p1)),false);assert.deepEqual(await fs.readFile(folderFile(p1)+'.bak'),backup);assert.deepEqual(await fs.readFile(path.join(lib.userData,'poc-projects.json')),registry)
+ const fresh=new Library(path.join(root,'fresh-recovery'),undefined,false);await fresh.init();assert.ok((await fresh.link(p1)).projects[0].error)
+ const restored=await fresh.restoreProject(project.projectId);assert.equal(restored.projects[0].error,undefined);assert.equal((await readFolder(p1)).folderId,project.rootFolderId);assert.deepEqual(await fs.readFile(folderFile(p1)+'.bak'),backup)
+})
+test('failed initialization beside archives preserves them and leaves a recoverable backup',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!
+ const common=await readFolder(p1);common.attributes=[{attributeId:'common',key:'shared',type:'string',value:'KEEP',source:'manual'}];await saveFolder(p1,common,common.revision)
+ const retained=await lib.previewRemoveProject(project.projectId);await lib.removeProject(retained.token);await fs.unlink(folderFile(p1));await fs.unlink(folderFile(p1)+'.bak')
+ const archive=projectFile(p1,project.projectId)+'.removed-'+retained.token,bytes=await fs.readFile(archive),rename=fs.rename.bind(fs)
+ t.mock.method(fs,'rename',async(source:Parameters<typeof fs.rename>[0],target:Parameters<typeof fs.rename>[1])=>{if(String(target)===folderFile(p1))throw Object.assign(new Error('simulated disk full'),{code:'ENOSPC'});return rename(source,target)})
+ await assert.rejects(ensureFolder(p1,false),/建立可攜記錄失敗/);assert.equal(await exists(folderFile(p1)),false);assert.deepEqual(await fs.readFile(archive),bytes)
+ t.mock.restoreAll();const backup=await readJson(folderFile(p1)+'.bak');validateFolder(backup)
+ await restoreJson(p1,folderFile(p1),validateFolder,value=>value.folderId===backup.folderId);assert.equal((await readFolder(p1)).folderId,backup.folderId);assert.deepEqual(await fs.readFile(archive),bytes)
+})
+
 
 test('root and project corruption can reconnect and recover without replacing good backups', async t => {
   const { root, p1, lib } = await fixture(t)
@@ -41,7 +113,7 @@ test('root and project corruption can reconnect and recover without replacing go
 
 test('failed atomic replacement leaves original readable and retry succeeds', async t => {
   const { p1, lib } = await fixture(t)
-  const s = await lib.create(p1, input), row = s.rows.find(r => r.name === 'A')!
+  const s = await createTextProject(lib,p1), row = s.rows.find(r => r.name === 'A')!
   const original = await fs.readFile(folderFile(row.path)), rename = fs.rename
   const injected = t.mock.method(fs, 'rename', async (source: any, target: any) => {
     if (String(target) === folderFile(row.path)) throw Object.assign(new Error('simulated disk full'), { code: 'ENOSPC' })
@@ -134,7 +206,7 @@ test('legacy string import backs up originals and retry preserves user edits', a
 
 test('depth modes, portable values, templates, fresh-device reconnect and images', async t => {
   const { root, p1, p2, lib } = await fixture(t)
-  let s = await lib.create(p1, input), p = s.projects[0].project!
+  let s = await createTextProject(lib,p1), p = s.projects[0].project!
   assert.deepEqual(s.rows.map(r => r.name).sort(), ['A', 'B', 'P1'])
   s = await lib.saveProject({ ...p, depth: { mode: 'exact', level: 3 } })
   assert.deepEqual(s.rows.map(r => r.name), ['C']); assert.ok(await readFolder(path.join(p1, 'B')))
@@ -149,17 +221,17 @@ test('depth modes, portable values, templates, fresh-device reconnect and images
   await lib.create(p2, { ...input, name: '目的專案' }); await fs.rename(path.join(p1, 'A'), path.join(p2, 'A'))
   s = await lib.scan(); a = s.rows.find(r => r.name === 'A')!
   assert.equal(a.record!.folderId, originalId); assert.equal(a.record!.attributes[0].value, '可攜作品 A')
-  assert.notEqual(s.projects[1].project!.fieldBindings[0].attributeId, field)
+  assert.equal(s.projects[1].project!.fieldBindings.length,0)
   const asset = await lib.asset(a.rowId, a.record!.assets[0].assetId); assert.deepEqual(await fs.readFile(asset.file), bytes)
   const newDevice = new Library(path.join(root, 'fresh-device'), undefined, false)
   await newDevice.init(); s = await newDevice.link(p2)
   assert.equal(s.rows.find(r => r.name === 'A')!.record!.folderId, originalId)
-  assert.equal(s.projects[0].project!.cells.length, 4)
+  assert.equal(s.projects[0].project!.cells.length, 3)
 })
 
 test('revision conflicts and interrupted writes preserve saved record; backup restores corrupt data', async t => {
   const { p1, lib } = await fixture(t)
-  let s = await lib.create(p1, input), a = s.rows.find(r => r.name === 'A')!, field = s.projects[0].project!.fieldBindings[0].attributeId
+  let s = await createTextProject(lib,p1), a = s.rows.find(r => r.name === 'A')!, field = s.projects[0].project!.fieldBindings[0].attributeId
   const revision = a.record!.revision
   s = await lib.saveValues(a.rowId, revision, { [field]: '已保存' }); a = s.rows.find(r => r.name === 'A')!
   await assert.rejects(lib.saveValues(a.rowId, revision, { [field]: '舊草稿' }), /版本/)
@@ -193,7 +265,7 @@ test('O80 cleanup excludes overlapping projects, portable exclusions and moved f
 
 test('cleanup preview refuses changed data and never deletes unknown files or originals', async t => {
   const { p1, lib } = await fixture(t)
-  let s = await lib.create(p1, input), a = s.rows.find(r => r.name === 'A')!
+  let s = await createTextProject(lib,p1), a = s.rows.find(r => r.name === 'A')!
   const preview = await lib.previewCleanup(a.rowId)
   await lib.saveValues(a.rowId, a.record!.revision, { [s.projects[0].project!.fieldBindings[0].attributeId]: 'changed' })
   await assert.rejects(lib.cleanup(preview.token, false), /預覽後資料已變更/)
@@ -241,4 +313,45 @@ test('project writes reject overlapping cells and preserve external revision cha
   await atomicJson(file, { ...p, revision: 2, name: '外部修改' }, 1)
   await assert.rejects(lib.saveProject({ ...p, name: '舊草稿' }), /版本/)
   assert.equal((await readJson(file) as Project).name, '外部修改')
+})
+
+test('removing an unused empty root retires all root metadata to verified local recovery and recreates cleanly',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!,child=await fs.readFile(folderFile(path.join(p1,'A')))
+ await fs.writeFile(path.join(p1,'original.txt'),'MEDIA')
+ const primary=await fs.readFile(folderFile(p1)),backup=await fs.readFile(folderFile(p1)+'.bak'),definition=await fs.readFile(projectFile(p1,project.projectId)),preview=await lib.previewRemoveProject(project.projectId)
+ assert.equal(preview.rootCleanup,true);assert.equal(await exists(folderFile(p1)),true)
+ assert.deepEqual((await lib.removeProject(preview.token)).failed,[]);assert.equal(await exists(path.join(p1,DATA_DIR)),false)
+ const recovery=preview.recoveryPath!;assert.deepEqual(await fs.readFile(path.join(recovery,DATA_DIR,'folder.json')),primary);assert.deepEqual(await fs.readFile(path.join(recovery,DATA_DIR,'folder.json.bak')),backup)
+ assert.deepEqual(await fs.readFile(path.join(recovery,DATA_DIR,'projects',project.projectId+'.json.removed-'+preview.token)),definition)
+ assert.equal((await readJson(path.join(recovery,'manifest.json')) as any).root,p1)
+ assert.equal(await fs.readFile(path.join(p1,'original.txt'),'utf8'),'MEDIA');assert.deepEqual(await fs.readFile(folderFile(path.join(p1,'A'))),child)
+ const next=await lib.create(p1,{...input,name:'Recreated'}),created=next.projects[0].project!;assert.notEqual(created.projectId,project.projectId);assert.notEqual(created.rootFolderId,project.rootFolderId);assert.equal(next.problems.length,0);assert.equal((await lib.link(p1)).projects.length,1)
+})
+test('root retirement keeps unknown/shared/overlapping data and rejects additions after preview',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!,preview=await lib.previewRemoveProject(project.projectId),unknown=path.join(p1,DATA_DIR,'unknown.txt')
+ await fs.writeFile(unknown,'UNKNOWN');await assert.rejects(lib.removeProject(preview.token),/根資料夾內容或歸屬已變更/);assert.equal(lib.snapshot().projects.length,1)
+ const retained=await lib.previewRemoveProject(project.projectId);assert.equal(retained.rootCleanup,false);await lib.removeProject(retained.token);assert.equal(await fs.readFile(unknown,'utf8'),'UNKNOWN');assert.ok(await readFolder(p1))
+ const next=await lib.create(p1,input);assert.equal(next.problems.length,0)
+ const childState=await lib.create(path.join(p1,'A'),input),parent=childState.projects.find(p=>p.root===p1)!.project!
+ await fs.unlink(unknown);assert.equal((await lib.previewRemoveProject(parent.projectId)).rootCleanup,false)
+})
+test('recovery copy or root cleanup failure keeps readable primary identity and recoverable media',async t=>{
+ for(const failure of ['copy','unlink','rmdir']){
+  const {p1,lib}=await fixture(t),state=await lib.create(p1,input),project=state.projects[0].project!,primary=await fs.readFile(folderFile(p1)),preview=await lib.previewRemoveProject(project.projectId)
+  await fs.writeFile(path.join(p1,'media.bin'),'ORIGINAL')
+  const open=fs.open.bind(fs),unlink=fs.unlink.bind(fs),rmdir=fs.rmdir.bind(fs)
+  if(failure==='copy')t.mock.method(fs,'open',async(...args:Parameters<typeof fs.open>)=>{if(String(args[0]).startsWith(preview.recoveryPath!))throw new Error('simulated recovery disk full');return open(...args)})
+  else if(failure==='unlink')t.mock.method(fs,'unlink',async(file:Parameters<typeof fs.unlink>[0])=>{if(String(file)===folderFile(p1)+'.bak')throw new Error('simulated cleanup denied');return unlink(file)})
+  else t.mock.method(fs,'rmdir',async(...args:Parameters<typeof fs.rmdir>)=>{if(String(args[0])===path.join(p1,DATA_DIR))throw new Error('simulated final directory denied');return rmdir(...args)})
+  const result=await lib.removeProject(preview.token);assert.equal(result.failed.length,1);assert.deepEqual(await fs.readFile(folderFile(p1)),primary);assert.equal(await fs.readFile(path.join(p1,'media.bin'),'utf8'),'ORIGINAL')
+  if(failure==='unlink')assert.deepEqual(await fs.readFile(path.join(preview.recoveryPath!,DATA_DIR,'folder.json')),primary)
+  t.mock.restoreAll();assert.equal((await lib.create(p1,input)).projects[0].error,undefined)
+ }
+})
+test('video autoplay preference is optional, validated and portable across project relinking',async t=>{
+ const {p1,lib}=await fixture(t),state=await lib.create(p1,{...input,mediaCategory:'video'}),project=state.projects[0].project!
+ assert.equal(project.videoAutoplay,undefined)
+ await assert.rejects(lib.saveProject({...project,videoAutoplay:'no' as any}),/自動播放設定/)
+ await lib.saveProject({...project,videoAutoplay:false});await lib.unlink(project.projectId)
+ assert.equal((await lib.link(p1)).projects[0].project!.videoAutoplay,false)
 })

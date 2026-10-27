@@ -65,6 +65,19 @@ test('real write failure leaves previous disk and memory state intact', async t 
   assert.equal(await fs.readFile(store.file, 'utf8'), before)
   assert.equal((await store.read(ids)).prefs.projects.p1.favorite, false)
 })
+
+test('optional table column order survives reload; invalid orders leave previous settings intact', async t => {
+  const {root,store}=await fixture(t),ids=['p1'];await store.read(ids)
+  const value={mode:'TABLE' as const,location:'',widths:{name:200},panelWidth:420,columnOrder:['depth','name','path']}
+  await store.update({action:'browse',projectId:'p1',value},ids)
+  const reopened=new WorkspaceStore(root);await reopened.init()
+  assert.deepEqual((await reopened.read(ids)).prefs.browse?.p1?.columnOrder,value.columnOrder)
+  const before=await fs.readFile(store.file,'utf8')
+  for(const columnOrder of [['name','name'],['__proto__'],['bad/key'],[12],null]){
+    await assert.rejects(reopened.update({action:'browse',projectId:'p1',value:{...value,columnOrder} as typeof value},ids))
+    assert.equal(await fs.readFile(store.file,'utf8'),before)
+  }
+})
 test('corrupt UI settings remain untouched while projects can still be displayed', async t => {
   const { root, store } = await fixture(t); await fs.writeFile(store.file, '{ broken')
   const reopened = new WorkspaceStore(root); await reopened.init()
@@ -72,4 +85,17 @@ test('corrupt UI settings remain untouched while projects can still be displayed
   assert.equal(state.prefs.projects.p1.favorite, false)
   await assert.rejects(reopened.update({ action: 'createGroup', name: 'new' }, ['p1']))
   assert.equal(await fs.readFile(store.file, 'utf8'), '{ broken')
+})
+
+test('TREE branch visibility is a local project preference and survives reload',async t=>{
+ const{root,store}=await fixture(t),ids=['p1'];await store.read(ids)
+ const value={mode:'TREE' as const,location:'',widths:{},panelWidth:420,treeCollapsed:['branch-a','branch-b']}
+ await store.update({action:'browse',projectId:'p1',value},ids)
+ const reopened=new WorkspaceStore(root);await reopened.init()
+ assert.deepEqual((await reopened.read(ids)).prefs.browse?.p1?.treeCollapsed,['branch-a','branch-b'])
+ const before=await fs.readFile(store.file,'utf8')
+ for(const treeCollapsed of [['branch-a','branch-a'],['__proto__'],null]){
+  await assert.rejects(reopened.update({action:'browse',projectId:'p1',value:{...value,treeCollapsed} as typeof value},ids))
+  assert.equal(await fs.readFile(store.file,'utf8'),before)
+ }
 })

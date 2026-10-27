@@ -1,11 +1,12 @@
 import { visibleCells } from './layouts'
 import type { Attribute, Cell, Snapshot } from './model'
 export type BrowseMode = 'CARD' | 'TREE' | 'TABLE'
-export interface BrowseState { mode: BrowseMode; location: string; locations?:Partial<Record<BrowseMode,string>>; widths: Record<string, number>; panelWidth: number; panelVisible?:boolean; detailId?:string; scroll?: number; scrolls?: Partial<Record<BrowseMode,number>>; viewport?: { x: number; y: number; zoom: number } }
+export interface BrowseState { mode: BrowseMode; location: string; locations?:Partial<Record<BrowseMode,string>>; widths: Record<string, number>; columnOrder?:string[]; treeCollapsed?:string[]; panelWidth: number; panelVisible?:boolean; detailId?:string; scroll?: number; scrolls?: Partial<Record<BrowseMode,number>>; viewport?: { x: number; y: number; zoom: number } }
 export interface GameBoundary { state: 'root' | 'not-game' | 'candidate'; engines: string[]; evidence: string[] }
 export interface ReadingPrefs { page?: number; fit?: 'height' | 'width' | 'original'; spread?: boolean; rtl?: boolean; firstSingle?: boolean }
 export interface SubtitlePrefs { offset: number; size: number; bottom: number; color: string; background: string; encoding: 'utf-8' | 'big5' | 'shift_jis' }
 export interface FolderDetails {
+  cellImages?:Record<string,string>
   schemaVersion: 1; boundary?: GameBoundary; bannerAssetId?: string; reading?: ReadingPrefs
   playback?: Record<string, { time: number; subtitle?: string; settings?: Record<string, SubtitlePrefs> }>
   targets?: Record<string, { kind: 'exe' | 'folder'; path: string; relative: boolean; args: string[] }>
@@ -13,13 +14,13 @@ export interface FolderDetails {
 }
 export interface ActionTemplate { id: string; label: string; kind: 'exe' | 'folder'; color: string }
 export interface MediaEntry { id: string; name: string; kind: 'image' | 'video' | 'subtitle' | 'folder' | 'other'; size: number; modified: number; mime: string; url: string; thumb?: string }
-export interface ContentResult { entries: MediaEntry[]; notices: string[] }
+export interface ContentResult { entries: MediaEntry[]; notices: string[]; nextCursor?:string; total?:number }
 export interface SearchHit { rowId: string; projectId: string; name: string; path: string; matched: string[] }
 export interface SearchResult { hits: SearchHit[]; total: number; fields: { key: string; type: string; projectId: string; attributeId: string }[]; incomplete: string[]; parsed: string; index: string }
-export interface MetadataPreview { token: string; title: string; source: string; values: { key: string; type: string; value: unknown }[]; image?: string }
+export interface MetadataPreview { provider?:'eh'|'steam'; token: string; title: string; source: string; values: { key: string; type: string; value: unknown }[]; image?: string }
 export type ExplorerRequest =
  | { action: 'search'; query: string; projectId?: string; offset?: number; limit?: number }
- | { action: 'content'; rowId: string }
+ | { action: 'content'; rowId: string; limit?:number; cursor?:string }
  | { action: 'visit'; rowId:string }
  | { action: 'attributes'; rowId: string; revision: number; values: Attribute[]; private: boolean }
  | { action: 'batch'; rows: { rowId: string; revision: number }[]; attributeId: string; value: unknown; mode: 'replace' | 'add' | 'remove' }
@@ -27,6 +28,7 @@ export type ExplorerRequest =
  | { action: 'playback'; rowId: string; revision: number; fileId: string; time: number; subtitle?: string; settings?: SubtitlePrefs }
  | { action: 'boundary'; rowId: string; revision: number; state: 'root' | 'not-game' | 'candidate'; traverse?: boolean }
  | { action: 'banner'; rowId: string; revision: number; assetId: string }
+ | { action: 'cellImage'; rowId:string; revision:number; cellId:string; assetId:string|null }
  | { action: 'bindTarget'; rowId: string; revision: number; templateId: string; args: string[] }
  | { action: 'runTarget'; rowId: string; templateId: string }
  | { action: 'subtitle'; rowId: string; fileId?: string; externalToken?: string; import?: boolean; encoding?: string }

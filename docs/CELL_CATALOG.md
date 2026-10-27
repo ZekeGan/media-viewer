@@ -13,7 +13,8 @@
 | field-tags | 多值標籤 |
 | field-number | 數字 |
 | field-date | 日期 |
-| image | 受管圖片／封面 |
+| image | 選用的獨立圖片組件；每個位置可各自選圖，空白不強制填寫 |
+| divider | 分隔線，沿用組件尺寸／文字色 |
 | open-folder | 經 main 驗證後開啟目前資料夾 |
 
 缺 key 可顯示預設，但不寫回資料夾、不成為搜尋真值；搬入專案的欄位身分不可只按相同 alias 合併。

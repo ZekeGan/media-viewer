@@ -21,8 +21,8 @@ Renderer 負責畫面、草稿與互動；preload 只暴露受控 API；main 驗
 | 本機 UI 設定 | [workspace](../electron/workspace.ts) `WorkspaceStore` | 群組／排序／窗格／偏好，驗證、保存、尺寸正規化 |
 | 外部來源 | [metadata](../electron/metadata.ts) | E-Hentai URL 驗證與公開資料預覽 |
 | 契約與驗證 | [model](../shared/model.ts)、[explorer](../shared/explorer.ts)、[workspace](../shared/workspace.ts) | 型別及 runtime 驗證；修改 IPC 時兩端一起查 |
-| 共用純邏輯 | [browse](../shared/browse.ts)、[layouts](../shared/layouts.ts)、[images](../shared/images.ts)、[query](../shared/query.ts)、[subtitles](../shared/subtitles.ts) | 模式範圍、方案、格式、查詢、字幕解析 |
-| 應用狀態／外框 | [App](../src/App.tsx)、[DesktopShell](../src/DesktopShell.tsx) | snapshot／草稿／保存、側欄、搜尋入口與視窗控制 |
+| 共用純邏輯 | [browse](../shared/browse.ts)、[layouts](../shared/layouts.ts)、[images](../shared/images.ts)、[query](../shared/query.ts)、[subtitles](../shared/subtitles.ts)、[reader](../shared/reader.ts)、[gallery](../shared/gallery.ts) | 模式／樹分支、方案、格式、查詢、字幕解析、閱讀分頁及適應尺寸、圖庫尺寸與可見範圍模型 |
+| 應用狀態／外框 | [App](../src/App.tsx)、[DesktopShell](../src/DesktopShell.tsx)、[ProjectSettings](../src/ProjectSettings.tsx) | snapshot／草稿／保存、側欄、搜尋入口與視窗控制 |
 | 瀏覽與設定 | [BrowseWorkspace](../src/BrowseWorkspace.tsx)、[TreeView](../src/TreeView.tsx)、[FolderPanel](../src/FolderPanel.tsx) | 三模式、歷史、獨立右區、設定 Drawer；TREE 用 React Flow＋Dagre |
 | CELL／內容 | [Card](../src/Card.tsx)、[Editor](../src/Editor.tsx)、[FolderContent](../src/FolderContent.tsx) | 共用編輯引擎、分開版面、各屬性內容 |
 | 媒體／搜尋／通知 | [Gallery](../src/Gallery.tsx)、[Reader](../src/Reader.tsx)、[VideoViewer](../src/VideoViewer.tsx)、[SearchDialog](../src/SearchDialog.tsx)、[Toasts](../src/Toasts.tsx) | 相簿／閱讀器、Video.js、查詢 UI、右下通知 |
@@ -30,6 +30,8 @@ Renderer 負責畫面、草稿與互動；preload 只暴露受控 API；main 驗
 先 `rg -n "符號" 相關目錄`，再讀函式及呼叫端；不為定位一個問題全讀以上檔案。
 
 ## 儲存位置
+
+主程序的權限請求與檢查只允許目前受信任主頁的 `fullscreen`；須同時符合目前 webContents、主框架及來源 URL，其他權限拒絕。Reader 以 Fullscreen API 進入系統全螢幕，關閉時只釋放自己取得的全螢幕；狀態不寫入可攜資料。
 
 | 位置 | 用途／權威 |
 | --- | --- |

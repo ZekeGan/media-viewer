@@ -2,6 +2,29 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.6.0 — 2026-10-27
+
+- Add group renaming, drag ordering and contextual hover actions in the project sidebar.
+- Synchronize CARD/TABLE/TREE folder locations with backslash breadcrumbs; add draggable TABLE columns and collapsible TREE branches.
+- Refine CARD display controls, folder settings tabs and advanced data-management options.
+- Add CELL dividers, Delete-key removal, multiple optional image slots and clearer field/component palettes.
+- Keep manga content layouts independent of CARD layouts; add validated Steam metadata preview/import alongside E-Hentai.
+- Add project-removal previews, verified local recovery copies and safe cleanup of unused empty root metadata; preserve shared data, other projects and original media.
+- Improve recreation/relink errors around missing folder records and archived project settings without silently replacing recoverable identities.
+- Extend recognized game-runtime layouts and ancestor-boundary protection, including nested Tyrano deployments and macOS app bundles.
+- Add progressive album/manga content loading, viewport-based gallery rendering and asynchronous thumbnail decoding over scoped media streams.
+- Prioritize cached thumbnails, coalesce duplicate work, skip cancelled queued jobs and throttle cache maintenance; stabilize image geometry while scrolling.
+- Improve manga fullscreen reading, zoom/pan, page selection and spread transitions; keep navigation icons fixed when RTL key bindings change.
+- Add per-project video autoplay preferences, release playback sources on navigation and combine subtitle settings under an icon-only video settings menu.
+- Remove resume prompts and full-video control shading; support horizontal mouse-wheel scrolling in the video strip.
+- Simplify folder search, move advanced controls out of the primary flow and reduce routine success notifications.
+- Remove the default TITLE field from new projects, retain existing data and expose F12 DevTools access.
+- Update focused documentation and controlled-data regression, reader and gallery-performance coverage.
+
+Portable record `schemaVersion` remains 1. No bulk migration of user collections is performed by this version bump.
+
+Known limitations: some embedded NW.js and unpacked/mixed WOLF RPG layouts remain unrecognized. Native macOS game launching is not implemented; app-bundle detection does not imply launch support. See `docs/WORK_ITEMS.md` for outstanding work.
+
 ## 0.5.0 — 2026-10-27
 
 - Add CARD-only layout presets and display controls, with multi-level/all-depth and single-level browsing.

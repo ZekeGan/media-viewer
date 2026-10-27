@@ -86,6 +86,17 @@ C-80 採特徵候選＋人工修正與集中處理；純手動仍作無法辨識
 
 官方參考（2026-10-26 查閱）：[Electron shell](https://www.electronjs.org/docs/latest/api/shell)、[Node child_process](https://nodejs.org/api/child_process.html#child_processspawncommand-args-options)。實作時核對當時 Electron 內含 Node 版本；本輪未執行任何遊戲或程式。
 
+### Mac 遊戲執行條件（待實作）
+
+2026-10-27 使用者要求以 LOOK 補 Mac 條件，列入 P0；目前 `bindTarget`／`runTarget` 仍只支援 EXE／資料夾，以下不是已交付能力。辨識與 bundle 保護見 [Mac 與多平台規則](GAME_ENGINE_DETECTION.md#mac-封裝與多平台規則)。
+
+- 新增明確的 macOS App 目標／平台資訊，與 Windows EXE 分開保存及驗證，不以「開啟資料夾」繞過 EXE 限制。綁定實際 `.app`，保存相對於合法外層遊戲 ROOT 的位置；App 內不寫可攜記錄，也不改既有 EXE 綁定的語意。
+- 啟動前核對主機平台、App／plist／對應主執行檔、路徑範圍與連結；macOS 另核對最低系統版本、CPU 架構／可用相容層及可執行權限。相容性未知顯示未驗證，不把檔案存在視為保證能跑；Windows 不從檔案權限推定 macOS 實機結果，也不嘗試原生執行 `.app`。
+- Windows 可辨識並保護 Mac 遊戲，啟動入口須顯示需 macOS／目前平台不相容；同款存在 Windows 版時讓使用者明確綁定該目標，不自動猜第一個 EXE。不因本次需求加入模擬器、Wine、Android 安裝／啟動或任意腳本命令。
+- 只在使用者明確點按後透過 macOS 系統 App 啟動機制執行，參數保持有順序的陣列並與目標分離；不硬套 Windows 的 EXE 工作目錄規則。原生機制、參數及工作目錄行為須以受控 App 驗證，不能直接拼 shell 字串。
+- 系統信任、簽章、隔離、權限或缺檔造成拒絕時，顯示失敗並保留綁定供重新指定，不自動移除隔離、改權限、重簽章、修補 bundle 或改安全設定。掃描／預覽不啟動 App；未知引擎的有效 App 仍可由使用者明確綁定。
+- 驗收包含 Windows 平台拒絕、macOS 原生啟動／參數、App 改名／搬移／失效、架構／最低版本／權限不符與系統拒絕；只能在受控資料驗證。macOS 實機未執行時明列限制，不宣稱已支援原生啟動。
+
 ## 6. 下方欄位 TABLE 基線
 
 以欄位／值／來源呈現，專案常用欄位在前，其他已存屬性仍可展開查看；缺值與型別不合沿用既有規則。C-85 採先沿用既有編輯入口、列內編輯後加；欄位順序與具體元件由規格細化。共用值編輯提示影響，私有覆寫須明確建立。
