@@ -2,6 +2,25 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.7.0 — 2026-10-29
+
+- Add dark, glass-white and paper themes, five UI languages, shared SVG icons and system-language defaults.
+- Add a paged, virtualized file overview with thumbnails, source grouping, full-path lists and source-aware previews.
+- Fix large file-list scroll crashes caused by deferred event access; show an empty state for filters with no matches.
+- Add read-only ZIP/CBZ image reading and the native Chromium PDF viewer without extracting or modifying original documents.
+- Add static-text, spacer and cached system-information components, plus boolean, enum, URL and date-only fields.
+- Add layout creation, copying, renaming, deletion, draft protection, undo/redo and per-folder assignment to project schemes.
+- Add settings export/import with an explicit allowlist, difference previews, merge/replace modes and recoverable backups.
+- Expand metadata selection to 11 grouped, no-key sources with provenance, fill/replace previews and manual-value protection; exclude IGDB and TMDB.
+- Redesign video controls with hover volume, inline subtitle groups, playback speed, fullscreen and optional cancellable auto-next.
+- Add stable saved-query field identities and numeric/date comparisons; preserve ambiguous legacy queries for explicit review.
+- Strengthen embedded NW.js/WOLF runtime boundaries and ancestor protection; refactor validation, playback and search-index synchronization.
+- Add controlled-data and Electron UI regression coverage, including image/video lists with 1,200 files each.
+
+Portable record `schemaVersion` remains 1. No bulk migration or scan of actual user collections is performed by this version bump.
+
+Known limitations: live metadata-site/login access, media-format and game-engine variants still need real samples. Native macOS game launching is not implemented. Music playback, cloud sync and nested component groups remain deferred. See `docs/WORK_ITEMS.md`.
+
 ## 0.6.0 — 2026-10-27
 
 - Add group renaming, drag ordering and contextual hover actions in the project sidebar.

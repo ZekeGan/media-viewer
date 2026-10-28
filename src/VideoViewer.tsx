@@ -1,63 +1,822 @@
+import { t as tr, useLocale } from './i18n'
+import { Icon } from './icons'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Button, ColorInput, Group, Modal, NumberInput, Select, Stack } from '@mantine/core'
-import { Video, VideoPlayer, VideoSkin } from '@videojs/react/video'
-import '@videojs/react/video/skin.css'
+import { Video, VideoPlayer } from '@videojs/react/video'
 import type { FolderRow } from '../shared/model'
 import { defaultSubtitle, type ExplorerRequest, type ExplorerResponse, type MediaEntry, type SubtitlePrefs } from '../shared/explorer'
 import { parseSubtitles, type Cue } from '../shared/subtitles'
-export function VideoViewer({row,entries,run,autoplay,settingsOpened,closeSettings}:{row:FolderRow;entries:MediaEntry[];run:(req:ExplorerRequest)=>Promise<ExplorerResponse|undefined>;autoplay:boolean;settingsOpened:boolean;closeSettings:()=>void}){
-  const videos=entries.filter(e=>e.kind==='video'),subtitles=entries.filter(e=>e.kind==='subtitle')
-  const [fileId,setFileId]=useState(videos[0]?.id),[subtitle,setSubtitle]=useState<ExplorerResponse['subtitle']>(),[cues,setCues]=useState<Cue[]>([]),[settings,setSettings]=useState(defaultSubtitle),[error,setError]=useState(''),[time,setTime]=useState(0),[files,setFiles]=useState<File[]>([])
-  const [options,setOptions]=useState(false)
-  const video=useRef<HTMLVideoElement|null>(null),stage=useRef<HTMLDivElement>(null),latest=useRef(row),saving=useRef(false),strip=useRef<HTMLDivElement>(null),wantsPlayback=useRef(autoplay),pendingStart=useRef(false)
-  const release=(node:HTMLVideoElement)=>{node.pause();node.removeAttribute('src');node.load()}
-  const bindVideo=useCallback((node:HTMLVideoElement|null)=>{const previous=video.current;video.current=node;pendingStart.current=false;if(previous&&previous!==node)release(previous)},[])
-  const [box,setBox]=useState({bottom:0,left:0,width:0,height:0})
-  latest.current=row;const file=videos.find(v=>v.id===fileId)??videos[0]
-  const save=async()=>{if(!file||!subtitle||row.readonly||!latest.current.record||saving.current)return;saving.current=true;try{await run({action:'playback',rowId:row.rowId,revision:latest.current.record.revision,fileId:file.id,time:0,subtitle:subtitle.token,settings})}finally{saving.current=false}}
-  const apply=(value:ExplorerResponse['subtitle'])=>{if(!value)return;try{const parsed=parseSubtitles(value.text);setCues(parsed);setSubtitle(value);setSettings(latest.current.record?.details?.playback?.[file?.id??'']?.settings?.[value.token]??defaultSubtitle());setError('')}catch(e){setError(String(e))}}
-  const load=async(entry?:MediaEntry,external?:File)=>{try{const result=external?await window.explorer.dropSubtitle(row.rowId,external):await window.explorer.request(entry?{action:'subtitle',rowId:row.rowId,fileId:entry.id,encoding:settings.encoding}:{action:'chooseSubtitle',rowId:row.rowId});apply(result.subtitle)}catch(e){setError(String(e))}}
-  useEffect(()=>{setSubtitle(undefined);setCues([]);setError('');setTime(0)},[file?.id])
-  useEffect(()=>{wantsPlayback.current=autoplay;if(!autoplay)pendingStart.current=false},[autoplay])
-  useEffect(()=>{const visibility=()=>{const node=video.current;if(document.hidden)node?.pause();else if(node&&pendingStart.current)void playSelected(node)};document.addEventListener('visibilitychange',visibility);return()=>document.removeEventListener('visibilitychange',visibility)},[])
-  useEffect(()=>{const update=()=>{const el=video.current,container=stage.current;if(!el||!container)return;const bounds=container.getBoundingClientRect(),ratio=(el.videoWidth||16)/(el.videoHeight||9),width=Math.min(bounds.width,bounds.height*ratio),height=width/ratio;setBox({left:(bounds.width-width)/2,bottom:(bounds.height-height)/2,width,height})};const observer=new ResizeObserver(update);if(stage.current)observer.observe(stage.current);video.current?.addEventListener('loadedmetadata',update);return()=>{observer.disconnect();video.current?.removeEventListener('loadedmetadata',update)}},[file?.id])
-  const playSelected=async(node:HTMLVideoElement)=>{
-    if(node!==video.current||!node.isConnected)return
-    if(document.hidden){pendingStart.current=true;return}
-    pendingStart.current=false
-    try{await node.play();if(node!==video.current||!node.isConnected||document.hidden)node.pause();else setError('')}
-    catch(reason){if(node===video.current&&node.isConnected&&(reason as Error).name!=='AbortError')setError('無法自動播放，請按播放器的播放按鈕。')}
+import { VideoControls } from './VideoControls'
+import { Accordion } from '@mantine/core'
+import { VideoSubtitleSettings } from './VideoSubtitleSettings'
+import { useVideoAudio } from './useVideoAudio'
+
+type UpNext = {
+  fileId: string
+  nextId: string
+  remaining: number
+}
+export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, changeAutoNext, changeAutoplay, initialFileId }: {
+  row: FolderRow
+  entries: MediaEntry[]
+  run: (req: ExplorerRequest) => Promise<ExplorerResponse | undefined>
+  autoplay: boolean
+  initialFileId?: string
+
+  busy: boolean
+  autoNext: boolean
+  changeAutoNext: (value: boolean) => Promise<boolean>
+  changeAutoplay: (value: boolean) => Promise<boolean>
+}) {
+  useLocale()
+
+  const videos = entries.filter(entry => entry.kind === 'video'),
+    subtitles = entries.filter(entry => entry.kind === 'subtitle')
+
+  const [fileId, setFileId] = useState(initialFileId??videos[0]?.id),
+    [subtitle, setSubtitle] = useState<ExplorerResponse['subtitle']>(),
+    [cues, setCues] = useState<Cue[]>([])
+
+  const [settings, setSettings] = useState(defaultSubtitle),
+    [error, setError] = useState(''),
+    [files, setFiles] = useState<File[]>([]),
+    [captions, setCaptions] = useState(true)
+
+  const [subtitleSection, setSubtitleSection] = useState<string | null>(null),
+    [audioDragging, setAudioDragging] = useState(false),
+    [menuOpen, setMenuOpen] = useState(false),
+    [subtitleExpanded,setSubtitleExpanded]=useState(false),
+    [nextSaving, setNextSaving] = useState(false)
+
+  const [paused, setPaused] = useState(true),
+    [time, setTime] = useState(0),
+    [duration, setDuration] = useState(0),
+    [buffered, setBuffered] = useState(0),
+    [rate, setRate] = useState(1),
+    [waiting, setWaiting] = useState(false)
+
+  const [active, setActive] = useState(true),
+    [fullscreen, setFullscreen] = useState(false),
+    [upNext, setUpNext] = useState<UpNext>()
+
+  const [box, setBox] = useState({ bottom: 0, left: 0, width: 0, height: 0 }),
+    [controlHeight, setControlHeight] = useState(80),
+    [stageSize, setStageSize] = useState({ width: 360, height: 480 })
+
+  const viewer = useRef<HTMLDivElement>(null),
+    stage = useRef<HTMLDivElement>(null),
+    controls = useRef<HTMLDivElement>(null),
+    strip = useRef<HTMLDivElement>(null)
+
+  const video = useRef<HTMLVideoElement | null>(null),
+    latest = useRef(row),
+    mounted = useRef(false),
+    saving = useRef(false),
+    wantsPlayback = useRef(initialFileId?true:autoplay),
+    pendingStart = useRef(false)
+
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(),
+    clickTimer = useRef<ReturnType<typeof setTimeout>>(),
+    nextRef = useRef<UpNext>()
+
+  const windowVisible = useRef(true)
+
+  const audio = useVideoAudio(),
+    audioLive = useRef(audio),
+    speed = useRef(rate),
+    filesLive = useRef(videos),
+    currentFile = useRef<string>()
+
+  const file = videos.find(entry => entry.id === fileId) ?? videos[0],
+    index = videos.findIndex(entry => entry.id === file?.id)
+
+  latest.current = row
+  audioLive.current = audio
+  speed.current = rate
+  filesLive.current = videos
+  currentFile.current = file?.id
+
+  const countdown = (value?: UpNext) => {
+    nextRef.current = value
+    setUpNext(value)
   }
-  const selectVideo=async(entry:MediaEntry)=>{
-    if(entry.id===file?.id){if(video.current)void playSelected(video.current);return}
-    wantsPlayback.current=true;video.current?.pause();setFileId(entry.id)
+
+  const release = (node: HTMLVideoElement) => {
+    node.pause()
+    node.removeAttribute('src')
+    node.load()
   }
-  useEffect(()=>{
-    const element=strip.current;if(!element)return
-    const wheel=(event:WheelEvent)=>{
-      if(event.ctrlKey||element.scrollWidth<=element.clientWidth)return
-      const delta=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY)*(event.deltaMode===1?16:event.deltaMode===2?element.clientWidth:1),next=Math.max(0,Math.min(element.scrollWidth-element.clientWidth,element.scrollLeft+delta))
-      if(next!==element.scrollLeft){event.preventDefault();element.scrollLeft=next}
+
+  const bindVideo = useCallback((node: HTMLVideoElement | null) => {
+    const previous = video.current
+    video.current = node
+    pendingStart.current = false
+
+    if (previous && previous !== node) release(previous)
+
+    if (node) {
+      node.muted = true
+      if (audioLive.current.ready) {
+        node.volume = audioLive.current.volume
+        node.muted = audioLive.current.muted
+      }
+      node.playbackRate = speed.current
     }
-    element.addEventListener('wheel',wheel,{passive:false});return()=>element.removeEventListener('wheel',wheel)
-  },[entries])
-  const visible=cues.filter(c=>time>=c.start+settings.offset&&time<c.end+settings.offset).map(c=>c.text).join('\n')
-  if(!file)return <div className="video-empty">此資料夾沒有直接影片</div>
-  return <div className="video-viewer">
-    <div className="video-stage" ref={stage} onDragOver={e=>{if(e.dataTransfer.types.includes('Files')||e.dataTransfer.types.includes('application/x-media-subtitle'))e.preventDefault()}} onDrop={e=>{e.preventDefault();const id=e.dataTransfer.getData('application/x-media-subtitle');if(id){const entry=subtitles.find(s=>s.id===id);if(entry)void load(entry)}else{const incoming=[...e.dataTransfer.files];setFiles(incoming);if(incoming.length>1)setOptions(true);if(incoming.length===1)void load(undefined,incoming[0])}}}>
-      <VideoPlayer key={file.id}><VideoSkin style={{width:'100%',height:'100%',aspectRatio:'auto'}}><Video ref={bindVideo} src={file.url} playsInline autoPlay={false} preload="metadata" onPlay={event=>{if(event.currentTarget!==video.current||!event.currentTarget.isConnected)event.currentTarget.pause()}} onTimeUpdate={e=>setTime(e.currentTarget.currentTime)} onLoadedMetadata={event=>{if(wantsPlayback.current)void playSelected(event.currentTarget)}} onError={()=>setError('此影片無法解碼或已失效；首輪驗證 MP4／WebM，MKV／HEVC 不保證支援。')}/>
-        {visible&&<div className="subtitle-overlay" style={{left:box.left,width:box.width||'100%',bottom:box.bottom+box.height*settings.bottom/100,fontSize:settings.size,color:settings.color}}><span style={{background:settings.background+'c0'}}>{visible}</span></div>}
-        {error&&<div className="video-error" role="alert">{error}</div>}
-      </VideoSkin></VideoPlayer>
+  }, [])
+
+  const showControls = () => {
+    setActive(true)
+
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+
+    hideTimer.current = setTimeout(() => {
+      if (!controls.current?.querySelector(':focus-visible') && !controls.current?.matches(':hover')) setActive(false)
+    }, 2500)
+  }
+
+  const playSelected = async (node: HTMLVideoElement) => {
+    if (node !== video.current || !node.isConnected) return
+
+    if (document.hidden || !windowVisible.current || !audioLive.current.ready) {
+      pendingStart.current = true
+      return
+    }
+
+    pendingStart.current = false
+
+    try {
+      await node.play()
+      if (node !== video.current || !node.isConnected || document.hidden || !windowVisible.current) node.pause(); else if (mounted.current) setError('')
+    }
+    catch (reason) {
+      if (mounted.current && node === video.current && node.isConnected && (reason as Error).name !== 'AbortError') setError(node.error || (reason as Error).name === 'NotSupportedError' ? tr('此影片無法解碼或已失效；首輪驗證 MP4／WebM，MKV／HEVC 不保證支援。') : tr('無法自動播放，請按播放器的播放按鈕。'))
+    }
+  }
+
+  const togglePlay = () => {
+    const node = video.current
+    if (!node) return
+
+    countdown()
+    showControls()
+
+    if (node.paused) {
+      wantsPlayback.current = true
+      void playSelected(node)
+    } else {
+      pendingStart.current = false
+      node.pause()
+    }
+  }
+
+  const selectVideo = (entry: MediaEntry) => {
+    countdown()
+    setMenuOpen(false)
+    showControls()
+
+    wantsPlayback.current = true
+
+    if (entry.id === file?.id) {
+      if (video.current) void playSelected(video.current)
+      return
+    }
+
+    video.current?.pause()
+    setFileId(entry.id)
+  }
+
+  const seek = (value: number) => {
+    const node = video.current
+    if (!node || !Number.isFinite(node.duration) || node.duration <= 0) return
+
+    countdown()
+    node.currentTime = Math.max(0, Math.min(node.duration, value))
+    setTime(node.currentTime)
+    showControls()
+  }
+
+  const changeAudio = (volume: number, muted: boolean) => {
+    audio.change({ volume, muted })
+    const node = video.current
+    if (node) {
+      node.volume = volume
+      node.muted = muted
+    }
+    showControls()
+  }
+
+  const changeRate = (value: number) => {
+    speed.current = value
+    setRate(value)
+    if (video.current) video.current.playbackRate = value
+  }
+
+  const openSubtitles = () => {
+    countdown()
+    setSubtitleSection('source')
+    setSubtitleExpanded(true)
+    setMenuOpen(true)
+    showControls()
+  }
+
+  const toggleCaptions = () => {
+    if (subtitle) setCaptions(value => !value); else openSubtitles()
+    showControls()
+  }
+
+  const toggleFullscreen = async () => {
+    const target = viewer.current
+    if (!target) return
+
+    try {
+      if (document.fullscreenElement === target) await document.exitFullscreen()
+      else if (!document.fullscreenElement) {
+        await target.requestFullscreen()
+        if (!target.isConnected && document.fullscreenElement === target) await document.exitFullscreen()
+      }
+
+      if (mounted.current) showControls()
+    } catch (reason) {
+      if (mounted.current) setError(tr('全螢幕切換失敗：') + String(reason))
+    }
+  }
+
+  const changePlaybackPreference = async (change: () => Promise<boolean>) => {
+    if (nextSaving || busy) return
+
+    countdown()
+    setNextSaving(true)
+
+    try {
+      await change()
+    } finally {
+      if (mounted.current) setNextSaving(false)
+    }
+  }
+
+  const save = async () => {
+    if (!file || !subtitle || row.readonly || !latest.current.record || saving.current) return
+
+    saving.current = true
+
+    try {
+      await run({
+        action: 'playback',
+        rowId: row.rowId,
+        revision: latest.current.record.revision,
+        fileId: file.id,
+        time: 0,
+        subtitle: subtitle.token,
+        settings
+      })
+    } finally {
+      saving.current = false
+    }
+  }
+
+  const apply = (value: ExplorerResponse['subtitle']) => {
+    if (!value) return
+
+    try {
+      const parsed = parseSubtitles(value.text)
+      setCues(parsed)
+      setSubtitle(value)
+      setCaptions(true)
+      setSettings(latest.current.record?.details?.playback?.[file?.id ?? '']?.settings?.[value.token] ?? defaultSubtitle())
+      setError('')
+    } catch (reason) {
+      setError(String(reason))
+    }
+  }
+
+  const load = async (entry?: MediaEntry, external?: File) => {
+    const target = currentFile.current
+
+    try {
+      const result = external ? await window.explorer.dropSubtitle(row.rowId, external) : await window.explorer.request(entry ? { action: 'subtitle', rowId: row.rowId, fileId: entry.id, encoding: settings.encoding } : { action: 'chooseSubtitle', rowId: row.rowId })
+      if (mounted.current && currentFile.current === target) apply(result.subtitle)
+    } catch (reason) {
+      if (mounted.current && currentFile.current === target) setError(String(reason))
+    }
+  }
+  const importSubtitle = async () => {
+    if (!subtitle) return
+    const result = await run({
+      action: 'subtitle',
+      rowId: row.rowId,
+      externalToken: subtitle.token,
+      import: true,
+      encoding: settings.encoding
+    })
+    apply(result?.subtitle)
+  }
+
+  const changeSubtitleEncoding = async (v: string | null) => {
+    if (!subtitle || !v) return
+    try {
+      const result = await window.explorer.request({
+        action: 'subtitle',
+        rowId: row.rowId,
+        ...(subtitles.some(s => s.id === subtitle.token) ? { fileId: subtitle.token } : { externalToken: subtitle.token }),
+        encoding: v
+      })
+      if (result.subtitle) {
+        const parsed = parseSubtitles(result.subtitle.text)
+        setCues(parsed)
+        setSubtitle(result.subtitle)
+        setSettings(s => ({ ...s, encoding: v as SubtitlePrefs['encoding'] }))
+      }
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
+  useEffect(() => {
+    mounted.current = true
+
+    const target = viewer.current,
+      changed = () => {
+        setFullscreen(document.fullscreenElement === target)
+        setActive(true)
+      }
+
+    document.addEventListener('fullscreenchange', changed)
+
+    return () => {
+      mounted.current = false
+      pendingStart.current = false
+      nextRef.current = undefined
+
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+      if (clickTimer.current) clearTimeout(clickTimer.current)
+
+      document.removeEventListener('fullscreenchange', changed)
+
+      if (target && document.fullscreenElement === target) void document.exitFullscreen().catch(() => { })
+    }
+  }, [])
+
+  useEffect(() => {
+    setSubtitle(undefined)
+    setCues([])
+    setError('')
+    setTime(0)
+    setDuration(0)
+    setBuffered(0)
+    setFiles([])
+    setSubtitleSection(null)
+    setPaused(true)
+    setWaiting(false)
+    countdown()
+    setMenuOpen(false)
+    showControls()
+  }, [file?.id])
+
+  useEffect(() => {
+    wantsPlayback.current = !!initialFileId || autoplay
+    if (!autoplay) pendingStart.current = false
+  }, [autoplay])
+
+  useEffect(() => {
+    const node = video.current
+    if (!node || !audio.ready) return
+
+    node.volume = audio.volume
+    node.muted = audio.muted
+
+    if (pendingStart.current && node.readyState >= 1) void playSelected(node)
+  }, [audio.ready, file?.id])
+
+  useEffect(() => {
+    const visibility = () => {
+      if (document.hidden) {
+        wantsPlayback.current = false
+        pendingStart.current = false
+        video.current?.pause()
+        countdown()
+      }
+    }
+
+    document.addEventListener('visibilitychange', visibility)
+    return () => document.removeEventListener('visibilitychange', visibility)
+  }, [])
+
+  useEffect(() => {
+    let alive = true,
+      observed = false
+
+    const apply = (visible: boolean | undefined) => {
+      windowVisible.current = visible !== false
+
+      if (visible === false) {
+        wantsPlayback.current = false
+        pendingStart.current = false
+        video.current?.pause()
+        countdown()
+      }
+    }
+
+    const remove = window.desktop.onWindowState(state => {
+      observed = true
+      apply(state.visible)
+    })
+
+    void window.desktop.windowAction('state').then(state => {
+      if (alive && !observed) apply(state.visible)
+    }).catch(() => { })
+
+    return () => {
+      alive = false
+      remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    const update = () => {
+      const node = video.current,
+        container = stage.current
+      if (!node || !container) return
+
+      const bounds = container.getBoundingClientRect(),
+        ratio = (node.videoWidth || 16) / (node.videoHeight || 9),
+        width = Math.min(bounds.width, bounds.height * ratio),
+        height = width / ratio
+
+      setStageSize({ width: bounds.width, height: bounds.height })
+      setBox({ left: (bounds.width - width) / 2, bottom: (bounds.height - height) / 2, width, height })
+      setControlHeight(controls.current?.getBoundingClientRect().height ?? 80)
+    }
+
+    const node = video.current,
+      observer = new ResizeObserver(update)
+
+    if (stage.current) observer.observe(stage.current)
+    if (controls.current) observer.observe(controls.current)
+
+    node?.addEventListener('loadedmetadata', update)
+    update()
+
+    return () => {
+      observer.disconnect()
+      node?.removeEventListener('loadedmetadata', update)
+    }
+  }, [file?.id])
+
+  useEffect(() => {
+    if (menuOpen) {
+      countdown()
+      setActive(true)
+    }
+  }, [menuOpen])
+
+  useEffect(() => {
+    if (!autoNext) countdown()
+  }, [autoNext])
+
+  useEffect(() => {
+    if (!upNext || !autoNext) return
+
+    const timer = setInterval(() => {
+      const current = nextRef.current,
+        list = filesLive.current
+
+      if (!current || document.hidden || !windowVisible.current || current.fileId !== currentFile.current) {
+        countdown()
+        return
+      }
+
+      const next = list[list.findIndex(entry => entry.id === current.fileId) + 1]
+
+      if (!next || next.id !== current.nextId) {
+        countdown()
+        return
+      }
+
+      if (current.remaining > 1) countdown({ ...current, remaining: current.remaining - 1 })
+      else {
+        countdown()
+        selectVideo(next)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [upNext?.fileId, autoNext])
+
+  useEffect(() => {
+    const element = strip.current
+    if (!element) return
+
+    const wheel = (event: WheelEvent) => {
+      if (event.ctrlKey || element.scrollWidth <= element.clientWidth) return
+
+      const delta = (Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY) * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1),
+        next = Math.max(0, Math.min(element.scrollWidth - element.clientWidth, element.scrollLeft + delta))
+
+      if (next !== element.scrollLeft) {
+        event.preventDefault()
+        element.scrollLeft = next
+      }
+    }
+
+    element.addEventListener('wheel', wheel, { passive: false })
+    return () => element.removeEventListener('wheel', wheel)
+  }, [entries])
+
+  const keyboard = (event: React.KeyboardEvent) => {
+    if (event.ctrlKey || event.altKey || event.metaKey || event.nativeEvent.isComposing || menuOpen) return
+
+    const target = event.target as HTMLElement
+
+    if (target.closest('input,select,textarea,[contenteditable="true"]')) return
+
+    const key = event.key.toLowerCase(),
+      node = video.current
+    if (!node) return
+
+    if (event.repeat && ['k', ' ', 'm', 'f', 'c'].includes(key)) return
+
+    if (key === ' ' && target.closest('button')) return
+
+    if (['k', ' ', 'm', 'f', 'c', 'j', 'l', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(key)) {
+      event.preventDefault()
+      event.stopPropagation()
+      showControls()
+
+      if (key === 'k' || key === ' ') togglePlay()
+      else if (key === 'm') changeAudio(audio.volume || .5, audio.volume === 0 ? false : !audio.muted)
+      else if (key === 'f') void toggleFullscreen()
+      else if (key === 'c') toggleCaptions()
+      else if (['j', 'l', 'arrowleft', 'arrowright'].includes(key)) seek(node.currentTime + (['j', 'arrowleft'].includes(key) ? -1 : 1) * (['j', 'l'].includes(key) ? 10 : 5))
+      else changeAudio(Math.max(0, Math.min(1, audio.volume + (key === 'arrowup' ? .05 : -.05))), false)
+    }
+  }
+
+  const controlsVisible = active || paused || audioDragging || menuOpen || !!error || !!upNext
+
+  const visible = captions ? cues.filter(cue => time >= cue.start + settings.offset && time < cue.end + settings.offset).map(cue => cue.text).join('\n') : ''
+
+  const upcoming = videos.find(entry => entry.id === upNext?.nextId)
+
+  if (!file) return <div className="video-empty">
+    {tr('此資料夾沒有直接影片')}
+  </div>
+
+  return <div
+    className="video-viewer"
+    ref={viewer}
+  >
+
+    <div
+      className="video-stage custom-video-stage"
+      ref={stage}
+      tabIndex={0}
+      aria-label={tr('影片播放器')}
+      onKeyDown={keyboard}
+      onFocusCapture={showControls}
+      onPointerMove={showControls}
+      onPointerDown={showControls}
+      onDoubleClick={event => {
+        if (event.target === video.current || event.target === stage.current) {
+          if (clickTimer.current) clearTimeout(clickTimer.current)
+          void toggleFullscreen()
+        }
+      }}
+      onDragOver={event => {
+        if (event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('application/x-media-subtitle')) event.preventDefault()
+      }}
+      onDrop={event => {
+        event.preventDefault()
+        const id = event.dataTransfer.getData('application/x-media-subtitle')
+        if (id) {
+          const entry = subtitles.find(item => item.id === id)
+          if (entry) void load(entry)
+        } else {
+          const incoming = [...event.dataTransfer.files]
+          setFiles(incoming)
+          if (incoming.length > 1) openSubtitles()
+          if (incoming.length === 1) void load(undefined, incoming[0])
+        }
+      }}
+    >
+
+      <VideoPlayer key={file.id}>
+        <Video
+          ref={bindVideo}
+          src={file.url}
+          playsInline
+          autoPlay={false}
+          controls={false}
+          preload="metadata"
+
+          onClick={() => {
+            if (clickTimer.current) clearTimeout(clickTimer.current)
+            clickTimer.current = setTimeout(togglePlay, 200)
+          }}
+
+          onPlay={event => {
+            if (event.currentTarget !== video.current || !event.currentTarget.isConnected || document.hidden || !windowVisible.current) event.currentTarget.pause(); else {
+              setPaused(false)
+              countdown()
+              showControls()
+            }
+          }}
+
+          onPause={event => {
+            if (event.currentTarget === video.current) setPaused(true)
+          }}
+          onTimeUpdate={event => {
+            if (event.currentTarget === video.current) setTime(event.currentTarget.currentTime)
+          }}
+
+          onLoadedMetadata={event => {
+            const node = event.currentTarget
+            if (node !== video.current) return
+            setDuration(Number.isFinite(node.duration) ? node.duration : 0)
+            node.playbackRate = speed.current
+            if (wantsPlayback.current) void playSelected(node)
+          }}
+
+          onDurationChange={event => {
+            if (event.currentTarget === video.current) setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)
+          }}
+
+          onProgress={event => {
+            const node = event.currentTarget
+            if (node === video.current && node.buffered.length) setBuffered(node.buffered.end(node.buffered.length - 1))
+          }}
+
+          onWaiting={() => setWaiting(true)}
+          onPlaying={() => setWaiting(false)}
+          onCanPlay={() => setWaiting(false)}
+
+          onEnded={event => {
+            if (event.currentTarget !== video.current) return
+            setPaused(true)
+            setWaiting(false)
+            const next = videos[index + 1]
+            if (autoNext && !nextSaving && !menuOpen && !document.hidden && windowVisible.current && next) countdown({ fileId: file.id, nextId: next.id, remaining: 5 })
+          }}
+
+          onError={event => {
+            if (event.currentTarget === video.current) {
+              countdown()
+              setWaiting(false)
+              setError(tr('此影片無法解碼或已失效；首輪驗證 MP4／WebM，MKV／HEVC 不保證支援。'))
+            }
+          }}
+        />
+      </VideoPlayer>
+
+      {visible && <div
+        className="subtitle-overlay"
+        style={{
+          left: box.left,
+          width: box.width || '100%',
+          bottom: Math.max(box.bottom + box.height * settings.bottom / 100, controlsVisible ? controlHeight + 8 : 8),
+          fontSize: settings.size,
+          color: settings.color
+        }}
+      >
+        <span style={{ background: settings.background + 'c0' }}>
+          {visible}
+        </span>
+      </div>}
+
+      {waiting && !paused && !error && <div
+        className="video-waiting"
+        role="status"
+      >
+        {tr('影片緩衝中…')}
+      </div>}
+
+      {(error || audio.error) && <div
+        className="video-error"
+        role="alert"
+      >
+        {error || audio.error}
+      </div>}
+
+      {upNext && upcoming && <div
+        className="video-up-next"
+        role="status"
+      >
+        <strong>
+          {tr('{0} 秒後播放下一部', upNext.remaining)}
+        </strong>
+        <span title={upcoming.name}>
+          {upcoming.name}
+        </span>
+        <div>
+          <button
+            type="button"
+            onClick={() => countdown()}
+          >
+            {tr('取消接續播放')}
+          </button>
+          <button
+            type="button"
+            onClick={() => selectVideo(upcoming)}
+          >
+            {tr('立即播放')}
+          </button>
+        </div>
+      </div>}
+
+      <VideoControls
+        controls={controls}
+        stage={stage}
+        panelHeight={Math.max(80, Math.min(440, stageSize.height - controlHeight - 20))}
+        panelWidth={Math.max(200, Math.min(360, stageSize.width - 24))}
+        interacting={setAudioDragging}
+        autoplay={autoplay}
+        autoplayToggle={() => void changePlaybackPreference(() => changeAutoplay(!autoplay))}
+        visible={controlsVisible}
+        paused={paused}
+        time={time}
+        duration={duration}
+        buffered={buffered}
+        volume={audio.volume}
+        muted={audio.muted}
+        rate={rate}
+        audioReady={audio.ready}
+        captions={captions}
+        hasSubtitle={!!subtitle}
+        autoNext={autoNext}
+        nextSaving={nextSaving || busy}
+        fullscreen={fullscreen}
+        canPrevious={index > 0}
+        canNext={index >= 0 && index < videos.length - 1}
+        menuOpen={menuOpen}
+        menu={opened => {
+          if (opened) { setSubtitleSection(null); setSubtitleExpanded(false) }
+          setMenuOpen(opened)
+        }}
+        play={togglePlay}
+        seek={seek}
+        audio={changeAudio}
+        speed={changeRate}
+        caption={toggleCaptions}
+        nextToggle={() => void changePlaybackPreference(() => changeAutoNext(!autoNext))}
+        previous={() => {
+          const previous = videos[index - 1]
+          if (previous) selectVideo(previous)
+        }}
+        next={() => {
+          const next = videos[index + 1]
+          if (next) selectVideo(next)
+        }}
+        subtitleSettings={<Accordion className="player-subtitle-group" value={subtitleExpanded?'subtitles':null} onChange={value=>setSubtitleExpanded(!!value)} transitionDuration={0}><Accordion.Item value="subtitles"><Accordion.Control>{tr('字幕設定')}</Accordion.Control><Accordion.Panel><VideoSubtitleSettings
+          section={subtitleSection}
+          changeSection={setSubtitleSection}
+          error={error}
+          subtitle={subtitle}
+          files={files}
+          subtitles={subtitles}
+          settings={settings}
+          readonly={row.readonly}
+          load={load}
+          clear={() => {
+            setSubtitle(undefined)
+            setCues([])
+          }}
+          save={save}
+          importSubtitle={importSubtitle}
+          changeEncoding={changeSubtitleEncoding}
+          setSettings={setSettings}
+        /></Accordion.Panel></Accordion.Item></Accordion>}
+        full={() => void toggleFullscreen()}
+      />
+
     </div>
-    <div ref={strip} className="video-strip" aria-label="資料夾影片">{videos.map(entry=><button key={entry.id} className={'video-tile '+(entry.id===file.id?'active':'')} aria-label={'播放 '+entry.name} title={entry.name} onClick={()=>void selectVideo(entry)}>
-      {entry.thumb?<img src={entry.thumb} alt="" onError={e=>{e.currentTarget.style.display='none'}}/>:<span className="video-symbol">▶</span>}<span>{entry.name}</span>
-    </button>)}</div>
-    <Modal opened={options||settingsOpened} onClose={()=>{setOptions(false);closeSettings()}} title="字幕設定" size="lg" zIndex={450}><Stack>{error&&<Alert color="orange">{error}</Alert>}
-    <Group gap="xs"><Button size="xs" variant="light" onClick={()=>void load()}>載入字幕／拖到播放器</Button><Button size="xs" variant="default" disabled={!subtitle} onClick={()=>{setSubtitle(undefined);setCues([])}}>關閉字幕</Button><Button size="xs" variant="light" disabled={!subtitle||row.readonly} onClick={()=>void save()}>保存字幕設定</Button>{subtitle&&!subtitle.portable&&<Button size="xs" disabled={row.readonly} onClick={async()=>{const result=await run({action:'subtitle',rowId:row.rowId,externalToken:subtitle.token,import:true,encoding:settings.encoding});apply(result?.subtitle)}}>匯入字幕可攜副本</Button>}</Group>
-    {files.length>1&&<Select label="選擇拖入的字幕" data={files.map((f,i)=>({value:String(i),label:f.name}))} onChange={v=>v!==null&&void load(undefined,files[Number(v)])}/>}
-    {subtitles.length>0&&<div className="subtitle-list">{subtitles.map(s=><Button key={s.id} size="xs" variant="subtle" draggable onDragStart={e=>e.dataTransfer.setData('application/x-media-subtitle',s.id)} onClick={()=>void load(s)}>{s.name}</Button>)}</div>}
-    {subtitle&&<details open><summary>字幕設定：{subtitle.name}（{subtitle.portable?'資料夾內來源':'本次臨時來源'}）</summary><Group align="end"><NumberInput label="延後秒數（正值＝晚出現）" decimalScale={1} step={.1} min={-86400} max={86400} value={settings.offset} onChange={v=>typeof v==='number'&&setSettings(s=>({...s,offset:v}))}/><Button size="xs" onClick={()=>setSettings(s=>({...s,offset:Math.round((s.offset-.1)*10)/10}))}>提早 0.1 秒</Button><Button size="xs" onClick={()=>setSettings(s=>({...s,offset:Math.round((s.offset+.1)*10)/10}))}>延後 0.1 秒</Button><NumberInput label="字幕大小" min={10} max={80} value={settings.size} onChange={v=>typeof v==='number'&&setSettings(s=>({...s,size:v}))}/><NumberInput label="距畫面底部 %" min={0} max={80} value={settings.bottom} onChange={v=>typeof v==='number'&&setSettings(s=>({...s,bottom:v}))}/><ColorInput label="字幕顏色" value={settings.color} onChange={v=>/^#[0-9a-f]{6}$/i.test(v)&&setSettings(s=>({...s,color:v}))}/><ColorInput label="字幕背景" value={settings.background} onChange={v=>/^#[0-9a-f]{6}$/i.test(v)&&setSettings(s=>({...s,background:v}))}/><Select label="文字編碼" value={settings.encoding} data={['utf-8','big5','shift_jis']} onChange={async v=>{if(!v)return;try{const result=await window.explorer.request({action:'subtitle',rowId:row.rowId,...(subtitles.some(s=>s.id===subtitle.token)?{fileId:subtitle.token}:{externalToken:subtitle.token}),encoding:v});if(result.subtitle){const parsed=parseSubtitles(result.subtitle.text);setCues(parsed);setSubtitle(result.subtitle);setSettings(s=>({...s,encoding:v as SubtitlePrefs['encoding']}))}}catch(e){setError(String(e))}}}/><Button variant="default" size="xs" onClick={()=>setSettings(defaultSubtitle())}>重設</Button></Group><small className="muted">固定延遲無法修復逐漸累積的時間差；請改用對應版本字幕。設定按影片與字幕來源保存。</small></details>}
-    </Stack></Modal>
+
+    <div
+      ref={strip}
+      className="video-strip"
+      aria-label={tr('資料夾影片')}
+    >
+      {videos.map(entry => <button
+        key={entry.id}
+        className={'video-tile ' + (entry.id === file.id ? 'active' : '')}
+        aria-label={tr('播放 ') + entry.name}
+        title={entry.name}
+        onClick={() => selectVideo(entry)}
+      >
+        {entry.thumb ? <img
+          src={entry.thumb}
+          alt=""
+          onError={event => {
+            event.currentTarget.style.display = 'none'
+          }}
+        /> : <span className="video-symbol">
+          <Icon
+            name="play"
+            size={24}
+          />
+        </span>}
+        <span>
+          {entry.name}
+        </span>
+      </button>)}
+    </div>
+
   </div>
 }

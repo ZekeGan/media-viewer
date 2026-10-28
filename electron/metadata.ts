@@ -1,26 +1,22 @@
 import type { MetadataPreview } from '../shared/explorer'
-export async function limitedBytes(response:Response,limit:number) {
-  if(!response.ok)throw new Error(`來源無法取得（HTTP ${response.status}）`)
-  if(Number(response.headers.get('content-length')??0)>limit)throw new Error('來源回應過大')
-  const reader=response.body?.getReader();if(!reader)throw new Error('來源沒有內容');const chunks:Uint8Array[]=[];let size=0
-  try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit)throw new Error('來源回應過大');chunks.push(value)}}finally{await reader.cancel()}
-  return Buffer.concat(chunks)
-}
-const decode=(value:unknown)=>String(value??'').replace(/&(amp|quot|apos|lt|gt|#\d+|#x[0-9a-f]+);/gi,(m,key:string)=>{const common:Record<string,string>={amp:'&',quot:'"',apos:"'",lt:'<',gt:'>'};if(key[0]!=='#')return common[key.toLowerCase()]??m;const n=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):Number(key.slice(1));return n>0&&n<=0x10ffff?String.fromCodePoint(n):m})
+import {limitedBytes,decode} from './metadata-common'
+export {limitedBytes} from './metadata-common'
+import {sourceForUrl,type MetadataSourceId} from '../shared/sources'
+import {publicMetadata} from './metadata-public'
 export async function ehMetadata(source:string,fetcher:typeof fetch=fetch):Promise<{preview:Omit<MetadataPreview,'token'>;cover?:{bytes:Buffer;mime:string;ext:string}}>{
   if(typeof source!=='string'||source.length>2048)throw new Error('圖庫網址不合法')
-  let url:URL;try{url=new URL(source)}catch{throw new Error('請貼上完整的 E-Hentai 圖庫網址')}
+  let url:URL;try{url=new URL(source)}catch{throw new Error('請貼上完整的 E-Hentai／ExHentai 圖庫網址')}
   const match=/^\/g\/(\d{1,12})\/([0-9a-f]{10})\/?$/i.exec(url.pathname)
-  if(url.protocol!=='https:'||url.hostname!=='e-hentai.org'||url.port||url.username||url.password||!match)throw new Error('只接受 https://e-hentai.org/g/ID/token/ 公開圖庫網址；頁面連結及需登入來源未支援')
+  if(url.protocol!=='https:'||!['e-hentai.org','exhentai.org'].includes(url.hostname)||url.port||url.username||url.password||!match)throw new Error('只接受 E-Hentai／ExHentai 的完整公開圖庫網址（/g/ID/token/）；其他頁面連結未支援')
   const response=await fetcher('https://api.e-hentai.org/api.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'gdata',gidlist:[[Number(match[1]),match[2]]],namespace:1}),signal:AbortSignal.timeout(15000),redirect:'error'})
   const data=JSON.parse((await limitedBytes(response,2*1024*1024)).toString()).gmetadata?.[0]
   if(!data||data.error||Number(data.gid)!==Number(match[1])||String(data.token).toLowerCase()!==match[2].toLowerCase())throw new Error(`無法取得公開圖庫資料：${String(data?.error??'身分不符／來源可能需登入')}`)
   const title=decode(data.title).slice(0,10000);if(!title)throw new Error('來源缺少標題')
-  const values:MetadataPreview['values']=[{key:'TITLE',type:'string',value:title},{key:'TITLE_ORIGINAL',type:'string',value:decode(data.title_jpn).slice(0,10000)},{key:'TAGS',type:'tags',value:Array.isArray(data.tags)?data.tags.filter((v:unknown)=>typeof v==='string'&&v.length>0&&v.length<=100).slice(0,200):[]},{key:'GALLERY_CATEGORY',type:'string',value:decode(data.category).slice(0,100)},{key:'UPLOADER',type:'string',value:decode(data.uploader).slice(0,100)},{key:'GALLERY_URL',type:'string',value:`https://e-hentai.org/g/${match[1]}/${match[2]}/`}]
+  const values:MetadataPreview['values']=[{key:'TITLE',type:'string',value:title},{key:'TITLE_ORIGINAL',type:'string',value:decode(data.title_jpn).slice(0,10000)},{key:'TAGS',type:'tags',value:Array.isArray(data.tags)?data.tags.filter((v:unknown)=>typeof v==='string'&&v.length>0&&v.length<=100).slice(0,200):[]},{key:'GALLERY_CATEGORY',type:'string',value:decode(data.category).slice(0,100)},{key:'UPLOADER',type:'string',value:decode(data.uploader).slice(0,100)},{key:'GALLERY_URL',type:'string',value:`https://${url.hostname}/g/${match[1]}/${match[2]}/`}]
   if(Number.isFinite(Number(data.posted))&&Number(data.posted)>0)values.push({key:'GALLERY_POSTED_UTC',type:'string',value:new Date(Number(data.posted)*1000).toISOString()})
   if(Number.isSafeInteger(Number(data.filecount))&&Number(data.filecount)>=0)values.push({key:'PAGE_COUNT',type:'number',value:Number(data.filecount)})
   let cover:{bytes:Buffer;mime:string;ext:string}|undefined
-  const preview:Omit<MetadataPreview,'token'>={title:title.slice(0,200),source:`https://e-hentai.org/g/${match[1]}/${match[2]}/`,values}
+  const preview:Omit<MetadataPreview,'token'>={title:title.slice(0,200),provider:url.hostname==='exhentai.org'?'exh':'eh',source:`https://${url.hostname}/g/${match[1]}/${match[2]}/`,values}
   if(typeof data.thumb==='string'){
     try{const image=new URL(data.thumb);if(image.protocol!=='https:'||image.hostname!=='ehgt.org'||image.port||image.username||image.password)throw new Error('封面來源未允許');const bytes=await limitedBytes(await fetcher(image,{signal:AbortSignal.timeout(15000),redirect:'error'}),10*1024*1024);const [ext,mime]=bytes[0]===255&&bytes[1]===216?['jpg','image/jpeg']:bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?['png','image/png']:[];if(!ext||!mime)throw new Error('封面格式未支援');cover={bytes,ext,mime};preview.image=`data:${mime};base64,${bytes.toString('base64')}`}
     catch{preview.values.push({key:'COVER_STATUS',type:'string',value:'封面縮圖無法取得；可略過或手動匯入'})}
@@ -70,7 +66,12 @@ export async function steamMetadata(source:string,fetcher:typeof fetch=fetch):Pr
   }
   return{preview,cover}
 }
-export async function metadata(source:string,fetcher:typeof fetch=fetch){
-  if(typeof source!=="string")throw new Error("來源網址不合法")
-  return /^\d+$/.test(source.trim())||/^https:\/\/store\.steampowered\.com(?:\/|$)/i.test(source.trim())?steamMetadata(source,fetcher):ehMetadata(source,fetcher)
+export async function metadata(source:string,fetcher:typeof fetch=fetch,expected?:MetadataSourceId){
+  if(typeof source!=='string'||source.length>2048)throw new Error('來源網址不合法')
+  source=source.trim()
+  const provider=sourceForUrl(source)
+  if(!provider||expected&&provider!==expected)throw new Error('來源網址與選定來源不符或未支援')
+  if(provider==='steam')return steamMetadata(source,fetcher)
+  if(provider==='eh'||provider==='exh')return ehMetadata(source,fetcher)
+  return publicMetadata(provider,source,fetcher)
 }

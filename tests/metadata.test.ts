@@ -1,6 +1,18 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {metadata,steamMetadata} from '../electron/metadata'
+test('ExHentai keeps its gallery identity while using the no-key metadata endpoint',async()=>{
+ const source='https://exhentai.org/g/12/abcdef0123/'
+ const fetcher=(async(input:RequestInfo|URL,init?:RequestInit)=>{
+  assert.equal(String(input),'https://api.e-hentai.org/api.php')
+  assert.deepEqual(JSON.parse(String(init?.body)).gidlist,[[12,'abcdef0123']])
+  assert.equal(new Headers(init?.headers).has('Authorization'),false)
+  return new Response(JSON.stringify({gmetadata:[{gid:12,token:'abcdef0123',title:'Example',title_jpn:'原文',tags:['tag']}] }))
+ })as typeof fetch
+ const result=await metadata(source,fetcher,'exh')
+ assert.equal(result.preview.provider,'exh');assert.equal(result.preview.source,source);assert.equal(result.preview.values.find(value=>value.key==='GALLERY_URL')?.value,source)
+ await assert.rejects(metadata(source,fetcher,'eh'),/不符/)
+})
 const payload=(overrides:Record<string,unknown>={})=>({'620':{success:true,data:{steam_appid:620,name:'Portal &amp; Test',type:'game',developers:['Valve'],publishers:['Valve'],genres:[{description:'Puzzle'}],short_description:'<b>Test</b>',release_date:{coming_soon:false,date:'18 Apr, 2011'},header_image:'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/620/header.jpg',...overrides}}})
 test('Steam accepts official URL/App ID, keeps store date semantics and limits image hosts',async()=>{
  const requests:string[]=[]

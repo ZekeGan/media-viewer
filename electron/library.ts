@@ -1,3 +1,4 @@
+import {stabilizeQuery,type QueryField} from '../shared/query'
 import {projectImageCells} from '../shared/layouts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -7,6 +8,7 @@ import { atomicJson, ensureFolder, exists, fingerprint, folderFile, keyPath, mes
 import { hideDirectories } from './hidden'
 import { detectGame, insideAppBundle, GameProbeLimit } from './game-detection'
 import { identifyImage } from '../shared/images'
+import type { LegacyImportResult } from '../shared/model'
 
 interface PlanEntry { dir: string; record: FolderRecord; files: { path: string; hash: string }[] }
 interface Plan { preview: CleanupPreview; entries: PlanEntry[]; rowId?: string; projectId?: string }
@@ -50,15 +52,15 @@ export class Library {
   }
   private async protectedAncestor(dir: string) {
     if (insideAppBundle(dir)) return dir
-    let parent = path.dirname(dir), distance = 0
+    let parent = path.dirname(dir)
     while (parent !== path.dirname(parent)) {
       await safePath(parent, parent)
       const record = await readFolder(parent).catch(e => { if (missing(e)) return undefined; throw e })
       // Saved/manual boundaries always apply, including overlapping project roots.
-      // For unregistered games, inspect only the nearest four ancestors.
+      // Unregistered runtime boundaries also apply to deep internal paths.
       const state = record?.details?.boundary
-      if (state?.state !== 'not-game' && (state || (record || distance < 4) && await detectGame(parent))) return parent
-      parent = path.dirname(parent); distance++
+      if (state?.state !== 'not-game' && (state || await detectGame(parent))) return parent
+      parent = path.dirname(parent)
     }
     return undefined
   }
@@ -222,6 +224,19 @@ export class Library {
   async saveProject(next: Project) {
     validateProject(next)
     const linked = this.linked(next.projectId), current = await this.currentProject(linked)
+    // Upgrade old saved strings only during an explicit project save. Resolve
+    // against the old aliases before a rename; never infer an ambiguous identity.
+    if(next.savedSearches?.some(search=>!search.queryAst)){
+      const fields:QueryField[]=[]
+      for(const entry of this.state.projects){
+        const project=entry.projectId===current.projectId?current:entry.project
+        if(!project)continue
+        const known=new Map(project.fieldBindings.map(field=>[field.attributeId,{key:field.alias,type:field.type,attributeId:field.attributeId,projectId:entry.projectId}]))
+        for(const row of this.state.rows.filter(row=>row.projectId===entry.projectId))for(const attribute of [...row.record?.attributes??[],...row.record?.projectOverrides[entry.projectId]??[]])if(!known.has(attribute.attributeId))known.set(attribute.attributeId,{key:attribute.key,type:attribute.type,attributeId:attribute.attributeId,projectId:entry.projectId})
+        fields.push(...known.values())
+      }
+      next={...next,savedSearches:next.savedSearches.map(search=>{if(search.queryAst)return search;try{return {...search,queryAst:stabilizeQuery(search.query,current.savedSearches?.some(old=>old.id===search.id&&old.query===search.query)?fields:fields.map(field=>field.projectId===next.projectId?{...field,key:next.fieldBindings.find(binding=>binding.attributeId===field.attributeId)?.alias??field.key}:field))}}catch{return search}})}
+    }
     if(await this.protectedAncestor(linked.root))throw new Error('專案位於遊戲／App 邊界內，無法修改設定')
     if (next.rootFolderId !== current.rootFolderId || JSON.stringify(next.excludedRelativePaths) !== JSON.stringify(current.excludedRelativePaths)) throw new Error('根身分與清理排除須由受控操作修改')
     await atomicJson(projectFile(linked.root, next.projectId), { ...next, revision: next.revision + 1 }, next.revision)
@@ -329,6 +344,11 @@ export class Library {
     await safePath(root, row.path)
     if (writable && (insideAppBundle(row.path) || await this.protectedAncestor(row.path))) throw new Error('此位置受遊戲／App 邊界保護，無法寫入')
     if (row.record) { const current = await readFolder(row.path); if (current.folderId !== row.record.folderId) throw new Error('目前位置已是另一資料夾，請重新掃描') }
+    return row
+  }
+  async readableRow(rowId:string) {
+    const row=await this.checkedRow(rowId)
+    if(!row.record||row.readonly||row.stopped||row.error||row.duplicate||await this.protectedAncestor(row.path))throw new Error('此資料夾尚未建立有效記錄或受遊戲邊界保護')
     return row
   }
   async refreshRecord(rowId:string) {
@@ -566,7 +586,7 @@ export class Library {
     this.legacyPlan = { token, hash: await fingerprint(file), views }
     return { token, projects, warnings }
   }
-  async importLegacy(token: string, ids: string[], depth: Project['depth']) {
+  async importLegacy(token: string, ids: string[], depth: Project['depth']): Promise<LegacyImportResult> {
     const plan = this.legacyPlan, base = path.join(this.userData, 'app-data')
     if (!plan || plan.token !== token || plan.hash !== await fingerprint(path.join(base, 'view.json'))) throw new Error('匯入預覽已失效')
     const backup = path.join(this.userData, 'legacy-backups', randomUUID())
@@ -620,6 +640,6 @@ export class Library {
       } catch (e) { warnings.push(`${view.name}: ${message(e)}`) }
     }
     await this.scan()
-    return `已建立：${imported.join('、') || '無'}\n舊檔備份：${backup}\n${warnings.join('\n')}`
+    return { imported, warnings, backup }
   }
 }

@@ -15,6 +15,7 @@
 | CELL／模板 | [EDITOR_DESIGN](EDITOR_DESIGN.md)、[CELL_CATALOG](CELL_CATALOG.md) | Editor、Card、shared/layouts |
 | 搜尋 | [SEARCH_DESIGN](SEARCH_DESIGN.md) | shared/query、electron/search-index、SearchDialog |
 | 相簿／漫畫 | [ALBUM](ALBUM_VIEWER_DESIGN.md)、[MANGA](MANGA_VIEWER_DESIGN.md) | Gallery、Reader、FolderContent |
+| ZIP／CBZ／PDF | [文件檢視器](DOCUMENT_VIEWER_DESIGN.md) | DocumentViewer、electron/archive、media protocol |
 | 遊戲／引擎邊界 | [GAME](GAME_VIEWER_DESIGN.md)、[偵測](GAME_ENGINE_DETECTION.md) | FolderContent、explorer、game-detection |
 | 影片／字幕 | [VIDEO](VIDEO_VIEWER_DESIGN.md) | VideoViewer、explorer、shared/subtitles |
 | 外部資料來源 | [METADATA_ENRICHMENT](METADATA_ENRICHMENT.md) | electron/metadata、explorer |

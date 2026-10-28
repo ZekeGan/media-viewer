@@ -47,7 +47,7 @@ test('breadcrumbs stay inside the project and depth uses indexed folders, not pr
 test('editor field sources distinguish shared and current-project private data without importing foreign overrides',async t=>{
  const{media,lib}=await fixture(t),s=await lib.create(media,{name:'Fields',mediaCategory:'album',depth:{mode:'through',level:1}}),root=s.structure![0],id=root.projectId
  const attribute=(attributeId:string,type='string')=>({attributeId,key:attributeId,type,value:'original',source:'manual'})
- const record={...root.record!,attributes:[attribute('common'),attribute('unsupported','boolean')],projectOverrides:{[id]:[attribute('common'),attribute('private-only')],foreign:[attribute('foreign-only')]}}
+ const record={...root.record!,attributes:[attribute('common'),attribute('unsupported','rich-text')],projectOverrides:{[id]:[attribute('common'),attribute('private-only')],foreign:[attribute('foreign-only')]}}
  const rows=[{...root,record},{...root,projectId:'foreign',record:{...record,attributes:[attribute('foreign-row')]}}]
  assert.deepEqual(editorFields(rows,id).map(f=>({id:f.attributeId,shared:f.shared,private:f.private,conflict:f.conflict})),[{id:'common',shared:true,private:true,conflict:false},{id:'private-only',shared:false,private:true,conflict:false}])
  const conflicting={...record,projectOverrides:{[id]:[attribute('common','number')]}}

@@ -1,3 +1,6 @@
+import { archiveIndex, archiveImage, type ArchiveIndex } from './archive'
+import { httpUrl, validFieldValue } from '../shared/fields'
+import { sourceForUrl, type MetadataSourceId } from '../shared/sources'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
@@ -6,23 +9,27 @@ import { Readable } from 'node:stream'
 import type { Library } from './library'
 import { atomicJson, exists, folderFile, readFolder, relPath, safePath, saveFolder, within } from './files'
 import { DATA_DIR, validateDetails, type Attribute, type FolderRecord } from '../shared/model'
-import { newDetails, type ContentResult, type ExplorerRequest, type ExplorerResponse, type MediaEntry, type MetadataPreview } from '../shared/explorer'
+import { newDetails, type ContentResult, type ExplorerRequest, type ExplorerResponse, type MediaEntry, type MetadataPreview, type OverviewResult } from '../shared/explorer'
 import { SearchIndex } from './search-index'
+import { completionNotice } from '../shared/notifications'
 import {projectImageCells} from '../shared/layouts'
 import { metadata } from './metadata'
 import { parseSubtitles } from '../shared/subtitles'
 import { imageTypes } from '../shared/images'
 
-const types: Record<string,[MediaEntry['kind'],string]> = { '.png':['image','image/png'],'.jpg':['image','image/jpeg'],'.jpeg':['image','image/jpeg'],'.gif':['image','image/gif'],'.webp':['image','image/webp'],'.mp4':['video','video/mp4'],'.webm':['video','video/webm'],'.mkv':['video','video/x-matroska'],'.avi':['video','video/x-msvideo'],'.mov':['video','video/quicktime'],'.srt':['subtitle','text/plain'],'.vtt':['subtitle','text/vtt'] }
+const types: Record<string,[MediaEntry['kind'],string]> = { '.pdf':['pdf','application/pdf'],'.zip':['archive','application/zip'],'.cbz':['archive','application/zip'],'.png':['image','image/png'],'.jpg':['image','image/jpeg'],'.jpeg':['image','image/jpeg'],'.gif':['image','image/gif'],'.webp':['image','image/webp'],'.mp4':['video','video/mp4'],'.webm':['video','video/webm'],'.mkv':['video','video/x-matroska'],'.avi':['video','video/x-msvideo'],'.mov':['video','video/quicktime'],'.srt':['subtitle','text/plain'],'.vtt':['subtitle','text/vtt'] }
 const key = (v: unknown): v is string => typeof v === 'string' && /^[\w-]{1,100}$/.test(v)
 const mediaNames=new Intl.Collator('zh-Hant',{numeric:true})
 export interface DesktopOperations {
+  external?(url: string): Promise<void>
   choose(kind: 'exe'|'folder'|'subtitle'): Promise<string|undefined>
   open(file: string): Promise<void>; launch(file: string,args: string[]): Promise<void>
   thumbnail(file: string, mime?:string, url?:string): Promise<Buffer>
 }
 export class Explorer {
   readonly index: SearchIndex
+  private archives=new Map<string,{file:string;index:ArchiveIndex}>()
+  private overviewPages=new Map<string,{rootId:string;folderId:string;scope:string;folders:string[];folder:number;contentCursor?:string;expires:number}>()
   private files = new Map<string,{rowId:string;name:string;file:string;mime:string;portable?:boolean}>()
   private externals = new Map<string,{rowId:string;file:string}>()
   private previews = new Map<string,{preview:MetadataPreview;cover?:{bytes:Buffer;mime:string;ext:string};expires:number}>()
@@ -44,7 +51,7 @@ export class Explorer {
   }
   async content(rowId: string,limit?:number,cursor?:string): Promise<ContentResult> {
     if(limit!==undefined&&(!Number.isInteger(limit)||limit<1||limit>500)||cursor!==undefined&&(typeof cursor!=='string'||cursor.length>150||limit===undefined))throw new Error('內容分批設定不合法')
-    const row = await this.library.checkedRow(rowId), notices: string[] = [], entries: MediaEntry[] = []
+    const row = await this.library.readableRow(rowId), notices: string[] = [], entries: MediaEntry[] = []
     let offset=0,token='',names:string[]
     for(const [id,session]of this.contentPages)if(session.expires<Date.now())this.contentPages.delete(id)
     if(cursor){
@@ -53,7 +60,7 @@ export class Explorer {
       names=session.names;token=match![1];session.expires=Date.now()+120000
     }else{
       names=(await fs.readdir(row.path,{withFileTypes:true})).filter(entry=>entry.name.toLowerCase()!==DATA_DIR&&!entry.isSymbolicLink()&&(entry.isFile()||entry.isDirectory())).map(entry=>entry.name).sort((a,b)=>mediaNames.compare(a,b)||(a<b?-1:a>b?1:0))
-      if(limit&&names.length>limit){for(const [id,session]of this.contentPages)if(session.rowId===rowId)this.contentPages.delete(id);while(this.contentPages.size>=4)this.contentPages.delete(this.contentPages.keys().next().value!);token=randomUUID();this.contentPages.set(token,{rowId,path:row.path,folderId:row.record?.folderId,names,expires:Date.now()+120000})}
+      if(limit&&names.length>limit){while(this.contentPages.size>=8)this.contentPages.delete(this.contentPages.keys().next().value!);token=randomUUID();this.contentPages.set(token,{rowId,path:row.path,folderId:row.record?.folderId,names,expires:Date.now()+120000})}
     }
     const batch=names.slice(offset,limit?offset+limit:undefined)
     for (let start=0;start<batch.length;start+=16) await Promise.all(batch.slice(start,start+16).map(async name=>{
@@ -77,7 +84,7 @@ export class Explorer {
     return { entries,notices,...(limit?{total:names.length+(row.record?.details?.subtitles?.length??0),...(!complete?{nextCursor:token+':'+next}:{})}:{}) }
   }
   private async file(rowId: string,id: string) {
-    const row = await this.library.checkedRow(rowId), entry = this.files.get(`${rowId}/${id}`)
+    const row = await this.library.readableRow(rowId), entry = this.files.get(`${rowId}/${id}`)
     if (!entry || entry.rowId!==rowId) throw new Error('媒體不存在或需重新載入')
     await safePath(row.path,entry.file)
     if (!entry.portable && path.dirname(entry.file)!==row.path) throw new Error('媒體超出直接內容範圍')
@@ -98,7 +105,7 @@ export class Explorer {
         const version=new URL(request.url).searchParams.get('v')===`${entry.stat.size}-${entry.stat.mtimeMs}`
         return new globalThis.Response(new Uint8Array(bytes),{headers:{'Content-Type':'image/jpeg','Cache-Control':version?'private, max-age=86400, immutable':'no-cache'}})
       }
-      if(!/^(image|video)\//.test(entry.mime)) return new globalThis.Response(null,{status:415})
+      if(!/^(image|video)\//.test(entry.mime)&&entry.mime!=='application/pdf') return new globalThis.Response(null,{status:415})
       const size=entry.stat.size, headers:Record<string,string>={'Content-Type':entry.mime,'Accept-Ranges':'bytes','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
       const range=request.headers.get('range'); let start=0,end=size-1,status=200
       if(range) {
@@ -114,6 +121,15 @@ export class Explorer {
       const stream=createReadStream(entry.file,{start,end}); request.signal.addEventListener('abort',()=>stream.destroy(),{once:true})
       return new globalThis.Response(Readable.toWeb(stream) as ReadableStream,{status,headers})
     } catch { return new globalThis.Response(null,{status:404}) }
+  }
+  async archiveStream(rowId:string,fileId:string,token:string,number:string):Promise<globalThis.Response> {
+    try {
+      const file=await this.file(rowId,fileId),cached=this.archives.get(token),index=cached?.index
+      if(file.mime!=='application/zip'||!index||cached?.file!==file.file||!/^\d{1,5}$/.test(number))throw new Error('壓縮頁面已失效')
+      const entry=index.images[Number(number)];if(!entry)throw new Error('壓縮頁面不存在')
+      const bytes=await archiveImage(file.file,index,entry)
+      return new globalThis.Response(new Uint8Array(bytes),{headers:{'Content-Type':entry.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}})
+    }catch{return new globalThis.Response(null,{status:404})}
   }
   private async thumbnail(cache:string,source:string,mime:string,size:number,signal:AbortSignal,url:string){
     const jpeg=(b:Buffer)=>b.length>4&&b[0]===255&&b[1]===216&&b.at(-2)===255&&b.at(-1)===217
@@ -143,7 +159,7 @@ export class Explorer {
   }
   private checkValue(a:Attribute,record:FolderRecord) {
     if(!key(a.attributeId)||typeof a.key!=='string'||a.key.length>100) throw new Error('欄位身分不合法')
-    const valid = a.type==='string' ? typeof a.value==='string'&&a.value.length<=10000 : a.type==='tags' ? Array.isArray(a.value)&&a.value.length<=200&&a.value.every(v=>typeof v==='string'&&v.length>0&&v.length<=100) : a.type==='number' ? typeof a.value==='number'&&Number.isFinite(a.value) : a.type==='datetime' ? typeof a.value==='string'&&/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/.test(a.value)&&!Number.isNaN(Date.parse(a.value)) : false
+    const valid = validFieldValue(a.type, a.value)
     if(!valid) throw new Error(`欄位 ${a.key} 的值與型別 ${a.type} 不符`)
     const old=record.attributes.find(v=>v.attributeId===a.attributeId); if(old&&old.type!==a.type) throw new Error('不能改變既有欄位型別')
   }
@@ -152,7 +168,7 @@ export class Explorer {
     const {row,record}=await this.record(rowId,revision), project=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)!.project!
     const allowed=new Map([...project.fieldBindings.map(f=>[f.attributeId,{key:f.alias,type:f.type}] as const),...record.attributes.map(a=>[a.attributeId,a] as const)])
     const target=privateValues?(record.projectOverrides[row.projectId]??[]):record.attributes
-    for(const value of values) { this.checkValue(value,record); const binding=allowed.get(value.attributeId); if(!binding||binding.type!==value.type) throw new Error('欄位未配置或型別不符'); const old=target.find(a=>a.attributeId===value.attributeId); if(old&&old.type!==value.type) throw new Error('覆寫型別不符'); const a={...value,key:binding.key??('alias' in binding?binding.alias:''),source:'manual'}; const i=target.findIndex(a=>a.attributeId===value.attributeId); if(i<0)target.push(a);else target[i]=a }
+    for(const value of values) { this.checkValue(value,record); const binding=allowed.get(value.attributeId); if(!binding||binding.type!==value.type) throw new Error('欄位未配置或型別不符'); if(value.type==='enum'&&!validFieldValue(value.type,value.value,project.fieldBindings.find(field=>field.attributeId===value.attributeId)?.options))throw new Error('單選值不在選項內'); const old=target.find(a=>a.attributeId===value.attributeId); if(old&&old.type!==value.type) throw new Error('覆寫型別不符'); const a={...value,key:binding.key??('alias' in binding?binding.alias:''),source:'manual'}; delete a.sourceRecord; const i=target.findIndex(a=>a.attributeId===value.attributeId); if(i<0)target.push(a);else target[i]=a }
     if(privateValues)record.projectOverrides[row.projectId]=target;else record.attributes=target
     await saveFolder(row.path,record,revision)
   }
@@ -166,15 +182,25 @@ export class Explorer {
     if(req.action==='visit')return this.after(await this.library.visit(req.rowId))
     if(!req||typeof req.action!=='string')throw new Error('無效的操作')
     switch(req.action) {
-      case 'search': this.index.sync(this.library.snapshot()); return {search:this.index.search(req.query,req.projectId,req.offset,req.limit)}
-      case 'rebuildIndex': this.index.sync(this.library.snapshot(),true);return {message:'索引已由可攜資料重建'}
+      case 'archive': {
+        const file=await this.file(req.rowId,req.fileId)
+        if(file.mime!=='application/zip')throw new Error('不是 ZIP／CBZ')
+        const index=await archiveIndex(file.file),token=randomUUID()
+        while(this.archives.size>=4)this.archives.delete(this.archives.keys().next().value!)
+        this.archives.set(token,{file:file.file,index})
+        return {content:{entries:index.images.map((entry,i)=>({id:token+'-'+i,name:entry.name,kind:'image',mime:entry.mime,size:entry.size,modified:index.modified,url:`media://archive/${req.rowId}/${req.fileId}/${token}/${i}`})),notices:[]}}
+      }
+      case 'overview': return {overview:await this.overview(req)}
+      case 'openExternal': if(!httpUrl(req.url)||!this.desktop.external)throw new Error('網址無法開啟');await this.desktop.external(req.url);return {}
+      case 'search': this.index.sync(this.library.snapshot()); return {search:this.index.search(req.query,req.projectId,req.offset,req.limit,req.queryAst)}
+      case 'rebuildIndex': this.index.sync(this.library.snapshot(),true);return {notice:{level:'success',message:'索引已由可攜資料重建'}}
       case 'content': return {content:await this.content(req.rowId,req.limit,req.cursor)}
       case 'attributes': await this.attributes(req.rowId,req.revision,req.values,req.private);return this.after(await this.library.refreshRecord(req.rowId))
       case 'batch': {
         if(!Array.isArray(req.rows)||!req.rows.length||req.rows.length>1000||!['replace','add','remove'].includes(req.mode)||new Set(req.rows.map(r=>r.rowId)).size!==req.rows.length)throw new Error('批次範圍不合法')
         const failed:string[]=[];let saved=0
         for(const item of req.rows)try { const {row,record}=await this.record(item.rowId,item.revision),p=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)!.project!,field=p.fieldBindings.find(f=>f.attributeId===req.attributeId);if(!field)throw new Error('專案未配置欄位');let value=req.value; if(field.type==='tags'&&req.mode!=='replace') { if(!Array.isArray(req.value))throw new Error('標籤應為清單'); const old=record.attributes.find(a=>a.attributeId===field.attributeId)?.value??[]; if(!Array.isArray(old))throw new Error('型別衝突'); value=req.mode==='add'?[...new Set([...old,...req.value])]:old.filter(v=>!(req.value as unknown[]).includes(v)) } else if(req.mode!=='replace')throw new Error('只有標籤支援新增／移除'); await this.attributes(item.rowId,item.revision,[{attributeId:field.attributeId,key:field.alias,type:field.type,value,source:'manual'}],false);saved++ }catch(e){failed.push(`${item.rowId}: ${String(e)}`)}
-        for(const item of req.rows)await this.library.refreshRecord(item.rowId).catch(()=>{});const snapshot=this.library.snapshot();this.index.sync(snapshot);return {snapshot,message:`批次保存 ${saved} 筆${failed.length?'\n失敗（已成功項目保留）：\n'+failed.join('\n'):''}`}
+        for(const item of req.rows)await this.library.refreshRecord(item.rowId).catch(()=>{});const snapshot=this.library.snapshot();this.index.sync(snapshot);return {snapshot,notice:completionNotice(saved,failed.length,`批次保存 ${saved} 筆${failed.length?'\n失敗（已成功項目保留）：\n'+failed.join('\n'):''}`)}
       }
       case 'reading': return this.after(await this.details(req.rowId,req.revision,d=>{d.reading=req.prefs}))
       case 'playback': { const f=await this.file(req.rowId,req.fileId);if(!f.mime.startsWith('video/'))throw new Error('不是影片');return this.after(await this.details(req.rowId,req.revision,d=>{d.playback??={};const p=d.playback[req.fileId]??{time:0};p.time=req.time;if(req.subtitle!==undefined)p.subtitle=req.subtitle;if(req.settings){p.settings??={};if(!req.subtitle)throw new Error('字幕來源未指定');p.settings[req.subtitle]=req.settings}d.playback[req.fileId]=p})) }
@@ -192,7 +218,7 @@ export class Explorer {
         const file=target.relative?path.join(row.path,target.path):target.path;if(target.relative)await safePath(row.path,file);else if(!path.isAbsolute(file))throw new Error('外部路徑不合法')
         const stat=await fs.stat(file)
         if(target.kind==='exe'){if(!stat.isFile()||path.extname(file).toLowerCase()!=='.exe')throw new Error('EXE 已失效');await this.desktop.launch(file,target.args)}else{if(!stat.isDirectory())throw new Error('資料夾已失效');await this.desktop.open(file)}
-        return {message:'已開啟指定目標'}
+        return {notice:{level:'success',message:'已開啟指定目標'}}
       }
       case 'chooseSubtitle': {
         return this.chooseSubtitle(req.rowId)
@@ -212,15 +238,50 @@ export class Explorer {
         if(req.assetId===null)delete record.details.cellImages[cell.attributeId??cell.cellId];else record.details.cellImages[cell.attributeId??cell.cellId]=req.assetId
         await saveFolder(row.path,record,req.revision);break
       }
-      case 'metadataPreview': return {preview:await this.metadataPreview(req.source)}
+      case 'metadataPreview': return {preview:await this.metadataPreview(req.source,req.provider)}
       case 'metadataApply': await this.applyMetadata(req);break
       default: throw new Error('不支援的操作')
     }
     return this.after(await this.library.scan())
   }
+  private async overview(request:Extract<ExplorerRequest,{action:'overview'}>):Promise<OverviewResult> {
+    const limit=request.limit??96
+    if(!Number.isInteger(limit)||limit<1||limit>200||!['current','descendants'].includes(request.scope))throw new Error('檔案總覽範圍不合法')
+    const root=await this.library.readableRow(request.rowId),snapshot=this.library.snapshot()
+    const notices:string[]=[],entries:OverviewResult['entries']=[]
+    for(const [token,session]of this.overviewPages)if(session.expires<Date.now())this.overviewPages.delete(token)
+    let plan=request.cursor?this.overviewPages.get(request.cursor):undefined
+    if(request.cursor){
+      if(!plan||plan.rootId!==root.rowId||plan.folderId!==root.record!.folderId||plan.scope!==request.scope)throw new Error('檔案總覽批次已失效，請重新整理')
+      this.overviewPages.delete(request.cursor)
+    }else{
+      const base=root.path.replaceAll('\\','/').replace(/\/$/,'').toLocaleLowerCase()
+      const candidates=(snapshot.structure??snapshot.rows).filter(row=>row.projectId===root.projectId&&(row.rowId===root.rowId||request.scope==='descendants'&&row.path.replaceAll('\\','/').toLocaleLowerCase().startsWith(base+'/')))
+      const allowed=candidates.filter(row=>row.record&&!row.readonly&&!row.stopped&&!row.error&&!row.duplicate)
+      if(candidates.length!==allowed.length)notices.push('只列出目前已納入且允許瀏覽的範圍；缺失記錄或保護區域未列入')
+      allowed.sort((a,b)=>mediaNames.compare(a.path,b.path)||a.rowId.localeCompare(b.rowId))
+      plan={rootId:root.rowId,folderId:root.record!.folderId,scope:request.scope,folders:allowed.map(row=>row.rowId),folder:0,expires:Date.now()+120000}
+    }
+    let batches=0
+    while(plan!.folder<plan!.folders.length&&entries.length<limit&&batches++<8){
+      const rowId=plan!.folders[plan!.folder],row=(snapshot.structure??snapshot.rows).find(row=>row.rowId===rowId)
+      try{
+        if(!row)throw new Error('資料夾已離開允許範圍')
+        const result=await this.content(rowId,limit-entries.length,plan!.contentCursor)
+        notices.push(...result.notices)
+        entries.push(...result.entries.filter(entry=>entry.kind!=='folder').map(entry=>({...entry,rowId,folderName:row.name,sourcePath:row.path})))
+        plan!.contentCursor=result.nextCursor
+        if(!result.nextCursor)plan!.folder++
+      }catch(reason){notices.push((row?.name??rowId)+': '+String(reason));plan!.contentCursor=undefined;plan!.folder++}
+    }
+    const complete=plan!.folder>=plan!.folders.length
+    let nextCursor:string|undefined
+    if(!complete){nextCursor=randomUUID();plan!.expires=Date.now()+120000;while(this.overviewPages.size>=10)this.overviewPages.delete(this.overviewPages.keys().next().value!);this.overviewPages.set(nextCursor,plan!)}
+    return {entries,notices,complete,foldersVisited:plan!.folder,foldersTotal:plan!.folders.length,...(nextCursor?{nextCursor}:{})}
+  }
   private after(snapshot:ReturnType<Library['snapshot']>):ExplorerResponse{this.index.sync(snapshot);return {snapshot}}
-  private async metadataPreview(source:string):Promise<MetadataPreview> {
-    const item=await metadata(source),preview:MetadataPreview={...item.preview,token:randomUUID()}
+  private async metadataPreview(source:string,provider?:MetadataSourceId):Promise<MetadataPreview> {
+    const item=await metadata(source,fetch,provider),preview:MetadataPreview={...item.preview,token:randomUUID()}
     for(const [id,p] of this.previews)if(p.expires<Date.now())this.previews.delete(id)
     if(this.previews.size>=10)this.previews.delete(this.previews.keys().next().value!)
     this.previews.set(preview.token,{preview,cover:item.cover,expires:Date.now()+15*60*1000});return preview
@@ -228,9 +289,18 @@ export class Explorer {
   private async applyMetadata(req:Extract<ExplorerRequest,{action:'metadataApply'}>) {
     const item=this.previews.get(req.token);if(!item||item.expires<Date.now())throw new Error('候選已過期，請重新取得');if(!Array.isArray(req.keys)||!req.keys.every(k=>item.preview.values.some(v=>v.key===k)))throw new Error('匯入欄位不合法')
     const {row,record}=await this.record(req.rowId,req.revision)
-    for(const v of item.preview.values.filter(v=>req.keys.includes(v.key))) { const provider=item.preview.provider??'eh',attributeId=provider+'-'+v.key.toLowerCase(),old=record.attributes.find(a=>a.attributeId===attributeId);if(old&&!old.source.startsWith(item.preview.provider==='steam'?'https://store.steampowered.com/app/':'https://e-hentai.org/g/'))throw new Error('既有欄位來源衝突');record.attributes=record.attributes.filter(a=>a.attributeId!==attributeId);record.attributes.push({...v,attributeId,source:item.preview.source}) }
+    if(req.mode!==undefined&&!['fill','replace'].includes(req.mode))throw new Error('來源匯入模式不合法')
+    for(const v of item.preview.values.filter(v=>req.keys.includes(v.key))) {
+      const provider=item.preview.provider??'eh',attributeId=provider+'-'+v.key.toLowerCase(),old=record.attributes.find(attribute=>attribute.attributeId===attributeId)
+      if(old&&sourceForUrl(old.source)!==provider)throw new Error('既有欄位來源衝突')
+      const filled=old&&old.value!==null&&old.value!==undefined&&old.value!==''&&(!Array.isArray(old.value)||old.value.length>0)
+      if(req.mode!=='replace'&&filled)continue
+      const attribute:Attribute={...v,attributeId,source:item.preview.source,sourceRecord:{provider,url:item.preview.source,fetchedAt:new Date().toISOString()}}
+      this.checkValue(attribute,record)
+      record.attributes=record.attributes.filter(attribute=>attribute.attributeId!==attributeId);record.attributes.push(attribute)
+    }
     let added:string|undefined
-    if(req.image&&item.cover){const {bytes,ext,mime}=item.cover,assetId=randomUUID(),relativePath=`assets/${assetId}.${ext}`;added=path.join(row.path,DATA_DIR,relativePath);await safePath(row.path,added);await fs.mkdir(path.dirname(added),{recursive:true});await fs.writeFile(added,bytes,{flag:'wx'});record.assets.push({assetId,relativePath,originalName:(item.preview.provider??'eh')+'-cover.'+ext,mediaType:mime})}
+    if(req.image&&item.cover&&(req.mode==='replace'||!record.assets.some(asset=>asset.originalName.startsWith((item.preview.provider??'eh')+'-cover.')))){const {bytes,ext,mime}=item.cover,assetId=randomUUID(),relativePath=`assets/${assetId}.${ext}`;added=path.join(row.path,DATA_DIR,relativePath);await safePath(row.path,added);await fs.mkdir(path.dirname(added),{recursive:true});await fs.writeFile(added,bytes,{flag:'wx'});record.assets.push({assetId,relativePath,originalName:(item.preview.provider??'eh')+'-cover.'+ext,mediaType:mime})}
     try{await saveFolder(row.path,record,req.revision)}catch(e){if(added)await fs.unlink(added);throw e}
   }
 }

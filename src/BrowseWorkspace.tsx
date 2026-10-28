@@ -1,3 +1,7 @@
+import {FileOverview} from './FileOverview'
+import type {OverviewEntry} from '../shared/explorer'
+import {t as tr, useLocale,currentLocale} from './i18n'
+import { Icon } from './icons'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -80,6 +84,8 @@ export function BrowseWorkspace({
   notify,
   onOverlay,
 }: Props) {
+ const locale=useLocale()
+
   const [browse, setBrowse] = useState(initial),
     [ready, setReady] = useState(false),
     [page, setPage] = useState(1)
@@ -88,10 +94,12 @@ export function BrowseWorkspace({
     [configId, setConfigId] = useState<string>(),
     [configDirty, setConfigDirty] = useState(false),
     [expanded, setExpanded] = useState(false)
+  const [filePreview,setFilePreview]=useState<OverviewEntry>()
+  const navigation=useRef(0),mounted=useRef(false)
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;navigation.current++}},[])
   const [displayOpen, setDisplayOpen] = useState(false),
     [display, setDisplay] = useState(cardDisplay(project)),
     [density, setDensity] = useState(project.list)
-  const [subtitleSettingsOpen, setSubtitleSettingsOpen] = useState(false)
   const [dragColumn, setDragColumn] = useState(''),
     [columnDrop, setColumnDrop] = useState<{ id: string; after: boolean }>()
   const histories = useRef<Partial<Record<BrowseMode, { items: string[]; index: number }>>>({}),
@@ -106,7 +114,6 @@ export function BrowseWorkspace({
     config = all.find((r) => r.rowId === configId),
     card = cardDisplay(project)
   state.current = browse
-  useEffect(() => { setSubtitleSettingsOpen(false) }, [detail?.rowId, browse.panelVisible, project.mediaCategory])
   useEffect(() => {
     let alive = true
     window.desktop
@@ -148,9 +155,9 @@ export function BrowseWorkspace({
     [onDirty]
   )
   useEffect(() => {
-    onOverlay(!!configId || displayOpen || subtitleSettingsOpen)
+    onOverlay(!!configId || displayOpen)
     return () => onOverlay(false)
-  }, [configId, displayOpen, subtitleSettingsOpen, onOverlay])
+  }, [configId, displayOpen, onOverlay])
   useEffect(() => {
     setPage(1)
   }, [browse.location, browse.mode, project.cardView, project.list.pageSize])
@@ -202,11 +209,11 @@ export function BrowseWorkspace({
         return (
           (typeof av === 'number' && typeof bv === 'number'
             ? av - bv
-            : String(av).localeCompare(String(bv), 'zh-Hant', { numeric: true })) *
+            : String(av).localeCompare(String(bv), currentLocale(), { numeric: true })) *
             (sort.asc ? 1 : -1) || a.rowId.localeCompare(b.rowId)
         )
       }),
-    [base, sort]
+    [base, sort,locale]
   )
   const pageSize = browse.mode === 'CARD' ? project.list.pageSize : 100,
     pages = Math.max(1, Math.ceil(filtered.length / pageSize)),
@@ -234,10 +241,15 @@ export function BrowseWorkspace({
   const open = async (id: string, fromHistory?: number) => {
     const row = all.find((r) => r.rowId === id)
     if (!row || busy) return
+    const operation=++navigation.current
+    let prefs
+    try{prefs=await window.desktop.workspace()}catch(error){notify(String(error));return}
+    if(!mounted.current||operation!==navigation.current)return
     const result = await run({ action: 'visit', rowId: id })
-    if (!result?.snapshot || !onSelect(id)) return
+    if (!mounted.current||operation!==navigation.current||!result?.snapshot || !onSelect(id)) return
+    setFilePreview(undefined)
     setHighlight(id)
-    persist({ ...state.current, detailId: id, panelVisible: true })
+    persist({ ...state.current, detailId: id, ...(state.current.contentMode==='files'?{fileRootId:id}:{}), panelVisible: prefs.prefs.autoOpenContent === true || state.current.panelVisible !== false })
     if (navigable) {
       if (fromHistory !== undefined) {
         const next={...history,index:fromHistory};histories.current={CARD:next,TABLE:next,TREE:next}
@@ -250,6 +262,12 @@ export function BrowseWorkspace({
       } else moveTo(row.path)
     }
   }
+  const previewFile=async(entry:OverviewEntry)=>{
+    if(busy)return
+    const operation=++navigation.current,result=await run({action:'visit',rowId:entry.rowId})
+    if(!mounted.current||operation!==navigation.current||!result?.snapshot||!onSelect(entry.rowId))return
+    setFilePreview(entry);persist({...state.current,detailId:entry.rowId,panelVisible:true})
+  }
   const navHistory = (delta: number) => {
     const i = history.index + delta
     if (i < 0 || i >= history.items.length) return
@@ -257,12 +275,12 @@ export function BrowseWorkspace({
     if (target) void open(target.rowId, i)
   }
   const openConfig = (id: string) => {
-    if (configDirty && id !== configId && !window.confirm('放棄尚未保存的資料夾設定？')) return
+    if (configDirty && id !== configId && !window.confirm(tr("放棄尚未保存的資料夾設定？"))) return
     setHighlight(id)
     setConfigId(id)
   }
   const closeConfig = () => {
-    if (!configDirty || window.confirm('放棄尚未保存的資料夾設定？')) setConfigId(undefined)
+    if (!configDirty || window.confirm(tr("放棄尚未保存的資料夾設定？"))) setConfigId(undefined)
   }
   const child = (name: string) => {
     if (!detail) return
@@ -271,14 +289,14 @@ export function BrowseWorkspace({
     else
       notify(
         detail.boundary
-          ? '此資料夾受遊戲邊界保護，無法建立資料'
-          : '此資料夾尚未建立資料，請先明確重新掃描'
+          ? tr("此資料夾受遊戲邊界保護，無法建立資料")
+          : tr("此資料夾尚未建立資料，請先明確重新掃描")
       )
   }
   const availableColumns = [
-    { id: 'name', label: '資料夾名稱' },
-    { id: 'path', label: '目前路徑' },
-    { id: 'depth', label: '層級' },
+    { id: 'name', label: tr("資料夾名稱") },
+    { id: 'path', label: tr("目前路徑") },
+    { id: 'depth', label: tr("層級") },
     ...project.fieldBindings.map((f) => ({ id: f.attributeId, label: f.alias })),
   ]
   const columns = [
@@ -299,6 +317,8 @@ export function BrowseWorkspace({
   }
   const deepest = maxBrowseDepth(all),
     crumbs = folderBreadcrumbs(all, root, currentFolder?.path ?? root)
+  const overviewRoot=all.find(row=>row.rowId===browse.fileRootId)??currentFolder??rootRow
+  const folderMode=browse.contentMode!=='files'
   const previewCount = browserRows(all, { ...project, cardView: display }, root, 'CARD', '').length
   const openDisplay = () => {
     setDisplay({ ...card, level: card.level === 'all' ? 'all' : Math.min(card.level, deepest) })
@@ -377,154 +397,128 @@ export function BrowseWorkspace({
     <div className={'project-workspace' + (expanded ? ' content-expanded' : '')}>
       {toolbarTarget &&
         createPortal(
-          <Tooltip label={browse.panelVisible === false ? '顯示右側內容' : '隱藏右側內容'}>
+          <Tooltip label={browse.panelVisible === false ? tr("顯示右側內容") : tr("隱藏右側內容")}>
             <ActionIcon
               variant="subtle"
               color="gray"
-              aria-label="切換右側內容"
+              aria-label={tr("切換右側內容")}
               aria-pressed={browse.panelVisible !== false}
               disabled={!ready}
               onClick={togglePanel}
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                aria-hidden="true"
-              >
-                <rect x="2.5" y="3.5" width="15" height="13" rx="1" />
-                <path d="M12 4v12" />
-                {browse.panelVisible !== false && (
-                  <path d="M13 5h3.5v10H13z" fill="currentColor" stroke="none" />
-                )}
-              </svg>
+              <Icon name="panel-right" size={20}/>
             </ActionIcon>
           </Tooltip>,
           toolbarTarget
         )}
-      <section className="center-pane" aria-label="資料夾瀏覽區">
+      <section className="center-pane" aria-label={tr("資料夾瀏覽區")}>
         <div className="workspace-toolbar">
           <div className="toolbar-left">
-            {browse.mode === 'CARD' && (
+            {folderMode && browse.mode === 'CARD' && (
               <>
                 <div className="preset-controls">
                   <Select
-                    aria-label="CELL 版面方案"
+                    aria-label={tr("CELL 版面方案")}
                     size="xs"
                     value={project.activeLayoutId ?? presets[0].id}
                     allowDeselect={false}
-                    data={presets.map((p) => ({ value: p.id, label: p.name }))}
+                    data={presets.map((p) => ({ value: p.id, label: p.id==='default'&&p.name==='預設版面'?tr('預設版面'):p.name }))}
                     disabled={busy}
                     onChange={(id) => id && pickPreset(id)}
                   />
-                  <Tooltip label="更改樣式">
+                  <Tooltip label={tr("更改樣式")}>
                     <ActionIcon
-                      aria-label="更改樣式"
+                      aria-label={tr("更改樣式")}
                       variant="default"
                       disabled={busy}
                       onClick={() => edit()}
-                    >
-                      ✎
-                    </ActionIcon>
+                    ><Icon name="edit"/></ActionIcon>
                   </Tooltip>
                 </div>
                 <Menu>
                   <Menu.Target>
                     <ActionIcon
                       className="compact-presets"
-                      aria-label="CELL 方案選單"
+                      aria-label={tr("CELL 方案選單")}
                       variant="subtle"
-                    >
-                      ▦
-                    </ActionIcon>
+                    ><Icon name="grid"/></ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
                     {presets.map((p) => (
                       <Menu.Item key={p.id} onClick={() => pickPreset(p.id)}>
-                        {p.name}
+                        {p.id==='default'&&p.name==='預設版面'?tr('預設版面'):p.name}
                       </Menu.Item>
                     ))}
                     <Menu.Divider />
-                    <Menu.Item onClick={() => edit()}>更改樣式</Menu.Item>
+                    <Menu.Item onClick={() => edit()}>{tr("更改樣式")}</Menu.Item>
                   </Menu.Dropdown>
                 </Menu>
               </>
             )}
           </div>
+          <SegmentedControl aria-label={tr('展示內容')} size="xs" value={browse.contentMode??'folders'} disabled={busy||!ready} data={[{value:'folders',label:tr('資料夾')},{value:'files',label:tr('檔案')}]} onChange={value=>{setFilePreview(undefined);persist({...state.current,contentMode:value as 'folders'|'files',fileRootId:detail?.rowId??currentFolder?.rowId,filePresentation:state.current.filePresentation??'tiles',fileScope:project.mediaCategory==='manga'?'current':state.current.fileScope??'descendants'})}}/>
           <SegmentedControl
+            style={{display:folderMode?undefined:'none'}}
             className="center-mode"
-            aria-label="瀏覽模式"
+            aria-label={tr("瀏覽模式")}
             size="xs"
             value={browse.mode}
-            data={['CARD', 'TABLE', 'TREE']}
+            data={(['CARD','TABLE','TREE'] as const).map(mode=>({value:mode,label:<><Icon name={mode==='CARD'?'grid':mode==='TABLE'?'list':'tree'} size={14}/>{mode==='CARD'?tr('卡片'):mode==='TABLE'?tr('表格'):tr('樹狀圖')}</>}))}
             disabled={busy||!ready}
             onChange={(mode) => void switchMode(mode as BrowseMode)}
           />
           <div className="toolbar-right">
             {browse.mode === 'CARD' && (
-              <Tooltip label="CARD 顯示設定">
+              <Tooltip label={tr("CARD 顯示設定")}>
                 <ActionIcon
-                  aria-label="CARD 顯示設定"
+                  aria-label={tr("CARD 顯示設定")}
                   variant="subtle"
                   color="gray"
                   disabled={busy}
                   onClick={openDisplay}
-                >
-                  ☷
-                </ActionIcon>
+                ><Icon name="sliders"/></ActionIcon>
               </Tooltip>
             )}
-            <Tooltip label="重新掃描">
+            <Tooltip label={tr("重新掃描")}>
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                aria-label="重新掃描"
+                aria-label={tr("重新掃描")}
                 disabled={busy}
                 onClick={() => void act({ action: 'scan' })}
-              >
-                ⟳
-              </ActionIcon>
+              ><Icon name="refresh"/></ActionIcon>
             </Tooltip>
-            <Tooltip label="目前資料夾設定">
+            <Tooltip label={tr("目前資料夾設定")}>
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                aria-label="目前資料夾設定"
+                aria-label={tr("目前資料夾設定")}
                 disabled={!currentFolder || busy}
                 onClick={() => currentFolder && openConfig(currentFolder.rowId)}
-              >
-                ⚙
-              </ActionIcon>
+              ><Icon name="folder-settings"/></ActionIcon>
             </Tooltip>
           </div>
         </div>
         <div className="workspace-breadcrumb">
-          <Tooltip label="返回上一個瀏覽位置">
+          <Tooltip label={tr("返回上一個瀏覽位置")}>
             <ActionIcon
-              aria-label="返回"
+              aria-label={tr("返回")}
               disabled={!navigable || !history.index || busy}
               variant="subtle"
               color="gray"
               onClick={() => navHistory(-1)}
-            >
-              ←
-            </ActionIcon>
+            ><Icon name="arrow-left"/></ActionIcon>
           </Tooltip>
-          <Tooltip label="前進至下一個瀏覽位置">
+          <Tooltip label={tr("前進至下一個瀏覽位置")}>
             <ActionIcon
-              aria-label="前進"
+              aria-label={tr("前進")}
               disabled={!navigable || history.index >= history.items.length - 1 || busy}
               variant="subtle"
               color="gray"
               onClick={() => navHistory(1)}
-            >
-              →
-            </ActionIcon>
+            ><Icon name="arrow-right"/></ActionIcon>
           </Tooltip>
-          <nav className="breadcrumb-path" aria-label="資料夾路徑" title={location || root}>
+          <nav className="breadcrumb-path" aria-label={tr("資料夾路徑")} title={location || root}>
             <Breadcrumbs
               separator={String.fromCharCode(92)}
             >
@@ -557,16 +551,15 @@ export function BrowseWorkspace({
             </Breadcrumbs>
           </nav>
           <small className="view-count">
-            {filtered.length} 筆
-            {browse.mode === 'CARD'
+            {filtered.length} {tr("筆")}{browse.mode === 'CARD'
               ? ' · ' +
-                (card.mode === 'multi' ? '多層' : '單層') +
+                (card.mode === 'multi' ? tr("多層") : tr("單層")) +
                 ' · ' +
                 (card.level === 'all'
-                  ? '全部（最深第 ' + deepest + ' 層）'
+                  ? tr("全部（最深第 ") + deepest + tr(" 層）")
                   : card.mode === 'multi'
-                    ? '第 1–' + card.level + ' 層'
-                    : '第 ' + card.level + ' 層')
+                    ? tr("第 1–") + card.level + tr(" 層")
+                    : tr("第 ") + card.level + tr(" 層"))
               : ''}
           </small>
         </div>
@@ -582,8 +575,8 @@ export function BrowseWorkspace({
             timer.current = setTimeout(() => persist(state.current), 400)
           }}
         >
-          {browse.mode === 'TREE' ? (
-            <Suspense fallback={<p>載入樹狀圖…</p>}>
+          {!folderMode&&overviewRoot?<FileOverview root={overviewRoot} folders={all} scope={browse.fileScope??'descendants'} presentation={browse.filePresentation??'tiles'} manga={project.mediaCategory==='manga'} busy={busy} change={(scope,presentation)=>{setFilePreview(undefined);persist({...state.current,fileScope:scope,filePresentation:presentation})}} chooseRoot={id=>void open(id)} open={entry=>void previewFile(entry)}/>:browse.mode === 'TREE' ? (
+            <Suspense fallback={<p>{tr("載入樹狀圖…")}</p>}>
               <Tree
                 rows={base}
                 selected={highlight}
@@ -647,7 +640,7 @@ export function BrowseWorkspace({
                         <button
                           disabled={busy}
                           draggable={!busy}
-                          title="點擊排序；拖曳調整欄位順序（Alt+←／→）"
+                          title={tr("點擊排序；拖曳調整欄位順序（Alt+←／→）")}
                           onDragStart={(e) => {
                             e.dataTransfer.setData('application/x-media-viewer-column', c.id)
                             e.dataTransfer.effectAllowed = 'move'
@@ -672,7 +665,7 @@ export function BrowseWorkspace({
                         <span
                           className="column-resizer"
                           role="separator"
-                          aria-label={'調整 ' + c.label + ' 欄寬'}
+                          aria-label={tr("調整 ") + c.label + tr(" 欄寬")}
                           onPointerDown={(e) => {
                             e.preventDefault()
                             resize.current = {
@@ -715,7 +708,7 @@ export function BrowseWorkspace({
                                 ? r.depth
                                 : Array.isArray(fieldValue(r, c.id))
                                   ? (fieldValue(r, c.id) as unknown[]).join(', ')
-                                  : String(fieldValue(r, c.id) ?? '')}
+                                  : typeof fieldValue(r,c.id)==='boolean'?fieldValue(r,c.id)?tr('是'):tr('否'):String(fieldValue(r, c.id) ?? '')}
                         </td>
                       ))}
                     </tr>
@@ -744,12 +737,12 @@ export function BrowseWorkspace({
                   {(row.error || !row.record || row.readonly || row.boundary) && (
                     <small className="folder-state">
                       {row.error
-                        ? '需要處理'
+                        ? tr("需要處理")
                         : row.readonly
-                          ? '受保護'
+                          ? tr("受保護")
                           : !row.record
-                            ? '尚未建立資料'
-                            : '遊戲邊界'}
+                            ? tr("尚未建立資料")
+                            : tr("遊戲邊界")}
                     </small>
                   )}
                 </article>
@@ -757,13 +750,13 @@ export function BrowseWorkspace({
             </div>
           )}
           {!current.length && browse.mode !== 'TREE' && (
-            <div className="empty-folder">此層沒有可顯示的子資料夾</div>
+            <div className="empty-folder">{tr("此層沒有可顯示的子資料夾")}</div>
           )}
         </div>
-        {browse.mode !== 'TREE' && (
+        {folderMode && browse.mode !== 'TREE' && (
           <div className="browse-pagination">
             <Pagination size="xs" total={pages} value={Math.min(page, pages)} onChange={setPage} />
-            <small>每頁 {pageSize} 筆</small>
+            <small>{tr("每頁")}{pageSize} {tr("筆")}</small>
           </div>
         )}
       </section>
@@ -771,7 +764,7 @@ export function BrowseWorkspace({
         <>
           <div
             role="separator"
-            aria-label="調整資料夾內容寬度"
+            aria-label={tr("調整資料夾內容寬度")}
             className="panel-resizer"
             onPointerDown={(e) => {
               resize.current = { id: 'panel', start: e.clientX, width: browse.panelWidth }
@@ -782,61 +775,55 @@ export function BrowseWorkspace({
           />
           <aside
             className={'folder-panel ' + (project.mediaCategory === 'video' ? 'video-panel' : '')}
-            aria-label="資料夾內容"
+            aria-label={tr("資料夾內容")}
             style={{ width: browse.panelWidth }}
           >
             <div className="folder-panel-header">
-              {project.mediaCategory === 'video' && <Menu position="bottom-start" withinPortal><Menu.Target><Tooltip label="影片設定"><ActionIcon className="video-settings-trigger" variant="subtle" color="gray" aria-label="影片設定"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14M7 3v4M13 8v4M8 13v4"/></svg></ActionIcon></Tooltip></Menu.Target><Menu.Dropdown><Menu.Label>此專案開啟資料夾時</Menu.Label>{[{value:true,label:'開啟後自動播放'},{value:false,label:'關閉自動播放'}].map(option=><Menu.Item key={String(option.value)} disabled={busy} leftSection={(project.videoAutoplay!==false)===option.value?'✓':'　'} onClick={()=>void act({action:'saveProject',project:{...project,videoAutoplay:option.value}})}>{option.label}</Menu.Item>)}<Menu.Divider/><Menu.Item onClick={()=>setSubtitleSettingsOpen(true)}>字幕設定</Menu.Item></Menu.Dropdown></Menu>}
               {project.mediaCategory !== 'video' && <strong>{detail.name}</strong>}
-              {project.mediaCategory === 'manga' && <Tooltip label="編輯此專案所有漫畫的資訊版面；CARD 版面獨立"><ActionIcon aria-label="編輯漫畫展示" variant="subtle" color="gray" disabled={busy} onClick={()=>edit('manga')}><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M8 3v14M8 9h9"/></svg></ActionIcon></Tooltip>}
+              {project.mediaCategory === 'manga' && <Tooltip label={tr("編輯此專案所有漫畫的資訊版面；CARD 版面獨立")}><ActionIcon aria-label={tr("編輯漫畫展示")} variant="subtle" color="gray" disabled={busy} onClick={()=>edit('manga')}><Icon name="layout"/></ActionIcon></Tooltip>}
               <ActionIcon
-                aria-label={expanded ? '還原內容區' : '放大內容區'}
+                aria-label={expanded ? tr("還原內容區") : tr("放大內容區")}
                 variant="subtle"
                 color="gray"
                 onClick={() => setExpanded((v) => !v)}
-              >
-                □
-              </ActionIcon>
+              ><Icon name="maximize"/></ActionIcon>
               <ActionIcon
-                aria-label="關閉資料夾內容"
+                aria-label={tr("關閉資料夾內容")}
                 variant="subtle"
                 color="gray"
                 onClick={togglePanel}
-              >
-                ×
-              </ActionIcon>
+              ><Icon name="close"/></ActionIcon>
             </div>
             <div className="folder-panel-body">
-              <Suspense fallback={<p>載入內容…</p>}>
-                <FolderContent
-                  key={detail.rowId}
+              <Suspense fallback={<p>{tr("載入內容…")}</p>}>
+                {folderMode||filePreview?<FolderContent
+                  key={detail.rowId+'/'+(filePreview?.id??'folder')}
+                  selectedFileId={folderMode?undefined:filePreview?.id}
                   row={detail}
                   project={project}
                   run={run}
                   act={act}
                   busy={busy}
                   configure={() => openConfig(detail.rowId)}
-                  subtitleSettingsOpen={subtitleSettingsOpen}
-                  closeSubtitleSettings={() => setSubtitleSettingsOpen(false)}
                   onChild={child}
-                />
+                />:<p>{tr('選擇檔案以預覽')}</p>}
               </Suspense>
             </div>
-            {project.mediaCategory === 'manga' && <Button className="manga-top" size="compact-sm" variant="default" aria-label="漫畫回到頂部" onClick={event=>event.currentTarget.closest('.folder-panel')?.querySelector('.folder-panel-body')?.scrollTo({top:0,behavior:'smooth'})}>↑ TOP</Button>}
+            {project.mediaCategory === 'manga' && <Button className="manga-top" size="compact-sm" variant="default" aria-label={tr("漫畫回到頂部")} onClick={event=>event.currentTarget.closest('.folder-panel')?.querySelector('.folder-panel-body')?.scrollTo({top:0,behavior:'smooth'})}><Icon name="arrow-up" size={15}/>{tr("返回頂部")}</Button>}
           </aside>
         </>
       )}
       <Drawer
         opened={!!config}
         onClose={closeConfig}
-        title={'資料夾設定 · ' + (config?.name ?? '')}
+        title={tr("資料夾設定 · ") + (config?.name ?? '')}
         position="right"
         size="lg"
         zIndex={300}
-        closeButtonProps={{ 'aria-label': '關閉資料夾設定' }}
+        closeButtonProps={{ 'aria-label': tr("關閉資料夾設定") }}
       >
         {config && (
-          <Suspense fallback={<p>載入設定…</p>}>
+          <Suspense fallback={<p>{tr("載入設定…")}</p>}>
             <FolderPanel
               key={config.rowId}
               row={config}
@@ -852,21 +839,20 @@ export function BrowseWorkspace({
       <Modal
         opened={displayOpen}
         onClose={() => !busy && setDisplayOpen(false)}
-        title="CARD 顯示設定"
+        title={tr("CARD 顯示設定")}
         size="md"
       >
         <Stack gap="lg">
           <section className="card-display-section">
             <Text fw={600} mb="sm">
-              顯示範圍
-            </Text>
+              {tr("顯示範圍")}</Text>
             <SegmentedControl
               fullWidth
-              aria-label="層級顯示"
+              aria-label={tr("層級顯示")}
               value={display.mode}
               data={[
-                { value: 'multi', label: '多層' },
-                { value: 'single', label: '單層' },
+                { value: 'multi', label: tr("多層") },
+                { value: 'single', label: tr("單層") },
               ]}
               onChange={(mode) =>
                 setDisplay({
@@ -877,28 +863,28 @@ export function BrowseWorkspace({
             />
             <Text size="sm" c="dimmed" my="sm">
               {display.mode === 'multi'
-                ? '將根資料夾與子資料夾放在同一畫面。雙擊只更新右側內容。'
-                : '顯示指定層級，雙擊可像一般資料夾逐層進入。'}
+                ? tr("將根資料夾與子資料夾放在同一畫面。雙擊只更新右側內容。")
+                : tr("顯示指定層級，雙擊可像一般資料夾逐層進入。")}
             </Text>
             <Select
-              label="顯示層數"
+              label={tr("顯示層數")}
               description={
                 display.mode === 'multi'
-                  ? '從專案根開始，顯示到哪一層'
-                  : '開啟 CARD 時，先顯示哪一層'
+                  ? tr("從專案根開始，顯示到哪一層")
+                  : tr("開啟 CARD 時，先顯示哪一層")
               }
               allowDeselect={false}
               value={String(display.level)}
               data={[
                 ...(display.mode === 'multi'
-                  ? [{ value: 'all', label: '全部已掃描層級（最深第 ' + deepest + ' 層）' }]
+                  ? [{ value: 'all', label: tr("全部已掃描層級（最深第 ") + deepest + tr(" 層）") }]
                   : []),
                 ...Array.from({ length: deepest }, (_, i) => ({
                   value: String(i + 1),
                   label:
                     display.mode === 'multi'
-                      ? '第 1 層至第 ' + (i + 1) + ' 層'
-                      : '第 ' + (i + 1) + ' 層',
+                      ? tr("第 1 層至第 ") + (i + 1) + tr(" 層")
+                      : tr("第 ") + (i + 1) + tr(" 層"),
                 })),
               ]}
               onChange={(v) =>
@@ -906,17 +892,15 @@ export function BrowseWorkspace({
               }
             />
             <Text size="xs" c="dimmed" mt="xs">
-              專案根資料夾為第 1 層，目前已掃描最深到第 {deepest} 層。
-            </Text>
+              {tr("專案根資料夾為第 1 層，目前已掃描最深到第")}{deepest} {tr("層。")}</Text>
           </section>
           <section className="card-display-section">
             <Text fw={600} mb="sm">
-              卡片密度
-            </Text>
+              {tr("卡片密度")}</Text>
             <div className="display-density">
               <NumberInput
-                label="每列卡片數"
-                description="視窗變窄時會自動減少"
+                label={tr("每列卡片數")}
+                description={tr("視窗變窄時會自動減少")}
                 min={1}
                 max={6}
                 allowDecimal={false}
@@ -927,8 +911,8 @@ export function BrowseWorkspace({
                 }
               />
               <NumberInput
-                label="每頁筆數"
-                description="控制單頁顯示的資料夾數"
+                label={tr("每頁筆數")}
+                description={tr("控制單頁顯示的資料夾數")}
                 min={1}
                 max={500}
                 allowDecimal={false}
@@ -939,16 +923,13 @@ export function BrowseWorkspace({
             </div>
           </section>
           <Text size="sm" className="display-summary" role="status">
-            套用後先顯示 {previewCount} 個資料夾，最多每列 {density.itemsPerRow} 張、每頁{' '}
-            {density.pageSize} 筆。
-          </Text>
+            {tr("套用後先顯示")}{previewCount} {tr("個資料夾，最多每列")}{density.itemsPerRow} {tr("張、每頁")}{' '}
+            {density.pageSize} {tr("筆。")}</Text>
           <Text size="xs" c="dimmed">
-            只調整 CARD，不變更 TREE／TABLE，也不會擴大掃描範圍。
-          </Text>
+            {tr("只調整 CARD，不變更 TREE／TABLE，也不會擴大掃描範圍。")}</Text>
           <Group justify="flex-end">
             <Button variant="default" disabled={busy} onClick={() => setDisplayOpen(false)}>
-              取消
-            </Button>
+              {tr("取消")}</Button>
             <Button
               loading={busy}
               onClick={async () => {
@@ -968,8 +949,7 @@ export function BrowseWorkspace({
                 }
               }}
             >
-              套用
-            </Button>
+              {tr("套用")}</Button>
           </Group>
         </Stack>
       </Modal>

@@ -53,6 +53,11 @@ export async function detectGame(dir: string): Promise<GameDetection | undefined
   }
   if (exes.length) {
     const stems = exes.map(e => e.name.slice(0, -4))
+    // NW.js can append the app to a renamed EXE. Runtime structure is only a
+    // stopping candidate, never evidence of a particular game engine or game.
+    const nwResources = await file('nw.pak') || await file('nw_100_percent.pak') || await file('nw_200_percent.pak')
+    const nwRuntime = nwResources && (await file('nw.dll') || await file('nw_elf.dll') || await file('chrome_elf.dll') || await file('icudt.dll') || await file('libEGL.dll') && await file('libGLESv2.dll'))
+    if (nwRuntime) add(undefined, 'EXE + NW.js 資源／執行環境組合：可能為內嵌或封裝應用；引擎未知，暫停深入，請確認 ROOT／非遊戲')
     const unityRuntime=await file('UnityPlayer.dll'),unityData=(await Promise.all(stems.map(stem => folder(stem + '_Data')))).some(Boolean)
     if (unityRuntime && unityData) add('Unity', '同名 EXE／*_Data + UnityPlayer.dll')
     else if(unityRuntime||unityData)add(undefined,'Unity 部署線索不完整或名稱不相符；先停止，請確認 ROOT／非遊戲')
@@ -85,6 +90,7 @@ export async function detectGame(dir: string): Promise<GameDetection | undefined
       if (scripts) add('Ren’Py', 'renpy + game 腳本／封包 + EXE')
     }
     if (await file('Data.wolf')) add('WOLF RPG', 'Data.wolf + EXE（候選）')
+    else if (await file('Data/BasicData/Game.dat') && await file('Data/BasicData/DataBase.dat')) add('WOLF RPG', 'EXE + 同一 Data/BasicData 的 Game.dat／DataBase.dat（未封包或混合封包候選）')
     if (await file('data.win')) add('GameMaker', 'data.win + EXE（候選；YYC 需人工確認）')
     if (await file('game.arcd') && await file('game.arci')) add('Defold', '成對 game.arcd／game.arci + EXE')
     if (await file('love.dll') && (await files('', /\.love$/i)).length) add('LÖVE', 'love.dll + .love + EXE')

@@ -43,6 +43,37 @@ test('invalid commands do not persist and queued updates retain both results', a
   assert.equal((await store.read(ids)).prefs.groups.length, 2)
 })
 
+test('global theme and language save together, survive unrelated changes, and reject invalid or failed writes',async t=>{
+ const {root,store}=await fixture(t),ids=['p1'];let state=await store.read(ids)
+ assert.equal(state.prefs.theme,undefined);assert.equal(state.prefs.locale,undefined)
+ await store.update({action:'appearance',theme:'glass',locale:'ja'},ids)
+ await store.update({action:'favorite',projectId:'p1',value:true},ids)
+ const reopened=new WorkspaceStore(root);await reopened.init();state=await reopened.read(ids)
+ assert.equal(state.prefs.theme,'glass');assert.equal(state.prefs.locale,'ja');assert.equal(state.prefs.projects.p1.favorite,true)
+ const before=await fs.readFile(store.file,'utf8')
+ for(const command of [{action:'appearance',theme:'missing',locale:'en'},{action:'appearance',theme:'paper',locale:'fr'},{action:'appearance',theme:'paper'}]){
+  await assert.rejects(reopened.update(command as WorkspaceCommand,ids));assert.equal(await fs.readFile(store.file,'utf8'),before)
+ }
+ await fs.unlink(store.file+'.bak');await fs.mkdir(store.file+'.bak')
+ await assert.rejects(reopened.update({action:'appearance',theme:'paper',locale:'es'},ids))
+ state=await reopened.read(ids);assert.equal(state.prefs.theme,'glass');assert.equal(state.prefs.locale,'ja');assert.equal(await fs.readFile(store.file,'utf8'),before)
+})
+
+test('video audio is local, survives other preferences, and invalid or failed saves preserve the last value',async t=>{
+ const {root,store}=await fixture(t),ids=['p1'];await store.read(ids)
+ await store.update({action:'videoAudio',value:{volume:.35,muted:true}},ids)
+ await store.update({action:'appearance',theme:'paper',locale:'en'},ids)
+ const reopened=new WorkspaceStore(root);await reopened.init()
+ assert.deepEqual((await reopened.read(ids)).prefs.videoAudio,{volume:.35,muted:true})
+ const before=await fs.readFile(store.file)
+ for(const value of [undefined,null,{volume:-1,muted:false},{volume:2,muted:true},{volume:NaN,muted:false},{volume:.5,muted:'yes'}]){
+  await assert.rejects(reopened.update({action:'videoAudio',value} as WorkspaceCommand,ids));assert.deepEqual(await fs.readFile(store.file),before)
+ }
+ await fs.unlink(store.file+'.bak');await fs.mkdir(store.file+'.bak')
+ await assert.rejects(reopened.update({action:'videoAudio',value:{volume:.9,muted:false}},ids))
+ assert.deepEqual((await reopened.read(ids)).prefs.videoAudio,{volume:.35,muted:true});assert.deepEqual(await fs.readFile(store.file),before)
+})
+
 test('manual group/project order persists; favorites remain independent from unclassified',async t=>{
   const {root,store}=await fixture(t),ids=['p1','p2','p3'];await store.read(ids)
   let state=await store.update({action:'createGroup',name:'G'},ids);const id=state.prefs.groups[0].id

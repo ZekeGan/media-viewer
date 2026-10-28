@@ -16,6 +16,130 @@ async function fixture(t:{after:(callback:()=>Promise<void>)=>void}){
  return{root,media,lib,files}
 }
 const tyranoMarkers=(base:string)=>['package.json','index.html','main.js','tyrano/tyrano.js','tyrano/plugins/kag/kag.js','data/system/Config.tjs','data/scenario/first.ks'].map(file=>base+'/'+file)
+const nwMarkers=['nw.pak','chrome_elf.dll','icudtl.dat','locales/ja.pak']
+const wolfMarkers=['Data/BasicData/Game.dat','Data/BasicData/DataBase.dat']
+// Include historical metadata and empty directories; only the ROOT's own record may change.
+async function internalTree(dir:string,root=true):Promise<Record<string,string>>{
+ const result:Record<string,string>={}
+ for(const entry of await fs.readdir(dir,{withFileTypes:true})){
+  if(root&&entry.name===DATA_DIR)continue
+  assert.equal(entry.isSymbolicLink(),false)
+  if(entry.isDirectory()){
+   result[entry.name+'/']='directory'
+   for(const [name,bytes]of Object.entries(await internalTree(path.join(dir,entry.name),false)))result[entry.name+'/'+name]=bytes
+  }else result[entry.name]=(await fs.readFile(path.join(dir,entry.name))).toString('base64')
+ }
+ return result
+}
+test('embedded and packaged NW.js deployments stay unknown; WOLF unpacked and mixed data stop at their own root',async t=>{
+ const {media,lib,files}=await fixture(t)
+ const samples=[
+  {name:'包裝/game',engine:undefined,names:['Custom.exe',...nwMarkers,'assets/sound/file.bin']},
+  {name:'ModernNW',engine:undefined,names:['Renamed.exe','Config.exe','nw.dll','nw_100_percent.pak','package.nw','assets/image/file.bin']},
+  {name:'PlainNW',engine:undefined,names:['Tool.exe',...nwMarkers,'package.nw/package.json','package.nw/index.html','assets/file.bin']},
+  {name:'LegacyNW',engine:undefined,names:['Renamed.exe','nw.pak','icudt.dll','assets/file.bin']},
+  {name:'WolfUnpacked',engine:'WOLF RPG',names:['Renamed.exe',...wolfMarkers,'Data/MapData/Map001.mps','AutoBackup2/old.bin']},
+  {name:'WolfMixed',engine:'WOLF RPG',names:['GamePro.exe','Config.exe',...wolfMarkers,'Data/任意素材.wolf','Data/別名.wolf','AutoBackup2/old.bin']}
+ ]
+ const before=new Map<string,Record<string,string>>()
+ for(const sample of samples){
+  const dir=path.join(media,sample.name);await files(dir,sample.names)
+  // Existing internal records must remain byte-for-byte unchanged during scan and visit.
+  await ensureFolder(path.join(dir,sample.engine?'AutoBackup2':'assets'),false)
+  before.set(dir,await internalTree(dir))
+  const detected=await detectGame(dir);assert.ok(detected,sample.name)
+  assert.deepEqual(detected.engines,sample.engine?[sample.engine]:[],sample.name)
+ }
+ assert.equal(await detectGame(media),undefined);assert.equal(await detectGame(path.join(media,'包裝')),undefined)
+ let state=await lib.create(media,input)
+ for(let pass=0;pass<2;pass++){
+  state=await lib.scan()
+  for(const sample of samples){
+   const dir=path.join(media,sample.name),row=state.rows.find(row=>row.path===dir)!
+   assert.equal(row.boundary?.state,'candidate');assert.deepEqual(row.boundary.engines,sample.engine?[sample.engine]:[])
+   assert.equal(row.record?.schemaVersion,1)
+   state=await lib.visit(row.rowId)
+   assert.equal(state.structure!.some(row=>row.path.startsWith(dir+path.sep)),false)
+   assert.deepEqual(await internalTree(dir),before.get(dir))
+  }
+ }
+ // Exact depth and explicitly enabled traversal still cannot initialize internals.
+ const game=state.rows.find(row=>row.path===path.join(media,'WolfMixed'))!,unknown=state.rows.find(row=>row.path===path.join(media,'ModernNW'))!
+ state=await lib.saveProject({...state.projects[0].project!,scanAll:false,depth:{mode:'exact',level:7},traversal:{[game.record!.folderId]:true,[unknown.record!.folderId]:true}})
+ assert.ok(state.structure!.find(row=>row.path===game.path)?.boundary)
+ assert.ok(state.structure!.some(row=>row.path.startsWith(game.path+path.sep)))
+ for(const row of state.structure!.filter(row=>row.path.startsWith(game.path+path.sep)))assert.equal(row.readonly,true)
+ for(const row of state.structure!.filter(row=>row.path.startsWith(unknown.path+path.sep))){assert.equal(row.readonly,true);await assert.rejects(lib.checkedRow(row.rowId,true),/不可寫入/)}
+ for(const [dir,tree]of before)assert.deepEqual(await internalTree(dir),tree)
+})
+test('NW.js and WOLF markers require coherent file types and paths, retaining engine conflicts',async t=>{
+ const {media,files}=await fixture(t)
+ const negatives:Record<string,string[]>={
+  ExeOnly:['Game.exe'],NWResourceOnly:['Game.exe','nw.pak'],NWRuntimeOnly:['Game.exe','nw.dll'],
+  ChromiumOnly:['Utility.exe','chrome_elf.dll','icudtl.dat','locales/ja.pak'],
+  WolfArchiveOnly:['Game.exe','Data/renamed.wolf'],WolfDataOnly:['Game.exe','Data/file.bin'],
+  WolfPartial:['Game.exe',wolfMarkers[0]],WolfWithoutExe:wolfMarkers,
+  SplitWolf:['Game.exe',wolfMarkers[0],'Other/BasicData/DataBase.dat'],
+  SplitNW:['Game.exe','A/nw.pak','B/chrome_elf.dll']
+ }
+ for(const [name,names]of Object.entries(negatives)){const dir=path.join(media,name);await files(dir,names);assert.equal(await detectGame(dir),undefined,name)}
+ for(const [name,names,fake]of [
+  ['FakeExe',nwMarkers,'Game.exe'],['FakeNW',['Game.exe','chrome_elf.dll'],'nw.pak'],
+  ['FakeWolf',['Game.exe',wolfMarkers[0]],wolfMarkers[1]]
+ ] as [string,string[],string][]){const dir=path.join(media,name);await files(dir,names);await fs.mkdir(path.join(dir,fake),{recursive:true});assert.equal(await detectGame(dir),undefined,name)}
+ const conflict=path.join(media,'Conflict');await files(conflict,['Renamed.exe',...nwMarkers,...wolfMarkers,'www/js/rpg_core.js','www/data/actors.json'])
+ assert.deepEqual((await detectGame(conflict))?.engines,['RPG Maker MV','WOLF RPG'])
+})
+test('new runtime boundaries block stale shared writes and deep nested creation; manual corrections remain authoritative',async t=>{
+ const {media,lib,files}=await fixture(t),game=path.join(media,'Runtime'),child=path.join(game,'assets/a/b/c/d/e')
+ await fs.mkdir(child,{recursive:true})
+ let state=await lib.create(media,input),row=state.rows.find(row=>row.path===child)!,root=state.rows.find(row=>row.path===game)!
+ const original=await fs.readFile(folderFile(child))
+ await files(game,['Renamed.exe',...nwMarkers])
+ await assert.rejects(lib.checkedRow(row.rowId,true),/邊界保護/)
+ await assert.rejects(lib.saveValues(row.rowId,row.record!.revision,{}),/邊界保護/)
+ await assert.rejects(lib.restore(row.rowId),/邊界保護/)
+ await assert.rejects(lib.create(child,{...input,name:'Nested'}),/邊界保護/)
+ assert.deepEqual(await fs.readFile(folderFile(child)),original)
+ let record=await readFolder(game);record.details={schemaVersion:1,boundary:{state:'root',engines:[],evidence:['使用者指定 ROOT']}};await saveFolder(game,record,record.revision)
+ state=await lib.scan();root=state.rows.find(row=>row.path===game)!;assert.equal(root.boundary?.state,'root');assert.deepEqual(root.boundary.evidence,['使用者指定 ROOT'])
+ record=await readFolder(game);record.details!.boundary!.state='not-game';await saveFolder(game,record,record.revision)
+ state=await lib.scan();assert.equal(state.rows.find(row=>row.path===game)!.boundary,undefined)
+ row=state.rows.find(row=>row.path===child)!;await lib.checkedRow(row.rowId,true)
+ // No ancestor records exist here. A four-level probe cutoff would let this escape.
+ const fresh=path.join(media,'Fresh'),deep=path.join(fresh,'assets/a/b/c/d/e')
+ await files(fresh,['Fresh.exe',...nwMarkers,'assets/a/b/c/d/e/file.bin'])
+ await assert.rejects(lib.create(deep,{...input,name:'Deep nested'}),/邊界保護/)
+ assert.equal(await exists(folderFile(deep)),false)
+})
+test('NW.js and WOLF marker links and probe failures stop branches; cancellation preserves all internals',async t=>{
+ const {root,media,lib,files}=await fixture(t),outside=path.join(root,'outside')
+ await files(outside,['Game.dat','DataBase.dat','original.bin'])
+ const outsideBefore=await internalTree(outside,false)
+ const wolf=path.join(media,'WolfLinked');await files(wolf,['Game.exe']);await fs.mkdir(path.join(wolf,'Data'))
+ await fs.symlink(outside,path.join(wolf,'Data/BasicData'),process.platform==='win32'?'junction':'dir')
+ const nw=path.join(media,'NWLinked');await files(nw,['Game.exe','chrome_elf.dll','assets/file.bin'])
+ await fs.symlink(outside,path.join(nw,'nw.pak'),process.platform==='win32'?'junction':'dir')
+ for(const dir of [wolf,nw])await assert.rejects(detectGame(dir),/連結/)
+ let state=await lib.create(media,input)
+ for(const dir of [wolf,nw])assert.ok(state.rows.find(row=>row.path===dir)!.error)
+ assert.deepEqual(await internalTree(outside,false),outsideBefore)
+ assert.equal(await exists(path.join(wolf,'Data',DATA_DIR)),false);assert.equal(await exists(path.join(nw,'assets',DATA_DIR)),false)
+ const denied=path.join(media,'DeniedWolf');await files(denied,['Renamed.exe',...wolfMarkers])
+ const open=fs.opendir.bind(fs);t.mock.method(fs,'opendir',async(...args:Parameters<typeof fs.opendir>)=>{if(String(args[0])===path.join(denied,'Data/BasicData'))throw Object.assign(new Error('denied'),{code:'EACCES'});return open(...args)})
+ state=await lib.scan();assert.ok(state.rows.find(row=>row.path===denied)!.error);assert.equal(await exists(folderFile(denied)),false);assert.equal(await exists(path.join(denied,'Data',DATA_DIR)),false);t.mock.restoreAll()
+ const controlled=path.join(root,'cancel-media');await fs.mkdir(controlled)
+ const snapshots=new Map<string,Record<string,string>>()
+ for(let i=0;i<30;i++){
+  const dir=path.join(controlled,'Game'+i);await files(dir,['Game.exe',...(i%2?nwMarkers:wolfMarkers),'assets/a/b/original.bin']);snapshots.set(dir,await internalTree(dir))
+ }
+ let cancel=true
+ const cancellable=new Library(path.join(root,'cancel-local'),progress=>{if(cancel&&progress.visited>=20)cancellable.cancelScan()},false);await cancellable.init()
+ state=await cancellable.create(controlled,input);assert.equal(state.progress.cancelled,true)
+ for(const [dir,before]of snapshots)assert.deepEqual(await internalTree(dir),before)
+ cancel=false;state=await cancellable.scan();assert.equal(state.progress.cancelled,false);assert.equal(state.rows.length,31)
+ for(const [dir,before]of snapshots)assert.deepEqual(await internalTree(dir),before)
+})
 test('unpacked Tyrano app and app.asar directories stop at the outer launcher root, including renamed games',async t=>{
  const {media,lib,files}=await fixture(t),samples=[{name:'ふたりぐらしver1.312',base:'resources/app.asar',exe:'hutarigurashi.exe'},{name:'ROOM',base:'resources/app',exe:'Room.exe'}],history=new Map<string,Buffer>()
  for(const sample of samples){

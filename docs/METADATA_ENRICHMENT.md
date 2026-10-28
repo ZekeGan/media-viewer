@@ -1,6 +1,6 @@
 # 外部資料預覽與匯入
 
-漫畫首個來源為 **E-Hentai**；使用者本輪另指定 **Steam** 作為遊戲來源。此頁持有來源流程與人工值保護；程式入口：[metadata](../electron/metadata.ts)、[Explorer](../electron/explorer.ts) 的 metadataPreview／applyMetadata。
+目前已實作來源為漫畫的 **E-Hentai** 與遊戲的 **Steam**。2026-10-28 使用者另指定新增 **ExHentai** 與 **Hitomi.la**，兩者尚未實作。此頁持有來源流程與人工值保護；程式入口：[metadata](../electron/metadata.ts)、[Explorer](../electron/explorer.ts) 的 metadataPreview／applyMetadata。
 
 ## 目前能力
 
@@ -14,15 +14,37 @@
 
 目前使用 [Steam 商店公開資料端點](https://store.steampowered.com/api/appdetails?appids=620&l=english)，不宣稱是有相容承諾的 Steamworks API。main 固定請求主機／路徑、限制大小／逾時／重新導向並驗證 App ID；封面只允許指定官方 CDN 與同 App 路徑，失敗可略過。不需要使用者交出帳號憑證。
 
+## 分類來源（2026-10-28）
+
+使用者已核定加入下列不需要 API 憑證的來源，選單依種類分組，並標示適合目前專案分類的網站。以精確作品網址預覽，不搜尋、模糊配對、合併跨站作品或下載作品內容。來源註冊在 shared/sources.ts；固定端點與映射在 electron/metadata.ts、electron/metadata-public.ts。
+
+| 選單分類 | 來源 | 讀取方式與限制 |
+| --- | --- | --- |
+| 漫畫／動畫 | E-Hentai、ExHentai、Hitomi.la、Bangumi、AniList | E-H 系列沿用 [gdata](https://ehwiki.org/wiki/API)；Hitomi 僅解析公開 galleryinfo JSON，絕不執行遠端 JS；[Bangumi](https://bangumi.github.io/api/)／[AniList](https://docs.anilist.co/guide/auth/) 讀公開作品條目 |
+| 遊戲 | Steam、VNDB | Steam 商店公開資料；[VNDB Kana](https://api.vndb.org/kana) 的公開視覺小說條目 |
+| 音樂 | MusicBrainz | [公開發行版本資料](https://musicbrainz.org/doc/MusicBrainz_API)，不因此加入音樂播放器 |
+| 書籍 | Open Library | [公開書目與作者](https://openlibrary.org/developers/api)，作者補讀最多三筆 |
+| 圖片／插畫 | Pixiv、Wikimedia Commons | Pixiv 公開作品回應；[Commons API](https://commons.wikimedia.org/wiki/Commons:API/MediaWiki) 保留作者及授權，不推論私人照片身分 |
+
+IGDB、TMDB 需要 API 憑證，本輪依使用者要求排除。沒有內建 key、登入／Cookie 收集或存取限制繞過。ExHentai、Hitomi、Pixiv 可能因登入、站方限制或公開回應變更而失敗；失敗保留原資料並顯示原因。公開端點不等於官方提供長期相容承諾，Hitomi／Pixiv 的內部端點尤其如此。
+
+## 預覽、套用與追溯
+
+- main 驗證精確主機及作品 ID，請求固定 API 端點，限制回應大小、逾時與重新導向；封面限白名單 HTTPS 主機及支援的影像簽名，取得失敗仍可預覽欄位。
+- 預覽顯示候選值與已存在的來源值；預設只填空值，0／false 視為有值。明確勾選「覆寫已填來源欄位」才取代既有來源值，人工欄位分開保留。曾手動修改的來源欄位拒絕被來源再次覆寫。
+- 屬性仍以來源前綴分開保存，可選 sourceRecord 記錄 provider、原網址與 fetchedAt；手動編輯會移除此擷取註記。schemaVersion 維持 1，不自動遷移收藏，也不把同名欄位視為相同身分。
+- 來源日期保留原語意與顯示內容，不硬轉成首次發行日。封面寫入沿用可攜資產及原子保存；保存失敗移除本次新增的封面，保留原值及原資產。預設重複補空不重複加入同來源封面。
+- 受控驗證入口：tests/metadata.test.ts、tests/decided-media.test.ts。涵蓋固定回應、無憑證、錯誤／過大／惡意主機、作品 ID、遠端 JS 不執行、預覽不寫入、填空／覆寫／人工保護與封面回滾。真實網站、登入資料與實際收藏未執行驗證，不能由固定回應測試宣稱全部實站可用。
+
 ## 不變限制與目標
 
 - 外部資料提供候選，不替使用者決定作品身分；不以資料夾名稱直接認定作品。不自動批次模糊匹配或下載收藏。
 - 來源 URL／ID 與語意應可追溯；來源資料隨資料夾攜帶。敏感憑證不進專案或可攜記錄，不把共用 secret 內建桌面應用。
-- 再次匯入預設填空、逐欄確認覆寫及保護手填值是既有方向；**目前來源欄位分開保存，不等同完整逐欄 diff／映射／填空 UI 已交付**。統一 SourceRecord／FieldValue 契約、擷取時間／原始資料等完整模型尚需工程設計。
+- 再次匯入預設填空、預覽目前值並明確覆寫來源欄位，保護手填值；完整跨來源欄位映射、原始回應封存及批次匯入仍不在本輪範圍。
 - 只有來源及使用方式明確可用時保存圖片；不能假設所有網站提供同樣 API、欄位或授權。來源 adapter 彼此隔離，不為加一站重寫整個資料模型。
 
 ## 後續候選
 
-Steam 以外來源仍待指定；首次發行日、平台／版本日期與購買日分開。批次／CSV 對照、名稱候選人工審核、galleryinfo.txt／本地線索擷取是候選，尚未自動納入現行流程。批次若選入需可暫停、分別報成功／模糊／失敗，不能繞過寫入安全。
+新增來源依上方分類清單；需要憑證的網站保留在未啟用範圍。首次發行日、平台／版本日期與購買日分開。批次／CSV 對照、名稱候選人工審核、galleryinfo.txt／本地線索擷取是候選，尚未自動納入現行流程。批次若選入需可暫停、分別報成功／模糊／失敗，不能繞過寫入安全。
 
 原 Steam／IGDB／E-Hentai 研究、SourceRecord 提案與完整例子見 [原稿](history/agent-docs-before-cleanup.md#metadata-enrichment)，不是現行能力或每輪必讀。新增來源前再驗證官方能力與要求，不依賴歷史研究推斷現況。

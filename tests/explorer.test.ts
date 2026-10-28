@@ -43,7 +43,13 @@ test('typed attributes, explicit private override, stale revision and partial ba
  assert.deepEqual(a.record!.attributes.find(a=>a.attributeId==='tags')!.value,['中文','game']);assert.deepEqual(a.record!.projectOverrides[a.projectId][0].value,['private'])
  await assert.rejects(explorer.request({action:'attributes',rowId:a.rowId,revision:a.record!.revision,values:[{...attrs[1],value:'bad'}],private:false}),/型別/)
  const result=await explorer.request({action:'batch',rows:[{rowId:a.rowId,revision:a.record!.revision},{rowId:b.rowId,revision:0}],attributeId:'tags',value:['new'],mode:'add'})
- assert.match(result.message!,/批次保存 1 筆/);assert.match(result.message!,/失敗/);assert.deepEqual((await readFolder(a.path)).attributes.find(a=>a.attributeId==='tags')!.value,['中文','game','new']);assert.equal((await readFolder(b.path)).attributes.length,0)
+ assert.equal(result.notice?.level,'warning');assert.match(result.notice!.message,/批次保存 1 筆/);assert.match(result.notice!.message,/失敗/);assert.deepEqual((await readFolder(a.path)).attributes.find(a=>a.attributeId==='tags')!.value,['中文','game','new']);assert.equal((await readFolder(b.path)).attributes.length,0)
+ const beforeFailure=await Promise.all([readFolder(a.path),readFolder(b.path)])
+ const failed=await explorer.request({action:'batch',rows:[{rowId:a.rowId,revision:0},{rowId:b.rowId,revision:0}],attributeId:'tags',value:['keep'],mode:'replace'})
+ assert.equal(failed.notice?.level,'error');assert.deepEqual(await Promise.all([readFolder(a.path),readFolder(b.path)]),beforeFailure)
+ const saved=await explorer.request({action:'batch',rows:[{rowId:a.rowId,revision:beforeFailure[0].revision},{rowId:b.rowId,revision:beforeFailure[1].revision}],attributeId:'tags',value:['saved'],mode:'replace'})
+ assert.equal(saved.notice?.level,'success');assert.deepEqual((await readFolder(b.path)).attributes.find(a=>a.attributeId==='tags')!.value,['saved'])
+ assert.equal((await explorer.request({action:'rebuildIndex'})).notice?.level,'success')
 })
 test('SQLite supports Unicode substrings, comma AND, quotes, exclusion, OR, date normalization and ambiguity',async t=>{
  const {media,lib,explorer}=await fixture(t);await fs.mkdir(path.join(media,'中文 game 甲'));await fs.mkdir(path.join(media,'other'))
@@ -60,6 +66,48 @@ test('SQLite supports Unicode substrings, comma AND, quotes, exclusion, OR, date
  const seen=new Set<string>();for(let offset=0;offset<6;offset+=2){const page=(await explorer.request({action:'search',query:'',offset,limit:2})).search!;for(const hit of page.hits){assert.ok(!seen.has(hit.rowId));seen.add(hit.rowId)}}assert.equal(seen.size,6)
  const rebuilt=new SearchIndex(path.join(path.dirname(explorer.index.file),'rebuilt.sqlite'));try{rebuilt.sync(lib.snapshot());assert.equal(rebuilt.search('tag@tags:game').total,2)}finally{rebuilt.close()}
 })
+test('search sync detects same-revision values, private overrides, aliases, paths and source changes', async t => {
+ const {lib,media,explorer}=await fixture(t)
+ const snapshot=await lib.create(media,{name:'Search sync',mediaCategory:'other',depth:{mode:'through',level:1}})
+ const project=snapshot.projects[0].project!,row=snapshot.rows[0],record=row.record!,index=explorer.index
+ project.fieldBindings=[{alias:'title',attributeId:'title',type:'string'}]
+ record.attributes=[{attributeId:'title',key:'title',type:'string',value:'Shared original',source:'manual'}]
+ index.sync(snapshot)
+ const original=index.search('title:original')
+ index.sync(snapshot)
+ assert.deepEqual(index.search('title:original'),original)
+
+ record.projectOverrides[project.projectId]=[{...record.attributes[0],value:'Private edition'}]
+ index.sync(snapshot)
+ assert.equal(index.search('title:private').total,1)
+ assert.equal(index.search('title:original').total,0)
+ record.attributes[0].value='Shared updated'
+ index.sync(snapshot)
+ assert.equal(index.search('title:updated').total,0,'private value still wins')
+ project.fieldBindings[0].alias='caption'
+ index.sync(snapshot)
+ assert.throws(()=>index.search('title:private'),/找不到欄位/)
+ assert.deepEqual(index.search('caption:private').hits[0].matched,['caption'])
+ delete record.projectOverrides[project.projectId]
+ index.sync(snapshot)
+ assert.equal(index.search('caption:updated').total,1)
+
+ row.name='Renamed folder';row.path=path.join(media,'relocated')
+ index.sync(snapshot)
+ assert.equal(index.search('name:renamed path:relocated').total,1)
+ assert.equal(index.search('name:media').total,0)
+ const other=structuredClone(snapshot.projects[0]);other.projectId='other-project';other.project!.projectId=other.projectId
+ snapshot.projects.push(other);row.projectId=other.projectId
+ index.sync(snapshot)
+ assert.equal(index.search('',project.projectId).total,0)
+ assert.equal(index.search('',other.projectId).total,1)
+ snapshot.rows=[];index.sync(snapshot)
+ assert.equal(index.search('').total,0)
+ snapshot.rows=[row];index.sync(snapshot,true)
+ assert.equal(index.search('caption:updated').total,1)
+ assert.equal(record.revision,1,'same-revision edits must not leave stale results')
+})
+
 test('range streaming, traversal rejection, subtitle import/cleanup and safe launch argument arrays',async t=>{
  const {root,media,lib,explorer,choose,executed}=await fixture(t);await fs.writeFile(path.join(media,'clip.mp4'),Buffer.from('0123456789'));await fs.writeFile(path.join(root,'external.srt'),'1\n00:00:00,000 --> 00:00:01,500\nhello\n')
  let s=await lib.create(media,{name:'P',mediaCategory:'video',depth:{mode:'through',level:1}}),row=s.rows[0]

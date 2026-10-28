@@ -3,6 +3,9 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { atomicJson, missing, readJson, safePath } from './files'
 import { defaultWorkspace, sectionIds, sectionProjects, type WorkspaceCommand, type WorkspacePrefs, type WorkspaceState } from '../shared/workspace'
+import { isThemeId } from '../shared/themes'
+import { isLocaleId, systemLocale } from '../shared/locales'
+import { exportSettings, importSettings, mergeSettings } from './settings-package'
 
 const key = (v: unknown): v is string => typeof v === 'string' && /^[\w-]{1,100}$/.test(v) && !['__proto__', 'constructor', 'prototype'].includes(v)
 const integer = (v: unknown, min: number, max = Number.MAX_SAFE_INTEGER) => Number.isInteger(v) && Number(v) >= min && Number(v) <= max
@@ -13,12 +16,17 @@ function groupName(v: unknown): string {
 }
 export function validateWorkspace(v: unknown): asserts v is WorkspacePrefs {
   if (!object(v) || v.schemaVersion !== 1 || !integer(v.revision, 0) || !integer(v.nextOrder, 1) || !integer(v.sidebarWidth, 200, 360) || typeof v.sidebarHidden !== 'boolean' || !object(v.collapsed) || typeof v.collapsed.favorites !== 'boolean' || typeof v.collapsed.recent !== 'boolean' || !Array.isArray(v.groups) || v.groups.length > 1000 || !v.groups.every(g => object(g) && key(g.id) && typeof g.name === 'string' && groupName(g.name) === g.name && typeof g.collapsed === 'boolean') || !object(v.projects) || Object.keys(v.projects).length > 50000) throw new Error('側欄設定格式不合法')
+  if (v.theme !== undefined && !isThemeId(v.theme)) throw new Error('主題設定不合法')
+  if (v.locale !== undefined && !isLocaleId(v.locale)) throw new Error('語言設定不合法')
+  if (v.autoOpenContent !== undefined && typeof v.autoOpenContent !== 'boolean') throw new Error('瀏覽設定不合法')
+  if (v.videoAudio !== undefined && (!object(v.videoAudio)||!Number.isFinite(v.videoAudio.volume)||v.videoAudio.volume<0||v.videoAudio.volume>1||typeof v.videoAudio.muted!=='boolean')) throw new Error('影片音量設定不合法')
   const groups = new Set(v.groups.map(g => g.id)), names = new Set(v.groups.map(g => g.name.toLocaleLowerCase()))
   if (groups.size !== v.groups.length || names.size !== v.groups.length || !Object.entries(v.projects).every(([id, p]) => key(id) && object(p) && (p.groupId === null || groups.has(p.groupId)) && typeof p.favorite === 'boolean' && integer(p.addedOrder, 1) && p.addedOrder < v.nextOrder)) throw new Error('側欄群組或專案引用不合法')
   if (v.collapsed.unclassified !== undefined && typeof v.collapsed.unclassified !== 'boolean') throw new Error('未分類設定不合法')
   if (v.sections !== undefined && (!Array.isArray(v.sections) || new Set(v.sections).size !== v.sections.length || !v.sections.every(id => ['favorites', 'unclassified', ...groups].includes(id)))) throw new Error('群組順序不合法')
   if (v.projectOrder !== undefined && (!object(v.projectOrder) || !Object.entries(v.projectOrder).every(([id, list]) => key(id) && Array.isArray(list) && list.length <= 50000 && new Set(list).size === list.length && list.every(key)))) throw new Error('專案順序不合法')
   if (v.browse !== undefined && (!object(v.browse) || !Object.entries(v.browse).every(([id,b])=>key(id)&&object(b)&&['CARD','TABLE','TREE'].includes(b.mode)&&typeof b.location==='string'&&b.location.length<=10000&&integer(b.panelWidth,280,1000)&&object(b.widths)&&Object.entries(b.widths).every(([k,w])=>key(k)&&integer(w,80,1000))&&(b.scroll===undefined||typeof b.scroll==='number'&&b.scroll>=0&&b.scroll<1e9)&&(b.viewport===undefined||object(b.viewport)&&['x','y','zoom'].every(k=>typeof b.viewport[k]==='number'&&Number.isFinite(b.viewport[k]))&&b.viewport.zoom>=0.05&&b.viewport.zoom<=4)))) throw new Error('瀏覽設定不合法')
+  if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.contentMode!==undefined&&!['folders','files'].includes(b.contentMode)||b.filePresentation!==undefined&&!['tiles','groups','list'].includes(b.filePresentation)||b.fileScope!==undefined&&!['current','descendants'].includes(b.fileScope)||b.fileRootId!==undefined&&!key(b.fileRootId)))throw new Error('檔案總覽偏好不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.scrolls!==undefined&&(!object(b.scrolls)||!Object.entries(b.scrolls).every(([mode,value])=>['CARD','TREE','TABLE'].includes(mode)&&typeof value==='number'&&value>=0&&value<1e9))))throw new Error('捲動位置不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.panelVisible!==undefined&&typeof b.panelVisible!=='boolean'||b.detailId!==undefined&&!key(b.detailId)||b.locations!==undefined&&(!object(b.locations)||!Object.entries(b.locations).every(([k,p])=>['CARD','TREE','TABLE'].includes(k)&&typeof p==='string'&&p.length<=10000))))throw new Error('瀏覽位置或內容面板設定不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.treeCollapsed!==undefined&&(!Array.isArray(b.treeCollapsed)||b.treeCollapsed.length>50000||new Set(b.treeCollapsed).size!==b.treeCollapsed.length||!b.treeCollapsed.every(key))))throw new Error('樹狀收合設定不合法')
@@ -30,11 +38,13 @@ export class WorkspaceStore {
   private error?: string
   private onDisk = false
   private tail: Promise<unknown> = Promise.resolve()
-  constructor(private root: string) { this.file = path.join(root, 'workspace-ui.json') }
+  private importPlan?:{token:string;revision:number;prefs:WorkspacePrefs}
+  constructor(private root: string, private languages?: readonly string[]) { this.file = path.join(root, 'workspace-ui.json') }
   async init() {
     await fs.mkdir(this.root, { recursive: true })
     try { await safePath(this.root, this.file); const value = await readJson(this.file); validateWorkspace(value); this.prefs = value; this.onDisk = true }
     catch (error) { if (!missing(error)) this.error = `側欄設定無法讀取，原檔保留；暫用預設且停止保存。${String(error)}` }
+    if (!this.error && !this.prefs.locale && this.languages) await this.commit({ ...this.prefs, locale: systemLocale(this.languages) })
   }
   private run<T>(fn: () => Promise<T>) { const next = this.tail.then(fn); this.tail = next.catch(() => {}); return next }
   private state(): WorkspaceState { return { prefs: structuredClone(this.prefs), ...(this.error ? { error: this.error } : {}) } }
@@ -49,6 +59,12 @@ export class WorkspaceStore {
     await safePath(this.root, this.file)
     await atomicJson(this.file, next, this.onDisk ? this.prefs.revision : undefined)
     this.prefs = next; this.onDisk = true
+  }
+  private async backup() {
+    const id=randomUUID(),dir=path.join(this.root,'workspace-backups'),file=path.join(dir,id+'.json')
+    await safePath(this.root,dir);await fs.mkdir(dir,{recursive:true});await safePath(this.root,file)
+    await atomicJson(file,{kind:'media-viewer.settings-backup',schemaVersion:1,createdAt:new Date().toISOString(),prefs:this.prefs})
+    return id
   }
   read(ids: string[]): Promise<WorkspaceState> {
     return this.run(async () => {
@@ -75,6 +91,43 @@ export class WorkspaceStore {
         next.projectOrder ??= {}; next.projectOrder[section] = list
       }
       switch (command.action) {
+        case 'exportPackage': return {...this.state(),settingsPackage:exportSettings(next)}
+        case 'previewPackage': {
+          const incoming=importSettings(command.value);validateWorkspace(incoming)
+          const token=randomUUID();this.importPlan={token,revision:this.prefs.revision,prefs:incoming}
+          const current=exportSettings(next).prefs,value=exportSettings(incoming).prefs
+          const changes=Object.keys(value).filter(field=>JSON.stringify(current[field as keyof WorkspacePrefs])!==JSON.stringify(value[field as keyof WorkspacePrefs])).map(field=>({field,current:current[field as keyof WorkspacePrefs],incoming:value[field as keyof WorkspacePrefs]}))
+          return {...this.state(),importPreview:{token,changes}}
+        }
+        case 'applyPackage': {
+          const plan=this.importPlan
+          if(!plan||plan.token!==command.token||plan.revision!==this.prefs.revision||!['merge','replace'].includes(command.mode))throw new Error('設定匯入預覽已失效，請重新預覽')
+          const imported=mergeSettings(next,plan.prefs,command.mode);this.sync(imported,ids);validateWorkspace(imported)
+          const backupId=await this.backup();await this.commit(imported);this.importPlan=undefined
+          return {...this.state(),backupId}
+        }
+        case 'restorePackage': {
+          if(typeof command.backupId!=='string'||!(/^[0-9a-f-]{36}$/i.test(command.backupId)))throw new Error('復原身分不合法')
+          const file=path.join(this.root,'workspace-backups',command.backupId+'.json');await safePath(this.root,file)
+          const saved=await readJson(file)
+          if(!object(saved)||saved.kind!=='media-viewer.settings-backup'||saved.schemaVersion!==1)throw new Error('復原備份不合法')
+          validateWorkspace(saved.prefs)
+          const restored=structuredClone(saved.prefs);this.sync(restored,ids)
+          const backupId=await this.backup();await this.commit(restored);this.importPlan=undefined
+          return {...this.state(),backupId}
+        }
+        case 'listBackups': {
+          const dir=path.join(this.root,'workspace-backups');await safePath(this.root,dir)
+          const names=await fs.readdir(dir).catch(error=>{if(missing(error))return [];throw error}),backups=[]
+          for(const name of names.filter(name=>/^[0-9a-f-]{36}\.json$/i.test(name)).slice(-1000)){
+            const file=path.join(dir,name);await safePath(this.root,file)
+            const stat=await fs.stat(file);backups.push({id:name.slice(0,-5),createdAt:stat.mtime.toISOString()})
+          }
+          return {...this.state(),backups:backups.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,30)}
+        }
+        case 'browseBehavior': next.autoOpenContent = bool(command.autoOpenContent); break
+        case 'videoAudio': if(!object(command.value))throw new Error('影片音量設定不合法');next.videoAudio=structuredClone(command.value);break
+        case 'appearance': if (!isThemeId(command.theme) || !isLocaleId(command.locale)) throw new Error('外觀設定不合法'); next.theme=command.theme; next.locale=command.locale; break
         case 'browse': {
           project(command.projectId)
           const value=structuredClone(command.value)

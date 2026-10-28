@@ -1,3 +1,4 @@
+import {calendarDate} from '../shared/fields'
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -5,7 +6,7 @@ import { createHash } from 'node:crypto'
 import type { Snapshot, FolderRow } from '../shared/model'
 import { fieldValue } from '../shared/model'
 import type { SearchResult } from '../shared/explorer'
-import { parseQuery, describeQuery, normalizeValue } from '../shared/query'
+import { parseQuery, describeQuery, normalizeValue, queryField, restoreQuery, queryText, type StableQuery } from '../shared/query'
 export class SearchIndex {
   private db: DatabaseSync
   private versions = new Map<string,string>()
@@ -27,6 +28,12 @@ export class SearchIndex {
   sync(snapshot: Snapshot, force = false) {
     this.snapshot = snapshot
     const keys = new Map<string,SearchResult['fields'][number]>()
+    const projects = new Map(snapshot.projects.map(linked => [linked.projectId, {
+      project: linked.project,
+      bindings: new Map(linked.project?.fieldBindings.map(field => [field.attributeId, {
+        alias: field.alias, key: field.alias.toLocaleLowerCase(),
+      }])),
+    }]))
     const rows = snapshot.rows, present = new Set(rows.map(r => r.rowId))
     const insertDoc = this.db.prepare('INSERT INTO docs VALUES(?,?,?,?)'), insertVal = this.db.prepare('INSERT INTO vals VALUES(?,?,?,?,?)'), insertGram = this.db.prepare('INSERT OR IGNORE INTO grams VALUES(?,?,?)'), remove = this.db.prepare('DELETE FROM docs WHERE id=?')
     const nextVersions = new Map(this.versions)
@@ -34,21 +41,27 @@ export class SearchIndex {
     try {
       for (const id of this.versions.keys()) if (!present.has(id)) { remove.run(id); nextVersions.delete(id) }
       for (const row of rows) {
-        const project = snapshot.projects.find(p => p.projectId === row.projectId)?.project
-        const values = [{ field: '@name', key: 'folder_name', type: 'string', text: normalizeValue(row.name,'string') }, { field: '@path', key: 'path', type: 'string', text: normalizeValue(row.path,'string') }]
+        const linked = projects.get(row.projectId), project = linked?.project
+        const values: { field: string; key: string; type: string; value: unknown }[] = [
+          { field: '@name', key: 'folder_name', type: 'string', value: row.name },
+          { field: '@path', key: 'path', type: 'string', value: row.path },
+        ]
         const all = new Map([...row.record?.attributes ?? [], ...row.record?.projectOverrides[row.projectId] ?? []].map(a => [a.attributeId,a]))
-        for (const a of all.values()) if (['string','tags','number','datetime'].includes(a.type)) {
-          const alias = project?.fieldBindings.find(f => f.attributeId === a.attributeId)?.alias ?? a.key
-          values.push({ field: a.attributeId, key: alias.toLocaleLowerCase(), type: a.type, text: normalizeValue(fieldValue(row,a.attributeId),a.type) })
+        for (const a of all.values()) if (['string','tags','number','datetime','boolean','enum','url','date'].includes(a.type)) {
+          const binding = linked?.bindings.get(a.attributeId), alias = binding?.alias ?? a.key
+          values.push({ field: a.attributeId, key: binding?.key ?? alias.toLocaleLowerCase(), type: a.type, value: fieldValue(row,a.attributeId) })
           keys.set(`${row.projectId}/${a.attributeId}`, { key: alias, type: a.type, projectId: row.projectId, attributeId: a.attributeId })
         }
         for (const f of project?.fieldBindings ?? []) keys.set(`${row.projectId}/${f.attributeId}`, { key: f.alias, type: f.type, projectId: row.projectId, attributeId: f.attributeId })
-        const signature = createHash('sha256').update(JSON.stringify([row.path,row.name,values])).digest('hex')
+        // Compare all searchable inputs before normalizing text/grams. This still
+        // detects in-place value, path and alias edits without relying on revisions.
+        const signature = createHash('sha256').update(JSON.stringify([row.projectId,values])).digest('hex')
         if (!force && this.versions.get(row.rowId) === signature) continue
         remove.run(row.rowId); insertDoc.run(row.rowId,row.projectId,row.name,row.path)
         for (const v of values) {
-          insertVal.run(row.rowId,v.field,v.key,v.type,v.text)
-          const chars = [...v.text]; const grams = new Set<string>(); for (let i=0;i<chars.length-2;i++) grams.add(chars.slice(i,i+3).join(''))
+          const text = normalizeValue(v.value,v.type)
+          insertVal.run(row.rowId,v.field,v.key,v.type,text)
+          const chars = [...text]; const grams = new Set<string>(); for (let i=0;i<chars.length-2;i++) grams.add(chars.slice(i,i+3).join(''))
           for (const gram of grams) insertGram.run(gram,row.rowId,v.field)
         }
         nextVersions.set(row.rowId,signature)
@@ -56,18 +69,24 @@ export class SearchIndex {
       this.db.exec('COMMIT'); this.versions = nextVersions; this.fields = [...keys.values()]
     } catch (e) { this.db.exec('ROLLBACK'); throw e }
   }
-  search(query: string, projectId?: string, offset = 0, limit = 100): SearchResult {
+  search(query: string, projectId?: string, offset = 0, limit = 100, saved?:StableQuery): SearchResult {
     if (!Number.isInteger(offset) || offset<0 || !Number.isInteger(limit) || limit<1 || limit>500) throw new Error('查詢分頁不合法')
     if (projectId && !this.snapshot?.projects.some(p => p.projectId === projectId)) throw new Error('搜尋專案未連結')
-    const groups = parseQuery(query), params: (string|number)[] = [], available = this.fields.filter(f => !projectId || f.projectId === projectId)
+    const params: (string|number)[] = [], available = this.fields.filter(f => !projectId || f.projectId === projectId)
+    const groups = saved?restoreQuery(saved,available):parseQuery(query)
     const conditions = groups.map(g => '('+(g.map(t => {
       let fields: string[] | undefined, type = 'string'
-      if (t.key) {
-        const marker=t.key.lastIndexOf('@'),hasExact=available.some(f=>f.key.toLocaleLowerCase()===t.key),key=marker<0||hasExact?t.key:t.key.slice(0,marker),explicit=marker<0||hasExact?undefined:t.key.slice(marker+1),found = available.filter(f => f.key.toLocaleLowerCase() === key && (!explicit || f.attributeId.toLocaleLowerCase() === explicit))
-        fields = [...new Set(found.map(f=>f.attributeId))]; type = found[0]?.type ?? 'string'
-        if (!fields.length && ['name','folder_name','path'].includes(key) && !explicit) fields = [key === 'path' ? '@path' : '@name']
-        if (!fields.length) throw new Error(`找不到欄位「${t.key}」，可從欄位提示選擇`)
-        if (fields.length > 1 || new Set(found.map(f=>f.type)).size > 1) throw new Error(`欄位「${key}」有多個身分；請使用提示中的 key@完整屬性ID`)
+      if(t.fieldId){fields=[t.fieldId];type=t.expectedType??'string'}
+      else if(t.key){const found=queryField(t.key,available);fields=[found.field];type=found.type}
+      const comparison=fields&&['number','date','datetime'].includes(type)?/^(>=|<=|>|<|=)(.+)$/.exec(t.value):null
+      if(comparison){
+        const value=normalizeValue(comparison[2],type)
+        if(type==='number'&&(!value.trim()||!Number.isFinite(Number(value))))throw new Error('數值比較條件不合法')
+        if(type==='date'&&value.length!==10)throw new Error('日期比較條件不合法')
+        if(type!=='number'&&(!calendarDate(value.slice(0,10))||!/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?)?$/i.test(value)))throw new Error('日期比較條件不合法')
+        params.push(fields![0],type==='number'?Number(value):value)
+        const column=type==='number'?'CAST(v.text AS REAL)':value.length===10?'substr(v.text,1,10)':'v.text'
+        return (t.exclude?'NOT ':'')+'EXISTS(SELECT 1 FROM vals v WHERE v.doc=d.id AND v.field=? AND v.text IS NOT NULL AND v.text<>\'\' AND '+column+' '+comparison[1]+' ?)'
       }
       const value = normalizeValue(t.value,type), gram = [...value].slice(0,3).join('')
       let sql = 'v.doc=d.id'
@@ -79,6 +98,6 @@ export class SearchIndex {
     const where = (projectId ? 'd.project=? AND ' : '') + `(${conditions})`, args = projectId ? [projectId,...params] : params
     const total = Number(this.db.prepare(`SELECT count(*) n FROM docs d WHERE ${where}`).get(...args)!.n)
     const hits = this.db.prepare(`SELECT id rowId,project projectId,name,path FROM docs d WHERE ${where} ORDER BY name COLLATE NOCASE,id LIMIT ? OFFSET ?`).all(...args,limit,offset).map(v => ({ rowId:String(v.rowId),projectId:String(v.projectId),name:String(v.name),path:String(v.path),matched: this.db.prepare('SELECT key,text FROM vals WHERE doc=?').all(String(v.rowId)).filter(v=>groups.flat().some(t=>!t.exclude&&String(v.text).includes(t.value))).map(v=>String(v.key)) }))
-    return { hits,total,fields:available,incomplete:this.snapshot?.projects.filter(p=>p.error&&(!projectId||p.projectId===projectId)).map(p=>p.root)??[],parsed:describeQuery(groups),index:'SQLite · 三字索引／短字範圍掃描' }
+    return { ...(saved?{resolvedQuery:queryText(groups)}:{}),hits,total,fields:available,incomplete:this.snapshot?.projects.filter(p=>p.error&&(!projectId||p.projectId===projectId)).map(p=>p.root)??[],parsed:describeQuery(groups),index:'SQLite · 三字索引／短字範圍掃描' }
   }
 }

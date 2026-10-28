@@ -5,15 +5,17 @@
 
 日期：2026-10-26。來源：C-80 使用者要求納入 Unity、RPG Maker、Unreal、Godot 及其他常見引擎，其他採推薦。**以下是設計覆蓋清單，不等於所有引擎版本均已支援；現有有限探測實作查 electron/game-detection.ts，真實版本樣本仍待驗收。** Windows 優先；2026-10-27 使用者另要求納入 Mac 封裝辨識與執行條件，規則見下節，Windows 可辨識／保護 App 結構候選；macOS 原生啟動及實機驗證仍未完成。
 
-## 現行修正範圍（2026-10-27）
+## 現行修正範圍（2026-10-28）
 
 - 自動結果一律是候選，不自動宣告遊戲 ROOT。Unreal 可結合同名外層啟動器、內層 Binaries/Win64 與 Content/Paks 的 PAK／IoStore；不依賴 EXE 版本資訊。多款集合不跨作品拼接；改名啟動器與部署歸屬不明時停止供人工確認。
 - Unity／Godot 檢查檔案型別及同名資源；不完整 Unity 部署先列未知候選。MV／MZ 結合核心檔與資料目錄；其餘現有引擎只覆蓋程式內的有限組合，不代表涵蓋所有發行版。
 - EXE＋resources/app.asar 只列封裝應用候選，引擎保持未知；不拆包、不以說明／存檔檔名推定 Tyrano。一般應用可明確標記「這不是遊戲」後重新掃描。候選／人工入口位於各分類資料夾設定的進階頁。
+- NW.js：同層一般 EXE、NW 資源檔（`nw.pak`／`nw_100_percent.pak`／`nw_200_percent.pak`）與執行環境（`nw.dll`／`nw_elf.dll`／`chrome_elf.dll`／`icudt.dll` 之一，或成對 `libEGL.dll`／`libGLESv2.dll`）只列引擎未知的應用候選，先停止深入。無外露腳本、改名 EXE、內嵌／`package.nw` 均不需解包；單一資源或 DLL 不成立，普通 NW 工具也不自動確認為遊戲。沒有這些外露組合的單檔形式仍需人工 ROOT。
+- WOLF：保留 EXE＋`Data.wolf`；新增一般 EXE＋同一 `Data/BasicData` 內的 `Game.dat` 與 `DataBase.dat` 候選。涵蓋未封包及同時帶任意名稱 `.wolf` 的混合結構，不依賴 EXE／素材封包固定名稱，不讀取版本資訊或深入 AutoBackup。缺任一基本資料、跨路徑拼接或單獨 `.wolf` 不推定 WOLF；編輯器／工具仍須人工判定是否為遊戲。
 - Tyrano 解包桌面版：外層有一般 EXE 檔案，且同一個 `resources/app` 或真實的 `resources/app.asar` 目錄內同時有 `package.json`、`index.html`、`tyrano/tyrano.js`、`tyrano/plugins/kag/kag.js`、`data/system/Config.tjs` 與 `data/scenario` 中至少一個一般 `.ks` 檔案，列 TyranoScript 候選並在外層 ROOT 停止。標記不跨包裝層拼接、不依賴資料夾／EXE／劇本固定名稱、不執行內容。僅有應用入口而缺少遊戲標記者保留未知候選；真正 ASAR 檔案存在時，不拿旁邊 app 目錄推定封包內引擎。
 - 每次探測最多 64 個目錄、12,000 筆目錄項目、相對深度 5；只讀目錄名稱與型別，資源／EXE／plist 內容讀取量為 0。超限暫停為候選；權限／路徑錯誤停止分支。連結不跟隨，取消不排入後續分支。
 - 任意 .app（含未知引擎、binary／破損 plist）都作為不可寫入的程式 bundle，根及內部不建檔、不深入；Unity dylib／Data／執行檔只提供結構候選。沒有解析 plist 或驗證主機可啟動性；不宣稱完成下方全部 Mac 規則。
-- 人工 ROOT／not-game 優先；唯讀遍歷偏好獨立保存，確認時保留候選證據。建立／載入巢狀專案與寫入入口也檢查上層保護；已連結的舊內部專案停止寫入。歷史內部記錄原樣保留，不自動清理。
+- 人工 ROOT／not-game 優先；唯讀遍歷偏好獨立保存，確認時保留候選證據。建立／載入巢狀專案與共同寫入入口也檢查上層保護；沒有記錄的祖先亦檢查，不再僅探測最近四層。已連結的舊內部專案停止寫入。歷史內部記錄原樣保留，不自動清理。
 - 雙擊／Breadcrumbs 導覽與掃描採相同停止規則：未明確啟用唯讀遍歷時，遊戲 ROOT 不發布任何內部子資料夾到 CARD／TABLE／TREE；連唯讀佔位也不列出。導覽新發現邊界時，移除本專案記憶體快照中的舊子層，磁碟歷史記錄保留。明確啟用唯讀遍歷才允許列出受保護內部。
 - 受控案例涵蓋七款回報的結構、同名偽造／缺標記、混合引擎、集合、精確深度、人工設定、歷史記錄、重掃、權限／超限與 junction。真實版本、plist 主目標解析、多平台共同作品歸屬及 macOS 原生啟動仍待樣本／環境；不可將目錄測試當成遊戲啟動驗證。
 
@@ -26,12 +28,14 @@
 | 個案／指定 ROOT | 本次證據與現行結果 | 待修範圍 |
 | --- | --- | --- |
 | NeetAndAngel | EXE＋resources/app.asar 檔案，目前回傳封裝候選；指定 resources/app/data/sound 層本次無 .media-viewer。 | 不把先前存在的記錄或引擎未知等同本次仍新增；以受控掃描／寫入稽核驗證，保留使用者指定 ROOT。 |
-| 発育測定…／game | game.exe、nw.pak、Chromium DLL／locales，沒有外露 js／www／data；EXE 無版本資訊，現行未命中。 | NW.js／內嵌內容只列執行環境候選並停止，不強猜引擎或解包 EXE；ROOT 是內層 game，不是外包裝。 |
-| 妹幻想…V1.4.5＋DLC | GamePro.exe 產品名稱／描述明載 WOLF RPG Editor；Data 下有多個 .wolf，BasicData 有 Game.dat／DataBase.dat 等。現行只認根的 Data.wolf，未命中；AutoBackup2 有記錄。 | 補未封包／混合封包的 WOLF 組合；不要求固定 Game.exe／Data.wolf 名稱，不深入 AutoBackup 才判根。 |
+| 発育測定…／game | game.exe、nw.pak、Chromium DLL／locales，沒有外露 js／www／data；EXE 無版本資訊，2026-10-27 診斷時未命中。 | 已補受控 NW.js／內嵌結構候選並停止，不強猜引擎或解包 EXE；ROOT 是內層 game，不是外包裝。實際 ROOT 未重掃。 |
+| 妹幻想…V1.4.5＋DLC | GamePro.exe 產品名稱／描述明載 WOLF RPG Editor；Data 下有多個 .wolf，BasicData 有 Game.dat／DataBase.dat 等。2026-10-27 診斷時只認根的 Data.wolf，未命中；AutoBackup2 有記錄。 | 已補受控未封包／混合封包組合；不要求固定 Game.exe／Data.wolf 名稱，不深入 AutoBackup 才判根。實際 ROOT 未重掃。 |
 | ふたりぐらしver1.312 | resources/app.asar 是真實目錄；小型入口檔引用 Tyrano／KAG 核心，具 Config.tjs／first.ks，判斷為 TyranoScript 遊戲結構。 | 本輪已依上方解包桌面版規則修正，在外層停止；歷史 data/image/ring 記錄保留。 |
 | ROOM | resources/app 是解包目錄；Room.exe、package.json／index.html、Tyrano／KAG 核心、Config.tjs 與 first.ks 相互對應。 | 本輪判斷為 TyranoScript 遊戲結構並納入同一規則，不依賴 Room 名稱或存檔。 |
 
-仍待實作／驗收：NW.js 內嵌形式、WOLF 混合封包，以及未知執行環境的通用暫停策略與共同寫入防線。解包 Tyrano 本輪以受控同結構目錄驗證外層定位、重掃／導覽、改名、缺標記／錯誤型別／不同包裝拼接／junction，確認內部零新增且歷史記錄保留。實際兩個 ROOT 僅做唯讀辨識與小型入口查核，不呼叫會建檔的 Library.scan；既有誤建資料另走備份與清理預覽，不自動刪除。
+2026-10-28 已以受控結構補 NW.js 內嵌／封裝候選、WOLF 未封包／混合封包，沿用未知候選暫停與共同寫入檢查；真實版本與其他無外露標記形式仍待樣本。測試核對重掃／導覽、精確深度、明確唯讀遍歷、人工 ROOT／not-game、舊記錄、取消、權限失敗、junction 與深層巢狀建立，原始檔及內部歷史記錄保留。本輪沒有讀取、重掃或修改實際收藏；既有誤建資料另走備份與清理預覽，不自動刪除。先前解包 Tyrano 的實際兩個 ROOT 僅做過唯讀辨識與小型入口查核，未呼叫會建檔的 Library.scan。
+
+本次驗證：`pnpm build` 通過；`pnpm test` 73 項通過（junction 在沙箱內遇 EPERM，沙箱外完整重跑通過）。隔離 Electron 目標檢查亦通過：NW／WOLF 候選內容頁、IPC visit 停止內部發布、深層建立拒絕，原檔與歷史記錄不變；腳本及截圖在 `.test-output/game-boundary-smoke.ts`、`.test-output/runtime-smoke-vDyFgG/`。完整 UI runner 與真實遊戲／macOS 原生啟動未執行。
 
 辨識目的是協助找到「應停止遞迴的遊戲 ROOT」，不是讀取／轉換遊戲資源。引擎身分、是否為遊戲、是否為收藏集合根是不同判斷；引擎製作的工具、編輯器、模組也可能命中特徵。
 
@@ -138,7 +142,7 @@ Apple 結構依據（2026-10-27 查閱）：[bundle 內容配置](https://develo
 | Ren’Py | 只查 `game` 第一層 `.rpy`／`.rpyc`／`.rpa`，腳本全在子目錄或自訂包裝可能漏判。 | 受限子路徑與封包／未封包形式均納入；改 EXE 名稱不應影響標準結構。SDK／Launcher、只有腳本副本與缺少執行環境的目錄須列反例。 |
 | KiriKiri／KiriKiri Z | 只認 EXE＋外部 `.xp3`，內嵌或自訂包裝未涵蓋。 | 單一 XP3 只能作線索，需與執行環境關聯；工具、補丁及其他用途 XP3 須列反例。不解包／解密來強行辨識。 |
 | TyranoScript／TyranoBuilder | 只認 EXE＋`tyrano`＋`data` 名稱，ASAR 等額外桌面封裝無外露標記時不命中；HOME_／NeetAndAngel 有隨附引擎說明，otsutome 引擎仍待確認。 | 驗證入口與 Tyrano 特徵的關聯，區分 Builder／桌面包裝；普通網頁、同名目錄、app.asar、Chromium、說明檔與使用者存檔名不能單獨確認遊戲引擎，不靠解包補判定。 |
-| WOLF RPG Editor | 只認 EXE＋`Data.wolf`，未封裝 Data、改名及其他封裝形式未涵蓋。 | 封裝與未封裝形式分開驗證，結合 WOLF 設定／資料線索；`Game.exe`、Data 或單獨 `.wolf` 均不能單獨確認。 |
+| WOLF RPG Editor | 已有 EXE＋`Data.wolf`，另補同一 `Data/BasicData` 的 `Game.dat`＋`DataBase.dat`；缺少外露基本資料的其他改名／封裝形式仍待樣本。 | 封裝與未封裝形式分開驗證；`Game.exe`、Data 或單獨 `.wolf` 均不能單獨確認，不跨作品拼接基本資料。 |
 | GameMaker | 只認 EXE＋`data.win`；不同 VM／YYC 輸出及自訂封裝需樣本，不能宣稱全部覆蓋。 | 按輸出形式補證據；無 `data.win` 不排除 GameMaker，任意同名檔＋EXE 也不是充分證據。 |
 | Cocos Creator／Cocos2d-x | 只認 EXE＋`cocos2d.dll`＋`resources`，未涵蓋不同版本／原生與網頁部署。 | 按部署形式組合引擎與入口／資源線索；不把單一 DLL、同名 resources 或開發專案直接當成發行遊戲。 |
 | Construct 2／3 | 只查 EXE＋`www/c2runtime.js`，其他 runtime、路徑及較新桌面匯出未涵蓋。 | 不硬性依賴舊 runtime／NW.js；普通網頁、只有 runtime 腳本或共用桌面框架須列反例，具體新規則先驗樣本。 |

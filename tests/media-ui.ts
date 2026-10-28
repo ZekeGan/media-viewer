@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import {execFile} from 'node:child_process'
 import {promisify} from 'node:util'
 import {Library} from '../electron/library'
+import {videoFixture} from './support/video-fixture'
 const base=path.resolve('.test-output');await fs.mkdir(base,{recursive:true})
 const root=await fs.mkdtemp(path.join(base,'media-ui-')),local=path.join(root,'local'),album=path.join(root,'Album'),video=path.join(root,'Video')
 for(const dir of [album,video])await fs.mkdir(dir)
@@ -13,7 +14,7 @@ for(let i=0;i<3;i++)await exec('ffmpeg',['-v','error','-f','lavfi','-i',`color=c
 for(let i=3;i<60;i++)await fs.copyFile(path.join(album,`00${i%3}.png`),path.join(album,String(i).padStart(3,'0')+'.png'))
 await exec('ffmpeg',['-v','error','-f','lavfi','-i','testsrc=size=106x162:rate=3','-t','1','-loop','0',path.join(album,'000-motion.gif')],{windowsHide:true})
 for(const [index,format]of ['webp','bmp','avif','ico'].entries())await exec('ffmpeg',['-v','error','-i',path.join(album,'000.png'),'-vf','scale=32:32','-frames:v','1',path.join(album,`09${index}.${format}`)],{windowsHide:true})
-await exec('ffmpeg',['-v','error','-f','lavfi','-i','color=c=blue:s=160x90:r=12','-f','lavfi','-i','sine=frequency=400:sample_rate=44100','-t','15','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',path.join(video,'first.mp4')],{windowsHide:true})
+await fs.copyFile(await videoFixture(),path.join(video,'first.mp4'))
 await fs.copyFile(path.join(video,'first.mp4'),path.join(video,'second.mp4'))
 await fs.writeFile(path.join(video,'first.srt'),'1\n00:00:00,000 --> 00:00:15,000\nSubtitle fixture\n')
 const library=new Library(local,undefined,false);await library.init();const input={depth:{mode:'through' as const,level:1},scanAll:true}
@@ -25,23 +26,25 @@ const open=async(name:string)=>{await page.getByRole('button',{name:'開啟專�
 try{
  await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.show();win.focus()});await page.bringToFront()
  await open('Video test');await page.locator('.video-stage video').waitFor();await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused&&v.currentTime>.1})
- const settingsIcon=page.getByRole('button',{name:'影片設定',exact:true})
+ const settingsIcon=page.getByRole('button',{name:'更多播放設定',exact:true})
+ const openPlaybackSettings=async()=>{await page.locator('.custom-video-stage').hover({position:{x:10,y:10}});await settingsIcon.click()}
+ assert.equal(await page.getByRole('button',{name:'影片設定',exact:true}).count(),0)
  assert.equal((await settingsIcon.innerText()).trim(),'');assert.equal(await settingsIcon.locator('svg').count(),1);assert.equal(await page.locator('.video-stage .video-options').count(),0)
- await settingsIcon.click();await page.getByRole('menuitem',{name:'字幕設定',exact:true}).click()
- const subtitleSettings=page.getByRole('dialog',{name:'字幕設定',exact:true});await subtitleSettings.waitFor();await subtitleSettings.getByRole('button',{name:'first.srt',exact:true}).click();await subtitleSettings.getByLabel('延後秒數（正值＝晚出現）',{exact:true}).fill('0.5');await subtitleSettings.getByRole('button',{name:'保存字幕設定',exact:true}).click()
+ await openPlaybackSettings()
+ const subtitleSettings=page.getByRole('dialog',{name:'更多播放設定',exact:true});await subtitleSettings.waitFor();await subtitleSettings.getByRole('button',{name:'字幕設定',exact:true}).click();if(await subtitleSettings.getByRole('button',{name:'字幕來源',exact:true}).getAttribute('aria-expanded')!=='true')await subtitleSettings.getByRole('button',{name:'字幕來源',exact:true}).click();await subtitleSettings.getByRole('button',{name:'first.srt',exact:true}).click();await subtitleSettings.getByRole('button',{name:'同步與編碼',exact:true}).click();await subtitleSettings.getByLabel('延後秒數（正值＝晚出現）',{exact:true}).fill('0.5');await subtitleSettings.getByRole('button',{name:'保存字幕設定',exact:true}).click()
  await page.waitForFunction(async()=>{const state=await window.media.request({action:'snapshot'});return state.snapshot.rows.filter(row=>row.projectId===state.snapshot.projects.find(p=>p.project?.name==='Video test')?.projectId).some(row=>Object.values(row.record?.details?.playback??{}).some(playback=>Object.values(playback.settings??{}).some(settings=>settings.offset===.5)))})
- await page.keyboard.press('Escape');await subtitleSettings.waitFor({state:'hidden'});await settingsIcon.click();await page.getByRole('menuitem',{name:'字幕設定',exact:true}).click();await subtitleSettings.waitFor();assert.equal(await subtitleSettings.getByLabel('延後秒數（正值＝晚出現）',{exact:true}).inputValue(),'0.5');await page.keyboard.press('Escape');await subtitleSettings.waitFor({state:'hidden'})
+ await page.keyboard.press('Escape');await subtitleSettings.waitFor({state:'hidden'});await openPlaybackSettings();await subtitleSettings.waitFor();await subtitleSettings.getByRole('button',{name:'字幕設定',exact:true}).click();await subtitleSettings.getByRole('button',{name:'同步與編碼',exact:true}).click();assert.equal(await subtitleSettings.getByLabel('延後秒數（正值＝晚出現）',{exact:true}).inputValue(),'0.5');await page.keyboard.press('Escape');await subtitleSettings.waitFor({state:'hidden'})
  await page.evaluate('window.detachedVideo=document.querySelector("video")')
  await open('Album test');await page.locator('.masonry-gallery').waitFor();await page.waitForFunction(()=>{const video=(window as any).detachedVideo;return video.paused&&!video.getAttribute('src')&&!document.querySelector('video')})
  await page.evaluate('window.detachedVideo.dispatchEvent(new Event("loadedmetadata"))');await page.waitForTimeout(400);assert.equal(await page.evaluate('(window.detachedVideo.paused)'),true)
  await open('Video test');await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused})
- await page.getByRole('button',{name:'影片設定',exact:true}).click();await page.getByRole('menuitem',{name:'關閉自動播放',exact:true}).click()
+ await openPlaybackSettings();await subtitleSettings.getByRole('switch',{name:'進入資料夾時自動播放',exact:true}).click();await subtitleSettings.getByRole('button',{name:'關閉播放設定',exact:true}).click()
  await page.waitForFunction(async()=>{const state=await window.media.request({action:'snapshot'});return state.snapshot.projects.find(p=>p.project?.name==='Video test')?.project?.videoAutoplay===false})
  await open('Album test');await open('Video test');await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&v.readyState>=1});await page.waitForTimeout(400);assert.equal(await page.locator('video').evaluate(v=>(v as HTMLVideoElement).paused),true)
  await page.getByRole('button',{name:'播放 second.mp4',exact:true}).click();await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused&&v.currentTime>.1})
  await page.getByRole('button',{name:'關閉資料夾內容',exact:true}).click();assert.equal(await page.locator('video').count(),0)
  await page.getByRole('button',{name:'切換右側內容',exact:true}).click();await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&v.readyState>=1});assert.equal(await page.locator('video').evaluate(v=>(v as HTMLVideoElement).paused),true)
- await page.getByRole('button',{name:'影片設定',exact:true}).click();await page.getByRole('menuitem',{name:'開啟後自動播放',exact:true}).click();await open('Album test');await open('Video test');await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused})
+ await openPlaybackSettings();await subtitleSettings.getByRole('switch',{name:'進入資料夾時自動播放',exact:true}).click();await subtitleSettings.getByRole('button',{name:'關閉播放設定',exact:true}).click();await open('Album test');await open('Video test');await page.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused})
  await open('Album test');await page.locator('.masonry-gallery .media-thumbnail').first().waitFor()
  assert.ok(await page.locator('.masonry-gallery .media-thumbnail img').count()<35)
  // Load all bounded thumbnails once, then scroll past them and back. Natural image
@@ -50,6 +53,9 @@ try{
  await page.waitForFunction(()=>[...document.querySelectorAll('.masonry-gallery img')].every(image=>(image as HTMLImageElement).complete&&(image as HTMLImageElement).naturalWidth>0))
  const animated=page.locator('.masonry-gallery .media-thumbnail[title="000-motion.gif"]'),galleryScroll=page.locator('.folder-panel-body')
  await galleryScroll.evaluate(element=>element.scrollTop=0);await page.waitForFunction(()=>document.querySelector('.media-thumbnail[title="000-motion.gif"] img')?.getAttribute('src')?.startsWith('media://file/'))
+ // A source URL is assigned before decoding and the scheduled ratio layout commit.
+ // Measure the initial slot only after its natural image ratio has been applied.
+ await page.waitForFunction(()=>{const image=document.querySelector<HTMLImageElement>('.media-thumbnail[title="000-motion.gif"] img'),box=image?.parentElement?.getBoundingClientRect();return image?.complete&&image.naturalHeight&&box&&Math.abs(box.width/box.height-image.naturalWidth/image.naturalHeight)<.01})
  const slotHeight=(await animated.boundingBox())!.height
  await galleryScroll.evaluate(element=>element.scrollTop=element.scrollHeight);await page.waitForFunction(()=>{const image=document.querySelector('.media-thumbnail[title="000-motion.gif"] img');return !image||image.getAttribute('src')?.startsWith('media://thumb/')})
  await page.waitForTimeout(200);await galleryScroll.evaluate(element=>element.scrollTop=element.scrollHeight)

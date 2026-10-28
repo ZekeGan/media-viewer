@@ -12,6 +12,7 @@ const api: MediaApi = {
 }
 contextBridge.exposeInMainWorld('media', api)
 const desktop: DesktopApi = {
+  settingsFile: action=>ipcRenderer.invoke('workspace:file',action),
   workspace: () => ipcRenderer.invoke('workspace:read'),
   updateWorkspace: command => ipcRenderer.invoke('workspace:update', command),
   windowAction: action => ipcRenderer.invoke('window:action', action),

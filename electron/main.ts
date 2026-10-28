@@ -1,3 +1,4 @@
+import {writeSettingsFile} from './settings-file'
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, protocol, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
@@ -12,6 +13,9 @@ import { WorkspaceStore } from './workspace'
 import type { WorkspaceCommand, WindowAction } from '../shared/workspace'
 import { Explorer } from './explorer'
 import type { ExplorerRequest } from '../shared/explorer'
+import type {LocaleId} from '../shared/locales'
+import {nativeText} from '../shared/native-messages'
+import { completionNotice } from '../shared/notifications'
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
 const rendererRoot = path.resolve(directory, '../renderer')
@@ -19,6 +23,8 @@ protocol.registerSchemesAsPrivileged(['app', 'media'].map(scheme => ({ scheme, p
 let win: BrowserWindow | undefined
 let library: Library
 let pendingRequests = 0
+let nativeLocale:LocaleId='zh-TW'
+const nt=(source:Parameters<typeof nativeText>[0])=>nativeText(source,nativeLocale)
 const rootChoices=new Map<string,{path:string;expires:number}>()
 const devUrl = process.env.ELECTRON_RENDERER_URL
 function trusted(url: string) { try { return devUrl ? new URL(url).origin === new URL(devUrl).origin : new URL(url).protocol === 'app:' && new URL(url).hostname === 'ui' } catch { return false } }
@@ -40,7 +46,7 @@ async function dispatch(request: Request): Promise<Response> {
     case 'saveProject': await library.saveProject(request.project); break
     case 'saveFolder': await library.saveValues(request.rowId, request.revision, request.values); break
     case 'image': {
-      const selected = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: '圖片', extensions: Object.keys(imageTypes) }] })
+      const selected = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: nt('圖片'), extensions: Object.keys(imageTypes) }] })
       if (!selected.canceled) await library.addImage(request.rowId, request.revision, selected.filePaths[0],request.cellId)
       else extra.cancelled=true
       break
@@ -54,8 +60,18 @@ async function dispatch(request: Request): Promise<Response> {
     case 'cleanupAllPreview': extra.preview = await library.previewCleanup(undefined, 'all'); break
     case 'cleanup': extra.cleanup = await library.cleanup(request.token, request.restart); break
     case 'legacyPreview': extra.legacy = await library.previewLegacy(); break
-    case 'legacyImport': extra.message = await library.importLegacy(request.token, request.ids, request.depth); break
+    case 'legacyImport': {
+      const result = await library.importLegacy(request.token, request.ids, request.depth)
+      extra.notice = completionNotice(result.imported.length, result.warnings.length,
+        `已建立：${result.imported.join('、') || '無'}\n舊檔備份：${result.backup}\n${result.warnings.join('\n')}`)
+      break
+    }
     default: throw new Error('不支援的操作')
+  }
+  const cleanup = extra.cleanup ?? extra.removal
+  if (cleanup?.failed.length) {
+    extra.notice = completionNotice(cleanup.removed, cleanup.failed.length,
+      nt('部分資料清理失敗：') + cleanup.failed.join('\n'))
   }
   return { snapshot: library.snapshot(), ...extra }
 }
@@ -67,13 +83,15 @@ else {
     library = new Library(app.getPath('userData'), progress => win?.webContents.send('library:progress', progress))
     let startupError = ''
     try { await library.init() } catch (e) { startupError = String(e); console.error(e) }
-    const workspace = new WorkspaceStore(app.getPath('userData')); await workspace.init()
+    const workspace = new WorkspaceStore(app.getPath('userData'), process.env.MEDIA_VIEWER_TEST_DATA ? ['zh-TW'] : app.getPreferredSystemLanguages()); await workspace.init()
     const checkSender = (event: Electron.IpcMainInvokeEvent) => {
       if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame || !trusted(event.senderFrame.url)) throw new Error('拒絕未授權的操作')
     }
     const projectIds = () => library.snapshot().projects.map(p => p.projectId)
+    nativeLocale=(await workspace.read(projectIds())).prefs.locale??'zh-TW'
     const explorer = new Explorer(library,app.getPath('userData'),{
-      choose: async kind => { const result=await dialog.showOpenDialog(win!,{properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='folder'?{}:{filters:[{name:kind==='exe'?'程式':'字幕',extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
+      external: url=>shell.openExternal(url),
+      choose: async kind => { const result=await dialog.showOpenDialog(win!,{properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='folder'?{}:{filters:[{name:nt(kind==='exe'?'程式':'字幕'),extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
       open: async file=>{const error=await shell.openPath(file);if(error)throw new Error(error)},
       launch: (file,args)=>new Promise<void>((resolve,reject)=>{const child=spawn(file,args,{cwd:path.dirname(file),shell:false,detached:true,stdio:'ignore',windowsHide:false});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve()})}),
       thumbnail: async (file,mime,url)=>{
@@ -89,13 +107,31 @@ else {
     ipcMain.handle('explorer:request',async(event,request:ExplorerRequest)=>{checkSender(event);pendingRequests++;try{return await library.run(()=>explorer.request(request))}finally{pendingRequests--}})
     ipcMain.handle('explorer:subtitleDrop',async(event,rowId:string,file:string)=>{checkSender(event);pendingRequests++;try{return await library.run(()=>explorer.droppedSubtitle(rowId,file))}finally{pendingRequests--}})
     ipcMain.handle('workspace:read', async event => { checkSender(event); pendingRequests++; try { return await workspace.read(projectIds()) } finally { pendingRequests-- } })
-    ipcMain.handle('workspace:update', async (event, command: WorkspaceCommand) => { checkSender(event); pendingRequests++; try { return await workspace.update(command, projectIds()) } finally { pendingRequests-- } })
+    ipcMain.handle('workspace:file',async(event,action:'export'|'import')=>{
+      checkSender(event);pendingRequests++
+      try{
+        if(action==='export'){
+          const state=await workspace.update({action:'exportPackage'},projectIds())
+          const chosen=await dialog.showSaveDialog(win!,{title:nt('匯出設定包'),defaultPath:'media-viewer-settings.json',filters:[{name:'JSON',extensions:['json']}]})
+          if(chosen.canceled||!chosen.filePath)return {...state,cancelled:true}
+          await writeSettingsFile(chosen.filePath,state.settingsPackage!)
+          return state
+        }
+        if(action!=='import')throw new Error('設定包操作不合法')
+        const chosen=await dialog.showOpenDialog(win!,{title:nt('匯入設定包'),properties:['openFile'],filters:[{name:'JSON',extensions:['json']}]})
+        if(chosen.canceled)return {...await workspace.read(projectIds()),cancelled:true}
+        const file=chosen.filePaths[0],stat=await fs.stat(file)
+        if(!stat.isFile()||stat.size>4*1024*1024)throw new Error('設定包過大或不是檔案')
+        return await workspace.update({action:'previewPackage',value:JSON.parse(await fs.readFile(file,'utf8'))},projectIds())
+      }finally{pendingRequests--}
+    })
+    ipcMain.handle('workspace:update', async (event, command: WorkspaceCommand) => { checkSender(event); pendingRequests++; try { const state=await workspace.update(command, projectIds());nativeLocale=state.prefs.locale??'zh-TW';return state } finally { pendingRequests-- } })
     ipcMain.handle('window:action', (event, action: WindowAction) => {
       checkSender(event)
       if (!['state', 'minimize', 'toggleMaximize', 'close'].includes(action)) throw new Error('不支援的視窗操作')
       if (action === 'minimize') win!.minimize()
       if (action === 'toggleMaximize') { if (win!.isMaximized()) win!.unmaximize(); else win!.maximize() }
-      const state = { maximized: win!.isMaximized() }
+      const state = { maximized: win!.isMaximized(), visible:win!.isVisible()&&!win!.isMinimized() }
       if (action === 'close') win!.close()
       return state
     })
@@ -112,6 +148,7 @@ else {
       try {
         const url = new URL(request.url), parts = url.pathname.split('/').filter(Boolean)
         if (['file','thumb'].includes(url.hostname) && parts.length===2) { const response=await explorer.stream(parts[0],parts[1],request,url.hostname==='thumb');response.headers.set('Access-Control-Allow-Origin',devUrl?new URL(devUrl).origin:'app://ui');response.headers.set('Access-Control-Expose-Headers','Content-Range, Accept-Ranges');return response }
+        if (url.hostname==='archive'&&parts.length===4)return explorer.archiveStream(parts[0],parts[1],parts[2],parts[3])
         if (url.hostname !== 'asset' || parts.length !== 2) return new Response(null, { status: 403 })
         const asset = await library.asset(parts[0], parts[1])
         return net.fetch(pathToFileURL(asset.file).toString())
@@ -120,12 +157,12 @@ else {
     ipcMain.handle('library:request', async (event, request: Request) => {
       if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame || !trusted(event.senderFrame.url) || !request || typeof request.action !== 'string') throw new Error('拒絕未授權的操作')
       if (request.action === 'cancelScan') { library.cancelScan(); return { snapshot: library.snapshot() } }
-      if (request.action === 'snapshot' && startupError) return { snapshot: library.snapshot(), message: startupError }
+      if (request.action === 'snapshot' && startupError) return { snapshot: library.snapshot(), notice: { level: 'error', message: startupError } } satisfies Response
       pendingRequests++
       try { return await library.run(() => dispatch(request)) }
       finally { pendingRequests-- }
     })
-    win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, frame: false, backgroundColor: '#202124', show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
+    win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, frame: false, backgroundColor: '#202124', show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, plugins: true } })
     win.setMenu(null)
     const contents = win.webContents
     contents.on('before-input-event', (event, input) => {
@@ -133,18 +170,20 @@ else {
       event.preventDefault()
       if (input.type === 'keyDown' && !input.isAutoRepeat) contents.toggleDevTools()
     })
-    const publishWindowState = () => win?.webContents.send('window:state', { maximized: win.isMaximized() })
-    win.on('maximize', publishWindowState); win.on('unmaximize', publishWindowState)
+    const publishWindowState = () => win?.webContents.send('window:state', { maximized: win.isMaximized(), visible:win.isVisible()&&!win.isMinimized() })
+    win.on('maximize',publishWindowState);win.on('unmaximize',publishWindowState)
+    win.on('hide',publishWindowState);win.on('show',publishWindowState)
+    win.on('minimize',publishWindowState);win.on('restore',publishWindowState)
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     win.on('close', event => {
       if (pendingRequests) {
         event.preventDefault()
-        dialog.showMessageBoxSync(win!, { type: 'info', message: '操作仍在進行', detail: '請等候保存完成；掃描可先按「取消掃描」，再關閉程式。', buttons: ['繼續等待'] })
+        dialog.showMessageBoxSync(win!, { type: 'info', message: nt('操作仍在進行'), detail: nt('請等候保存完成；掃描可先按「取消掃描」，再關閉程式。'), buttons: [nt('繼續等待')] })
       }
     })
     win.webContents.on('will-prevent-unload', event => {
       if (pendingRequests) return
-      const choice = dialog.showMessageBoxSync(win!, { type: 'question', message: '要放棄尚未保存的變更嗎？', detail: '返回可繼續編輯；放棄後會關閉或重新載入畫面。', buttons: ['返回編輯', '放棄變更'], defaultId: 0, cancelId: 0 })
+      const choice = dialog.showMessageBoxSync(win!, { type: 'question', message: nt('要放棄尚未保存的變更嗎？'), detail: nt('返回可繼續編輯；放棄後會關閉或重新載入畫面。'), buttons: [nt('返回編輯'), nt('放棄變更')], defaultId: 0, cancelId: 0 })
       if (choice === 1) event.preventDefault()
     })
     win.webContents.on('will-navigate', (event, url) => { if (!trusted(url)) event.preventDefault() })
@@ -153,6 +192,6 @@ else {
     win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>callback(allowFullscreen(contents,permission,details)))
     win.once('ready-to-show', () => win?.show())
     await win.loadURL(devUrl ?? 'app://ui/index.html')
-  }).catch(error => { console.error(error); dialog.showErrorBox('啟動失敗', String(error)); app.quit() })
+  }).catch(error => { console.error(error); dialog.showErrorBox(nt('啟動失敗'), String(error)); app.quit() })
   app.on('window-all-closed', () => app.quit())
 }

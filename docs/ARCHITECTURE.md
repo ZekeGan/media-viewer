@@ -15,17 +15,23 @@ Renderer 負責畫面、草稿與互動；preload 只暴露受控 API；main 驗
 | 啟動／IPC／協定／系統操作 | [main](../electron/main.ts)、[preload](../electron/preload.ts) | BrowserWindow、來源驗證、原生對話框、受控媒體串流 |
 | 專案與可攜記錄 | [library](../electron/library.ts) `Library` | create/link/scan/visit/saveValues、身分、副本、復原、清理與舊資料匯入 |
 | 原子檔案／路徑 | [files](../electron/files.ts)、[hidden](../electron/hidden.ts) | safePath/within、atomicJson、記錄備份／指紋、Windows 隱藏目錄 |
-| 媒體／縮圖／字幕／遊戲動作 | [explorer](../electron/explorer.ts) `Explorer` | content/stream/thumbnail、attributes、目標綁定與執行、外部資料套用 |
+| 媒體／縮圖／字幕／遊戲動作 | [explorer](../electron/explorer.ts) `Explorer` | content/overview/stream/thumbnail、attributes、目標綁定與執行、外部資料套用 |
 | 遊戲辨識 | [game-detection](../electron/game-detection.ts) | 有限探測、證據與 ROOT 邊界 |
 | 搜尋索引 | [search-index](../electron/search-index.ts) `SearchIndex` | Node SQLite、Unicode 子字串 grams、分頁；可重建，非資料來源 |
-| 本機 UI 設定 | [workspace](../electron/workspace.ts) `WorkspaceStore` | 群組／排序／窗格／偏好，驗證、保存、尺寸正規化 |
-| 外部來源 | [metadata](../electron/metadata.ts) | E-Hentai URL 驗證與公開資料預覽 |
+| 本機 UI 設定 | [workspace](../electron/workspace.ts) `WorkspaceStore` | 群組／排序／窗格／偏好，驗證、保存、尺寸正規化；settings-package／settings-file 處理允許清單、移轉預覽與備份復原 |
+| 外部來源 | [metadata](../electron/metadata.ts) | [sources](../shared/sources.ts) 分類註冊、metadata／metadata-public 固定端點、大小限制、來源預覽與追溯 |
 | 契約與驗證 | [model](../shared/model.ts)、[explorer](../shared/explorer.ts)、[workspace](../shared/workspace.ts) | 型別及 runtime 驗證；修改 IPC 時兩端一起查 |
+| 操作通知契約 | [notifications](../shared/notifications.ts)、[Toasts](../src/Toasts.tsx) | main／Explorer 以完成數與問題數建立通知等級；App 接收 notice，例外明確標為 error；Toasts 負責標題、角色及收起時機。舊資料匯入回傳 imported／warnings／backup，顯示文字由 main 組合；均屬瞬時回應，不改可攜 schema |
 | 共用純邏輯 | [browse](../shared/browse.ts)、[layouts](../shared/layouts.ts)、[images](../shared/images.ts)、[query](../shared/query.ts)、[subtitles](../shared/subtitles.ts)、[reader](../shared/reader.ts)、[gallery](../shared/gallery.ts) | 模式／樹分支、方案、格式、查詢、字幕解析、閱讀分頁及適應尺寸、圖庫尺寸與可見範圍模型 |
 | 應用狀態／外框 | [App](../src/App.tsx)、[DesktopShell](../src/DesktopShell.tsx)、[ProjectSettings](../src/ProjectSettings.tsx) | snapshot／草稿／保存、側欄、搜尋入口與視窗控制 |
+| 全域外觀／語言／圖示 | [ApplicationSettings](../src/ApplicationSettings.tsx)、[themes](../src/themes/ThemeProvider.tsx)、[i18n](../src/i18n/index.ts)、[icons](../src/icons.tsx) | 主題／語言預覽與本機保存、共用 CSS 變數、介面翻譯；不改寫使用者資料 |
 | 瀏覽與設定 | [BrowseWorkspace](../src/BrowseWorkspace.tsx)、[TreeView](../src/TreeView.tsx)、[FolderPanel](../src/FolderPanel.tsx) | 三模式、歷史、獨立右區、設定 Drawer；TREE 用 React Flow＋Dagre |
 | CELL／內容 | [Card](../src/Card.tsx)、[Editor](../src/Editor.tsx)、[FolderContent](../src/FolderContent.tsx) | 共用編輯引擎、分開版面、各屬性內容 |
 | 媒體／搜尋／通知 | [Gallery](../src/Gallery.tsx)、[Reader](../src/Reader.tsx)、[VideoViewer](../src/VideoViewer.tsx)、[SearchDialog](../src/SearchDialog.tsx)、[Toasts](../src/Toasts.tsx) | 相簿／閱讀器、Video.js、查詢 UI、右下通知 |
+| 影片控制與本機音量 | [VideoControls](../src/VideoControls.tsx)、[useVideoAudio](../src/useVideoAudio.ts) | native video 操作、控制列、可選接續；本機音量經 WorkspaceStore 保存。main 的 `window:state` 另發布可見／最小化狀態，供播放器暫停與取消倒數 |
+| 影片字幕設定畫面 | [VideoSubtitleSettings](../src/VideoSubtitleSettings.tsx) | 控制列內受控字幕群組、來源選擇、外觀／時間／編碼欄位；狀態、讀取／解析／保存由 VideoViewer 管理，選單留在播放器容器內 |
+| 檔案總覽／文件 | [FileOverview](../src/FileOverview.tsx)、[DocumentViewer](../src/DocumentViewer.tsx)、[archive](../electron/archive.ts) | 已納管來源分頁／虛擬列、來源身分與生命週期；ZIP 受限直接讀取、PDF 內建 viewer，原文件唯讀 |
+| 影片／字幕樣式 | [video-player.css](../src/video-player.css) | 播放區、字幕、檔案列、控制列、設定與響應式規則集中於此；main.tsx 在共用 style.css 後、themes.css 前固定載入，主題仍持有色票及共用圓角覆蓋。播放器 JS 維持延遲載入 |
 
 先 `rg -n "符號" 相關目錄`，再讀函式及呼叫端；不為定位一個問題全讀以上檔案。
 

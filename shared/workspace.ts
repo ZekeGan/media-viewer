@@ -1,4 +1,6 @@
 import type { BrowseState } from './explorer'
+import type { ThemeId } from './themes'
+import type { LocaleId } from './locales'
 export interface ProjectPlacement { groupId: string | null; favorite: boolean; addedOrder: number }
 export interface WorkspacePrefs {
   schemaVersion: 1; revision: number; nextOrder: number
@@ -7,11 +9,25 @@ export interface WorkspacePrefs {
   sections?: string[]
   projectOrder?: Record<string, string[]>
   browse?: Record<string, BrowseState>
+  theme?: ThemeId
+  locale?: LocaleId
+  autoOpenContent?: boolean
+  videoAudio?: {volume:number;muted:boolean}
   groups: { id: string; name: string; collapsed: boolean }[]
   projects: Record<string, ProjectPlacement>
 }
-export interface WorkspaceState { prefs: WorkspacePrefs; error?: string }
+export interface SettingsPackage { kind:'media-viewer.settings'; schemaVersion:1; exportedAt:string; prefs:Partial<WorkspacePrefs> }
+export interface SettingsImportPreview { token:string; changes:{field:string;current:unknown;incoming:unknown}[] }
+export interface WorkspaceState { prefs: WorkspacePrefs; error?: string; settingsPackage?:SettingsPackage; importPreview?:SettingsImportPreview; backupId?:string; backups?:{id:string;createdAt:string}[]; cancelled?:boolean }
 export type WorkspaceCommand =
+  | { action:'exportPackage' }
+  | { action:'previewPackage'; value:unknown }
+  | { action:'applyPackage'; token:string; mode:'merge'|'replace' }
+  | { action:'restorePackage'; backupId:string }
+  | { action:'listBackups' }
+  | { action:'browseBehavior'; autoOpenContent:boolean }
+  | { action:'videoAudio'; value:{volume:number;muted:boolean} }
+  | { action: 'appearance'; theme: ThemeId; locale: LocaleId }
   | { action: 'createGroup'; name: string }
   | { action: 'renameGroup'; id: string; name: string }
   | { action: 'removeGroup'; id: string }
@@ -24,8 +40,9 @@ export type WorkspaceCommand =
   | { action: 'layout'; sidebarWidth?: number; sidebarHidden?: boolean }
   | { action: 'browse'; projectId: string; value: BrowseState }
 export type WindowAction = 'state' | 'minimize' | 'toggleMaximize' | 'close'
-export interface WindowState { maximized: boolean }
+export interface WindowState { maximized: boolean; visible?:boolean }
 export interface DesktopApi {
+  settingsFile(action:'export'|'import'):Promise<WorkspaceState>
   workspace(): Promise<WorkspaceState>
   updateWorkspace(command: WorkspaceCommand): Promise<WorkspaceState>
   windowAction(action: WindowAction): Promise<WindowState>
