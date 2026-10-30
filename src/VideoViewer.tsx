@@ -15,11 +15,14 @@ type UpNext = {
   nextId: string
   remaining: number
 }
-export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, changeAutoNext, changeAutoplay, initialFileId }: {
+export function VideoViewer({ background=false, row, entries, run, busy, autoplay, autoNext, changeAutoNext, changeAutoplay, initialFileId, hideStrip=false, onSelected }: {
+  background?:boolean
   row: FolderRow
   entries: MediaEntry[]
   run: (req: ExplorerRequest) => Promise<ExplorerResponse | undefined>
   autoplay: boolean
+  hideStrip?:boolean
+  onSelected?:(id:string)=>void
   initialFileId?: string
 
   busy: boolean
@@ -136,7 +139,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
   const playSelected = async (node: HTMLVideoElement) => {
     if (node !== video.current || !node.isConnected) return
 
-    if (document.hidden || !windowVisible.current || !audioLive.current.ready) {
+    if ((!background&&document.hidden) || !windowVisible.current || !audioLive.current.ready) {
       pendingStart.current = true
       return
     }
@@ -145,7 +148,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
 
     try {
       await node.play()
-      if (node !== video.current || !node.isConnected || document.hidden || !windowVisible.current) node.pause(); else if (mounted.current) setError('')
+      if (node !== video.current || !node.isConnected || (!background&&document.hidden) || !windowVisible.current) node.pause(); else if (mounted.current) setError('')
     }
     catch (reason) {
       if (mounted.current && node === video.current && node.isConnected && (reason as Error).name !== 'AbortError') setError(node.error || (reason as Error).name === 'NotSupportedError' ? tr('此影片無法解碼或已失效；首輪驗證 MP4／WebM，MKV／HEVC 不保證支援。') : tr('無法自動播放，請按播放器的播放按鈕。'))
@@ -184,6 +187,8 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
     setFileId(entry.id)
   }
 
+  useEffect(()=>{if(initialFileId&&initialFileId!==file?.id){const next=videos.find(entry=>entry.id===initialFileId);if(next)selectVideo(next)}},[initialFileId])
+  useEffect(()=>{if(file)onSelected?.(file.id)},[file?.id])
   const seek = (value: number) => {
     const node = video.current
     if (!node || !Number.isFinite(node.duration) || node.duration <= 0) return
@@ -388,7 +393,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
 
   useEffect(() => {
     const visibility = () => {
-      if (document.hidden) {
+      if ((!background&&document.hidden)) {
         wantsPlayback.current = false
         pendingStart.current = false
         video.current?.pause()
@@ -405,9 +410,9 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
       observed = false
 
     const apply = (visible: boolean | undefined) => {
-      windowVisible.current = visible !== false
+      windowVisible.current = background || visible !== false
 
-      if (visible === false) {
+      if (!background && visible === false) {
         wantsPlayback.current = false
         pendingStart.current = false
         video.current?.pause()
@@ -479,7 +484,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
       const current = nextRef.current,
         list = filesLive.current
 
-      if (!current || document.hidden || !windowVisible.current || current.fileId !== currentFile.current) {
+      if (!current || (!background&&document.hidden) || !windowVisible.current || current.fileId !== currentFile.current) {
         countdown()
         return
       }
@@ -613,7 +618,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
           }}
 
           onPlay={event => {
-            if (event.currentTarget !== video.current || !event.currentTarget.isConnected || document.hidden || !windowVisible.current) event.currentTarget.pause(); else {
+            if (event.currentTarget !== video.current || !event.currentTarget.isConnected || (!background&&document.hidden) || !windowVisible.current) event.currentTarget.pause(); else {
               setPaused(false)
               countdown()
               showControls()
@@ -653,7 +658,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
             setPaused(true)
             setWaiting(false)
             const next = videos[index + 1]
-            if (autoNext && !nextSaving && !menuOpen && !document.hidden && windowVisible.current && next) countdown({ fileId: file.id, nextId: next.id, remaining: 5 })
+            if (autoNext && !nextSaving && !menuOpen && !(!background&&document.hidden) && windowVisible.current && next) countdown({ fileId: file.id, nextId: next.id, remaining: 5 })
           }}
 
           onError={event => {
@@ -727,6 +732,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
         panelHeight={Math.max(80, Math.min(440, stageSize.height - controlHeight - 20))}
         panelWidth={Math.max(200, Math.min(360, stageSize.width - 24))}
         interacting={setAudioDragging}
+        showAutoplay={!hideStrip}
         autoplay={autoplay}
         autoplayToggle={() => void changePlaybackPreference(() => changeAutoplay(!autoplay))}
         visible={controlsVisible}
@@ -738,8 +744,6 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
         muted={audio.muted}
         rate={rate}
         audioReady={audio.ready}
-        captions={captions}
-        hasSubtitle={!!subtitle}
         autoNext={autoNext}
         nextSaving={nextSaving || busy}
         fullscreen={fullscreen}
@@ -754,7 +758,6 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
         seek={seek}
         audio={changeAudio}
         speed={changeRate}
-        caption={toggleCaptions}
         nextToggle={() => void changePlaybackPreference(() => changeAutoNext(!autoNext))}
         previous={() => {
           const previous = videos[index - 1]
@@ -765,6 +768,8 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
           if (next) selectVideo(next)
         }}
         subtitleSettings={<Accordion className="player-subtitle-group" value={subtitleExpanded?'subtitles':null} onChange={value=>setSubtitleExpanded(!!value)} transitionDuration={0}><Accordion.Item value="subtitles"><Accordion.Control>{tr('字幕設定')}</Accordion.Control><Accordion.Panel><VideoSubtitleSettings
+          captions={captions}
+          toggleCaptions={toggleCaptions}
           section={subtitleSection}
           changeSection={setSubtitleSection}
           error={error}
@@ -788,7 +793,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
 
     </div>
 
-    <div
+    {!hideStrip&&<div
       ref={strip}
       className="video-strip"
       aria-label={tr('資料夾影片')}
@@ -816,7 +821,7 @@ export function VideoViewer({ row, entries, run, busy, autoplay, autoNext, chang
           {entry.name}
         </span>
       </button>)}
-    </div>
+    </div>}
 
   </div>
 }

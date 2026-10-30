@@ -27,10 +27,9 @@ interface Props {
   muted: boolean
   rate: number
   audioReady: boolean
-  captions: boolean
-  hasSubtitle: boolean
 
   autoNext: boolean
+  showAutoplay?:boolean
   autoplay: boolean
   nextSaving: boolean
   fullscreen: boolean
@@ -44,7 +43,6 @@ interface Props {
   audio: (volume: number, muted: boolean) => void
 
   speed: (value: number) => void
-  caption: () => void
   autoplayToggle: () => void
   interacting: (value: boolean) => void
   nextToggle: () => void
@@ -166,7 +164,6 @@ export function VideoControls(p: Props) {
         >{videoTime(p.time)} / {videoTime(p.duration)}</span>
       </div>
       <div className="player-actions">
-        {tool(p.hasSubtitle ? tr('顯示／隱藏字幕') : tr('載入字幕'), 'captions', p.caption, false, 'C', p.hasSubtitle && p.captions)}
         <Popover
           opened={p.menuOpen}
           onChange={p.menu}
@@ -207,7 +204,7 @@ export function VideoControls(p: Props) {
             }}
           >
             <div className="player-settings-heading"><strong>{tr('播放設定')}</strong><button type="button" className="player-settings-close" aria-label={tr('關閉播放設定')} onClick={() => { p.menu(false); trigger.current?.focus() }}><Icon name="close" size={18} /></button></div>
-            <Switch label={tr('進入資料夾時自動播放')} checked={p.autoplay} disabled={p.nextSaving} onChange={p.autoplayToggle} />
+            {p.showAutoplay!==false&&<Switch label={tr('進入資料夾時自動播放')} checked={p.autoplay} disabled={p.nextSaving} onChange={p.autoplayToggle} />}
             <Switch label={tr('播完接下一部')} checked={p.autoNext} disabled={p.nextSaving} onChange={p.nextToggle} />
             <label className="player-speed-label">{tr('播放速度')}<select
               aria-label={tr('播放速度')}

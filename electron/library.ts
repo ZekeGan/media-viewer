@@ -1,4 +1,4 @@
-import {stabilizeQuery,type QueryField} from '../shared/query'
+import {parseQuery,stabilizeQuery,type QueryField} from '../shared/query'
 import {projectImageCells} from '../shared/layouts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -9,6 +9,8 @@ import { hideDirectories } from './hidden'
 import { detectGame, insideAppBundle, GameProbeLimit } from './game-detection'
 import { identifyImage } from '../shared/images'
 import type { LegacyImportResult } from '../shared/model'
+import type {FieldDeletionPreview,FullRemovalPreview} from '../shared/model'
+import {managedTree,applyMaintenance,withoutField,MaintenanceFailure,type Change,type ManagedFile} from './maintenance'
 
 interface PlanEntry { dir: string; record: FolderRecord; files: { path: string; hash: string }[] }
 interface Plan { preview: CleanupPreview; entries: PlanEntry[]; rowId?: string; projectId?: string }
@@ -16,6 +18,8 @@ export class Library {
   private refs: { projectId: string; root: string }[] = []
   private plans = new Map<string, Plan>()
   private removalPlans = new Map<string, { preview:ProjectRemovalPreview; root:string; records:{dir:string;record:FolderRecord}[]; files:{path:string;hash:string}[]; definitions:string[]; rootFiles?:{path:string;hash:string}[] }>()
+  private fieldPlans=new Map<string,{preview:FieldDeletionPreview;changes:Change[];guards:ManagedFile[];refs:string;scope:string;absent:string[]}>()
+  private fullPlans=new Map<string,{preview:FullRemovalPreview;tree:Awaited<ReturnType<typeof managedTree>>;refs:string;guards:ManagedFile[];absent:string[]}>()
   private cancelled = false
   private hiddenKnown = new Set<string>()
   private legacyPlan?: { token: string; hash: string; views: any[] }
@@ -68,9 +72,10 @@ export class Library {
     root = await fs.realpath(root)
     const protectedBy = await this.protectedAncestor(root)
     if (protectedBy) throw new Error(`此位置受遊戲／App 邊界保護，請選擇外層資料夾：${protectedBy}`)
-    const p: Project = { kind: 'media-viewer.project', schemaVersion: 1, projectId: randomUUID(), rootFolderId: 'pending', revision: 1, name: input.name, mediaCategory: input.mediaCategory, depth: input.depth, fieldBindings: [], cells: defaultCells(randomUUID), list: { itemsPerRow: 2, pageSize: 100 }, excludedRelativePaths: [] }
+    const p: Project = { kind: 'media-viewer.project', schemaVersion: 1, projectId: randomUUID(), rootFolderId: 'pending', revision: 1, name: input.name, mediaCategory: input.mediaCategory, depth: input.depth, fieldBindings: [], cells: defaultCells(randomUUID), list: { itemsPerRow: 3, pageSize: 100 }, excludedRelativePaths: [] }
     validateProject(p)
-    if(input.scanAll){p.scanAll=true;p.cardView={mode:'multi',level:'all'}}
+    p.cardView={mode:'single',level:1}
+    if(input.scanAll)p.scanAll=true
     p.rootFolderId = (await ensureFolder(root, this.hide)).record.folderId
     const file = projectFile(root, p.projectId)
     await safePath(root, file); await fs.mkdir(path.dirname(file), { recursive: true }); await atomicJson(file, p)
@@ -106,6 +111,127 @@ export class Library {
     await this.persistRefs(); return this.scan()
   }
   async unlink(projectId: string) { this.refs = this.refs.filter(p => p.projectId !== projectId); await this.persistRefs(); return this.scan() }
+  private async maintenanceRecovery(token:string,roots:string[]) {
+    if(roots.some(root=>within(root,this.userData)))throw new Error('本機復原區位於修改範圍內，操作未執行')
+    const parent=path.join(this.userData,'maintenance-backups');await safePath(this.userData,parent);await fs.mkdir(parent,{recursive:true})
+    return path.join(parent,token)
+  }
+  private fieldScope() {return JSON.stringify((this.state.structure??this.state.rows).map(row=>[row.projectId,keyPath(row.path),row.record?.folderId,row.readonly,row.stopped,row.error]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))}
+  async previewDeleteField(projectId:string,attributeId:string):Promise<FieldDeletionPreview> {
+    const linked=this.linked(projectId),binding=linked.project!.fieldBindings.find(field=>field.attributeId===attributeId)
+    if(!binding)throw new Error('找不到自訂欄位，請重新載入')
+    const token=randomUUID(),preview:FieldDeletionPreview={token,attributeId,name:binding.alias,fields:0,folders:0,values:0,references:0,layouts:0,tables:0,searches:0,backups:0,projects:[],skipped:['只處理已連結且已納入的可存取記錄；離線、未索引及外部副本不在範圍。'],recoveryPath:path.join(this.userData,'maintenance-backups',token)}
+    const changes:Change[]=[],guards:ManagedFile[]=[],affected=new Set<string>(),linkedIds=new Set(this.refs.map(ref=>ref.projectId))
+    const fields:QueryField[]=[]
+    for(const ref of this.state.projects){
+      const known=new Map(ref.project?.fieldBindings.map(field=>[field.attributeId,{key:field.alias,type:field.type,attributeId:field.attributeId,projectId:ref.projectId}]))
+      for(const row of (this.state.structure??this.state.rows).filter(row=>row.projectId===ref.projectId))for(const attribute of [...row.record?.attributes??[],...row.record?.projectOverrides[ref.projectId]??[]])if(!known.has(attribute.attributeId))known.set(attribute.attributeId,{key:attribute.key,type:attribute.type,attributeId:attribute.attributeId,projectId:ref.projectId})
+      fields.push(...known.values())
+    }
+    const resolveSearches=(project:Project)=>({...project,savedSearches:project.savedSearches?.map(search=>{
+      if(search.queryAst)return search
+      const available=[...fields.filter(field=>field.projectId!==project.projectId||!project.fieldBindings.some(binding=>binding.attributeId===field.attributeId)),...project.fieldBindings.map(field=>({key:field.alias,type:field.type,attributeId:field.attributeId,projectId:project.projectId}))]
+      try{return {...search,queryAst:stabilizeQuery(search.query,available)}}catch(error){
+        const aliases=available.filter(field=>field.attributeId===attributeId).map(field=>field.key.toLocaleLowerCase())
+        let keys:string[]=[];try{keys=parseQuery(search.query).flat().flatMap(term=>term.key??[])}catch{}
+        if(keys.some(key=>aliases.includes(key)||key.endsWith('@'+attributeId.toLocaleLowerCase())))throw new Error(`常用搜尋「${search.name}」的欄位身分不明，請先修正：${message(error)}`)
+        preview.skipped.push(`常用搜尋「${search.name}」無法解析，原樣保留；未宣稱其引用已清除`);return search
+      }
+    })})
+    for(const ref of this.state.projects){
+      if(!ref.project||ref.error){preview.skipped.push(`${ref.root}: 專案不可用，保留`);continue}
+      const file=projectFile(ref.root,ref.projectId);await safePath(ref.root,file)
+      const project=await this.currentProject(ref),guard={root:ref.root,path:file,hash:await fingerprint(file)};guards.push(guard)
+      const next=withoutField(resolveSearches(project),attributeId)
+      let changed=JSON.stringify(withoutField(project,attributeId))!==JSON.stringify(project)||next.savedSearches?.length!==project.savedSearches?.length
+      if(changed){
+        preview.fields+=project.fieldBindings.filter(field=>field.attributeId===attributeId).length
+        preview.tables+=project.fieldBindings.filter(field=>field.attributeId===attributeId).length
+        const layouts=new Map<string,Project['cells']>([[project.activeLayoutId??'default',project.cells],...project.layoutPresets?.map(p=>[p.id,p.cells] as const)??[],...Object.entries(project.contentCells??{}).map(([key,cells])=>['content:'+key,cells] as const)])
+        preview.layouts+=[...layouts.values()].flat().filter(cell=>cell.attributeId===attributeId||cell.condition?.attributeId===attributeId).length
+        preview.searches+=(project.savedSearches?.length??0)-(next.savedSearches?.length??0)
+        changes.push({...guard,value:{...next,revision:project.revision+1}})
+      }
+      const backup=file+'.bak'
+      if(await exists(backup)){
+        await safePath(ref.root,backup);const old=await readJson(backup);validateProject(old);if(old.projectId!==project.projectId||old.rootFolderId!==project.rootFolderId)throw new Error('專案備份身分不符')
+        const backupGuard={root:ref.root,path:backup,hash:await fingerprint(backup)};guards.push(backupGuard)
+        const stripped=withoutField(resolveSearches(old),attributeId)
+        if(JSON.stringify(withoutField(old,attributeId))!==JSON.stringify(old)||stripped.savedSearches?.length!==old.savedSearches?.length){changes.push({...backupGuard,value:stripped});preview.backups++;changed=true}
+      }
+      if(changed){if(await this.protectedAncestor(ref.root))throw new Error('受影響專案位於保護邊界內，無法安全刪除欄位');affected.add(ref.projectId)}
+    }
+    const rows=[...new Map((this.state.structure??this.state.rows).filter(row=>row.record&&!row.readonly&&!row.stopped&&!row.error).map(row=>[keyPath(row.path),row])).values()]
+    for(const row of rows){
+      await safePath(row.path,folderFile(row.path));const record=await readFolder(row.path),guard={root:row.path,path:folderFile(row.path),hash:await fingerprint(folderFile(row.path))};guards.push(guard)
+      const attributes=[...record.attributes,...Object.entries(record.projectOverrides).filter(([id])=>linkedIds.has(id)).flatMap(([,values])=>values)].filter(value=>value.attributeId===attributeId)
+      for(const [id,values]of Object.entries(record.projectOverrides))if(!linkedIds.has(id)&&values.some(value=>value.attributeId===attributeId))preview.skipped.push(`${row.path}: 未連結專案 ${id} 的私有值保留，未納入刪除`)
+      const strip=(source:FolderRecord)=>{const next=structuredClone(source);next.attributes=next.attributes.filter(value=>value.attributeId!==attributeId);for(const id of Object.keys(next.projectOverrides)){if(linkedIds.has(id))next.projectOverrides[id]=next.projectOverrides[id].filter(value=>value.attributeId!==attributeId);else if(next.projectOverrides[id].some(value=>value.attributeId===attributeId))preview.skipped.push(`${row.path}: 未連結專案 ${id} 的私有值保留，未納入刪除`)}if(next.details?.cellImages)delete next.details.cellImages[attributeId];return next}
+      let changed=attributes.length>0||Object.hasOwn(record.details?.cellImages??{},attributeId)
+      if(changed){preview.values+=attributes.filter(a=>a.value!==null&&a.value!==undefined&&a.value!==''&&(!Array.isArray(a.value)||a.value.length>0)).length;changes.push({...guard,value:{...strip(record),revision:record.revision+1}})}
+      const backup=folderFile(row.path)+'.bak'
+      if(await exists(backup)){
+        await safePath(row.path,backup);const old=await readJson(backup);validateFolder(old);if(old.folderId!==record.folderId)throw new Error('資料夾備份身分不符')
+        const backupGuard={root:row.path,path:backup,hash:await fingerprint(backup)};guards.push(backupGuard)
+        const stripped=strip(old);if(JSON.stringify(stripped)!==JSON.stringify(old)){changes.push({...backupGuard,value:stripped});preview.backups++;changed=true}
+      }
+      if(changed){if(await this.protectedAncestor(row.path))throw new Error('受影響記錄位於保護邊界內，無法安全刪除欄位');preview.folders++;for(const ref of this.state.projects)if(within(ref.root,row.path))affected.add(ref.projectId)}
+    }
+    preview.projects=this.state.projects.filter(ref=>affected.has(ref.projectId)).map(ref=>({projectId:ref.projectId,name:ref.project?.name??ref.projectId,root:ref.root}))
+    preview.references=preview.layouts+preview.tables+preview.searches
+    preview.skipped=[...new Set(preview.skipped)]
+    const absent:string[]=[]
+    for(const guard of guards.filter(guard=>!guard.path.endsWith('.bak')))if(!await exists(guard.path+'.bak'))absent.push(guard.path+'.bak')
+    this.fieldPlans.clear();this.fieldPlans.set(token,{preview,changes,guards,refs:JSON.stringify(this.refs),scope:this.fieldScope(),absent});return preview
+  }
+  async deleteField(token:string) {
+    const plan=this.fieldPlans.get(token);this.fieldPlans.delete(token);if(!plan||plan.refs!==JSON.stringify(this.refs)||plan.scope!==this.fieldScope())throw new Error('欄位刪除預覽已失效，請重新預覽')
+    const check=async()=>{
+      for(const file of plan.absent)if(await exists(file))throw new Error('預覽後備份已變更，刪除未執行')
+      for(const guard of plan.guards){await safePath(guard.root,guard.path);if(await fingerprint(guard.path)!==guard.hash)throw new Error('預覽後資料已變更，刪除未執行')}
+      for(const root of new Set(plan.changes.map(change=>change.root)))if(await this.protectedAncestor(root))throw new Error('保護邊界已變更，刪除未執行')
+    }
+    await check()
+    const recovery=await this.maintenanceRecovery(token,this.refs.map(ref=>ref.root))
+    await applyMaintenance(plan.changes,recovery,this.userData,this.refs.map(ref=>ref.root),check);await this.scan();return recovery
+  }
+  async previewFullRemoval(projectId:string):Promise<FullRemovalPreview> {
+    const linked=this.linked(projectId);await this.currentProject(linked);if(await this.protectedAncestor(linked.root))throw new Error('此專案位於保護邊界內，只能取消連結')
+    const token=randomUUID(),tree=await managedTree(linked.root),overlaps=this.state.projects.filter(ref=>ref.projectId!==projectId&&(within(linked.root,ref.root)||within(ref.root,linked.root)))
+    const guards:ManagedFile[]=[]
+    for(const ref of this.refs)if(within(ref.root,linked.root)&&!within(linked.root,ref.root)){
+      const file=projectFile(ref.root,ref.projectId);await safePath(ref.root,file);const value=await this.currentProject(ref);guards.push({root:ref.root,path:file,hash:await fingerprint(file)})
+      if(await exists(file+'.bak')){await safePath(ref.root,file+'.bak');const backup=await readJson(file+'.bak');validateProject(backup);if(backup.projectId!==value.projectId||backup.rootFolderId!==value.rootFolderId)throw new Error('祖先專案備份身分不符');guards.push({root:ref.root,path:file+'.bak',hash:await fingerprint(file+'.bak')})}
+    }
+    guards.push({root:this.userData,path:this.registry,hash:await fingerprint(this.registry)})
+    if(await exists(this.registry+'.bak'))guards.push({root:this.userData,path:this.registry+'.bak',hash:await fingerprint(this.registry+'.bak')})
+    const preview:FullRemovalPreview={token,projectId,name:linked.project!.name,root:linked.root,paths:tree.files.map(file=>file.path),skipped:[...tree.skipped,'只檢查目前可存取的清理樹與已連結專案；離線、未連結副本無法判斷。'],affectedProjects:overlaps.map(ref=>({projectId:ref.projectId,name:ref.project?.name??ref.projectId,root:ref.root})),recoveryPath:path.join(this.userData,'maintenance-backups',token)}
+    const absent:string[]=[];for(const guard of guards.filter(guard=>!guard.path.endsWith('.bak')))if(!await exists(guard.path+'.bak'))absent.push(guard.path+'.bak')
+    this.fullPlans.clear();this.fullPlans.set(token,{preview,tree,refs:JSON.stringify(this.refs),guards,absent});return preview
+  }
+  async fullRemoveProject(token:string):Promise<CleanupResult> {
+    const plan=this.fullPlans.get(token);this.fullPlans.delete(token);if(!plan||plan.refs!==JSON.stringify(this.refs))throw new Error('完全移除預覽已失效，請重新預覽')
+    if(await this.protectedAncestor(plan.preview.root))throw new Error('遊戲保護邊界已變更，移除未執行')
+    const tree=await managedTree(plan.preview.root)
+    if(JSON.stringify(tree)!==JSON.stringify(plan.tree))throw new Error('預覽後資料已變更，移除未執行')
+    const nextRefs=this.refs.filter(ref=>!within(plan.preview.root,ref.root)),changes:Change[]=[]
+    for(const guard of plan.guards){
+      await safePath(guard.root,guard.path);if(await fingerprint(guard.path)!==guard.hash)throw new Error('預覽後專案已變更，移除未執行')
+      if(guard.path===this.registry||guard.path===this.registry+'.bak')changes.push({...guard,value:nextRefs,stopScan:true})
+      else {const project=await readJson(guard.path);validateProject(project);changes.push({...guard,stopScan:true,value:{...project,revision:project.revision+1,excludedRelativePaths:[...new Set([...project.excludedRelativePaths,relPath(guard.root,plan.preview.root)])]}})}
+    }
+    // Stop every affected scan before deleting metadata, including on process interruption.
+    changes.push(...[...tree.files].sort((a,b)=>Number(path.basename(a.path)==='folder.json')-Number(path.basename(b.path)==='folder.json')))
+    try{await applyMaintenance(changes,await this.maintenanceRecovery(token,[plan.preview.root]),this.userData,[plan.preview.root],async()=>{
+      if(JSON.stringify(await managedTree(plan.preview.root))!==JSON.stringify(tree))throw new Error('備份期間資料已變更，移除未執行')
+      for(const file of plan.absent)if(await exists(file))throw new Error('預覽後備份已變更，移除未執行')
+      for(const guard of plan.guards){await safePath(guard.root,guard.path);if(await fingerprint(guard.path)!==guard.hash)throw new Error('備份期間專案已變更，移除未執行')}
+    })}catch(error){if(error instanceof MaintenanceFailure&&error.rollbackIncomplete){this.refs=nextRefs;await this.scan()}throw error}
+    this.refs=nextRefs
+    const result:CleanupResult={removed:tree.files.length,failed:[],skipped:plan.preview.skipped}
+    for(const dir of tree.directories)try{await safePath(plan.preview.root,dir);await fs.rmdir(dir)}catch(error){const code=(error as NodeJS.ErrnoException).code;if(code==='ENOTEMPTY')result.skipped.push(`${dir}: 尚有未驗證資料，目錄保留`);else if(code!=='ENOENT')result.failed.push(`${dir}: ${message(error)}`)}
+    await this.scan();return result
+  }
   // Only retire an otherwise unused, empty root identity. Shared values, manual
   // settings, other projects, unknown files and links always keep it in place.
   private async removableRoot(root:string,projectId:string):Promise<{path:string;hash:string}[]|undefined>{

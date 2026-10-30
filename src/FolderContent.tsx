@@ -1,13 +1,19 @@
-import {DocumentViewer} from './DocumentViewer'
-import {cacheFolderStats} from './folderStats'
-import {t as tr, useLocale} from './i18n'
+import { MediaBrowser } from './MediaBrowser'
+import { MediaViewer } from './MediaViewer'
+import { isGameFolder, visibleFile } from '../shared/media'
+import { useFileVisibility } from './useFileVisibility'
+import { DocumentViewer } from './DocumentViewer'
+import './game-actions.css'
+import { cacheFolderStats } from './folderStats'
+import { t as tr, useLocale } from './i18n'
 import { Icon } from './icons'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Button, Group, Menu, Tooltip } from '@mantine/core'
 import { Card } from './Card'
 import { Gallery } from './Gallery'
 import {
   contentCells,
+  gameActionTemplates,
   type ContentResult,
   type ExplorerRequest,
   type ExplorerResponse,
@@ -19,7 +25,7 @@ import {
   type Request,
   type Response,
 } from '../shared/model'
-const Reader = lazy(() => import('./Reader').then(module=>({default:module.Reader})))
+const Reader = lazy(() => import('./Reader').then((module) => ({ default: module.Reader })))
 const VideoViewer = lazy(() => import('./VideoViewer').then((m) => ({ default: m.VideoViewer })))
 export function FolderContent({
   row,
@@ -29,7 +35,11 @@ export function FolderContent({
   act,
   busy,
   configure,
-  selectedFileId,selectedEntry,
+  selectedFileId,
+  selectedEntry,
+  childNames,
+  sourceRows,
+  onSource,
 }: {
   row: FolderRow
   project: Project
@@ -37,68 +47,195 @@ export function FolderContent({
   onChild: (name: string) => void
   act: (r: Request) => Promise<Response | undefined>
   busy: boolean
-  configure: () => void
-  selectedFileId?:string
-  selectedEntry?:ContentResult['entries'][number]
+  configure: (tab?: 'game') => void
+  sourceRows: FolderRow[]
+  onSource: (id: string) => void
+  childNames?: string[]
+  selectedFileId?: string
+  selectedEntry?: ContentResult['entries'][number]
 }) {
- useLocale()
+  useLocale()
+  const { visibility } = useFileVisibility()
+  const contentRow = useRef(row.rowId)
+  const [galleryFile, setGalleryFile] = useState<ContentResult['entries'][number]>()
 
   const [content, setContent] = useState<ContentResult>(),
     [error, setError] = useState(''),
     [reload, setReload] = useState(0),
-    [, setReader] = useState(false),[fileReader,setFileReader]=useState(false),[documentFile,setDocumentFile]=useState<ContentResult['entries'][number]>()
+    [, setReader] = useState(false),
+    [fileReader, setFileReader] = useState(false),
+    [documentFile, setDocumentFile] = useState<ContentResult['entries'][number]>()
   useEffect(() => {
     let alive = true
-    setContent(undefined)
+    if (contentRow.current !== row.rowId) {
+      setContent(undefined)
+      contentRow.current = row.rowId
+    }
     setError('')
-    const paged=['album','manga'].includes(project.mediaCategory)
-    void (async()=>{
-      let cursor:string|undefined
-      const counted:ContentResult['entries']=[]
-      do{
-        const response=await window.explorer.request({action:'content',rowId:row.rowId,...(paged?{limit:cursor?256:96,cursor}:{})})
-        if(!alive)return
-        const chunk=response.content;if(!chunk)throw new Error(tr("無法取得資料夾內容"))
-        const append=!!cursor
-        setContent(previous=>append&&previous?{...chunk,entries:[...previous.entries,...chunk.entries],notices:[...previous.notices,...chunk.notices]}:chunk)
+    const paged = ['album', 'manga', 'media'].includes(project.mediaCategory)
+    void (async () => {
+      let cursor: string | undefined
+      const counted: ContentResult['entries'] = []
+      do {
+        const response = await window.explorer.request({
+          action: 'content',
+          rowId: row.rowId,
+          ...(paged ? { limit: cursor ? 256 : 96, cursor } : {}),
+        })
+        if (!alive) return
+        const chunk = response.content
+        if (!chunk) throw new Error(tr('無法取得資料夾內容'))
+        const append = !!cursor
+        setContent((previous) =>
+          append && previous
+            ? {
+                ...chunk,
+                entries: [...previous.entries, ...chunk.entries],
+                notices: [...previous.notices, ...chunk.notices],
+              }
+            : chunk
+        )
         counted.push(...chunk.entries)
-        cursor=chunk.nextCursor
-        if(!cursor)cacheFolderStats(row.rowId,counted)
+        cursor = chunk.nextCursor
+        if (!cursor) cacheFolderStats(row.rowId, counted)
         // Yield between chunks so navigation and the first screen can render.
-        if(cursor)await new Promise(resolve=>setTimeout(resolve,50))
-      }while(alive&&cursor)
-    })().catch(e=>{if(alive)setError(String(e))})
+        if (cursor) await new Promise((resolve) => setTimeout(resolve, 50))
+      } while (alive && cursor)
+    })().catch((e) => {
+      if (alive) setError(String(e))
+    })
     return () => {
       alive = false
     }
   }, [row.rowId, row.path, project.mediaCategory, reload])
-  useEffect(()=>{setFileReader(false);setDocumentFile(undefined)},[row.rowId,selectedFileId])
-  if (error&&!content)
+  useEffect(() => {
+    setFileReader(false)
+    setDocumentFile(undefined)
+  }, [row.rowId, selectedFileId])
+  if (error && !content)
     return (
       <p role="alert" className="media-content-error">
         {error}
+        <Button size="compact-xs" variant="subtle" onClick={() => setReload((value) => value + 1)}>
+          {tr('重新載入')}
+        </Button>
       </p>
     )
-  if (!content) return <p className="media-loading">{tr("載入內容…")}</p>
-  const selectedFile=content.entries.find(entry=>entry.id===selectedFileId)??selectedEntry
-  if(selectedFile&&selectedFile.kind!=='video')return <div className="single-file-preview">
-    <h3>{selectedFile.name}</h3><small className="path">{row.path}</small>
-    {documentFile&&<DocumentViewer rowId={row.rowId} file={documentFile} close={()=>setDocumentFile(undefined)}/>}
-    {['pdf','archive'].includes(selectedFile.kind)&&<Button onClick={()=>setDocumentFile(selectedFile)}>{tr('開啟檢視器')}</Button>}
-    {selectedFile.kind==='image'?<><img className="single-file-image" src={selectedFile.url} alt={selectedFile.name}/><Button variant="light" onClick={()=>setFileReader(true)}>{tr('開啟閱讀器')}</Button>{fileReader&&<Suspense fallback={<p>{tr('載入內容…')}</p>}><Reader images={content.entries.filter(entry=>entry.kind==='image')} start={content.entries.filter(entry=>entry.kind==='image').findIndex(entry=>entry.id===selectedFile.id)} manga={project.mediaCategory==='manga'} prefs={row.record?.details?.reading} close={()=>setFileReader(false)} save={prefs=>void run({action:'reading',rowId:row.rowId,revision:row.record!.revision,prefs})}/></Suspense>}</>:<p>{selectedFile.mime} · {selectedFile.size.toLocaleString()} B</p>}
-    <Button variant="default" onClick={()=>void act({action:'open',rowId:row.rowId})}>{tr('開啟所在資料夾')}</Button>
-  </div>
-  if (project.mediaCategory === 'video'||selectedFile?.kind==='video')
+  if (!content) return <p className="media-loading">{tr('載入內容…')}</p>
+  const visibleEntries = content.entries.filter((entry) => visibleFile(entry, visibility))
+  const selectedFile = visibleEntries.find((entry) => entry.id === selectedFileId) ?? selectedEntry
+  if (['media', 'music', 'album', 'video', 'other'].includes(project.mediaCategory)&&(!selectedFile||['audio','video'].includes(selectedFile.kind)))
     return (
-      <Suspense fallback={<p>{tr("載入播放器…")}</p>}>
-        <VideoViewer initialFileId={selectedFile?.id} key={row.rowId} row={row} entries={content.entries} run={run} busy={busy} autoplay={project.videoAutoplay!==false} autoNext={project.videoAutoNext===true} changeAutoplay={async value=>!!await act({action:'saveProject',project:{...project,videoAutoplay:value}})} changeAutoNext={async value=>!!await act({action:'saveProject',project:{...project,videoAutoNext:value}})} />
+      <MediaBrowser
+        row={row}
+        project={project}
+        entries={visibleEntries}
+        loading={!!content.nextCursor && !error}
+        error={[error, ...new Set(content.notices)].filter(Boolean).join('\n')}
+        reload={() => setReload((value) => value + 1)}
+        onChild={onChild}
+        run={run}
+        act={act}
+        busy={busy}
+        configure={configure}
+        childNames={childNames}
+        sourceRows={sourceRows}
+        onSource={onSource}
+      />
+    )
+  if (selectedFile && selectedFile.kind !== 'video')
+    return (
+      <div className="single-file-preview">
+        <div className="single-file-heading">
+          <h3 title={selectedFile.name}>{selectedFile.name}</h3>
+          <Tooltip label={tr('開啟所在資料夾')}>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              aria-label={tr('開啟所在資料夾')}
+              onClick={() => void act({ action: 'open', rowId: row.rowId })}
+            >
+              <Icon name="folder" size={15} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
+        <small className="path">{row.path}</small>
+        {documentFile && (
+          <DocumentViewer
+            rowId={row.rowId}
+            file={documentFile}
+            close={() => setDocumentFile(undefined)}
+          />
+        )}
+        {['pdf', 'archive'].includes(selectedFile.kind) && (
+          <Button onClick={() => setDocumentFile(selectedFile)}>{tr('開啟檢視器')}</Button>
+        )}
+        {selectedFile.kind === 'image' ? (
+          <>
+            <button
+              type="button"
+              className="single-file-image-open"
+              aria-label={tr('開啟圖片 {0}', selectedFile.name)}
+              onClick={() => setFileReader(true)}
+            >
+              <img className="single-file-image" src={selectedFile.url} alt={selectedFile.name} />
+            </button>
+            {fileReader && (
+              <Suspense fallback={<p>{tr('載入內容…')}</p>}>
+                <Reader
+                  images={content.entries.filter((entry) => entry.kind === 'image')}
+                  start={content.entries
+                    .filter((entry) => entry.kind === 'image')
+                    .findIndex((entry) => entry.id === selectedFile.id)}
+                  manga={project.mediaCategory === 'manga'}
+                  prefs={row.record?.details?.reading}
+                  close={() => setFileReader(false)}
+                  save={(prefs) =>
+                    void run({
+                      action: 'reading',
+                      rowId: row.rowId,
+                      revision: row.record!.revision,
+                      prefs,
+                    })
+                  }
+                />
+              </Suspense>
+            )}
+          </>
+        ) : (
+          <p>
+            {selectedFile.mime} · {selectedFile.size.toLocaleString()} B
+          </p>
+        )}
+      </div>
+    )
+  if (project.mediaCategory === 'video' || selectedFile?.kind === 'video')
+    return (
+      <Suspense fallback={<p>{tr('載入播放器…')}</p>}>
+        <VideoViewer
+          initialFileId={selectedFile?.id}
+          key={row.rowId}
+          row={row}
+          entries={visibleEntries}
+          run={run}
+          busy={busy}
+          autoplay={project.videoAutoplay !== false}
+          autoNext={project.videoAutoNext === true}
+          changeAutoplay={async (value) =>
+            !!(await act({ action: 'saveProject', project: { ...project, videoAutoplay: value } }))
+          }
+          changeAutoNext={async (value) =>
+            !!(await act({ action: 'saveProject', project: { ...project, videoAutoNext: value } }))
+          }
+        />
       </Suspense>
     )
   const cover =
       row.record?.assets.find((a) => a.assetId === row.record?.details?.bannerAssetId) ??
       row.record?.assets[0],
     first = content.entries.find((e) => e.kind === 'image')
-  if (project.mediaCategory === 'game') {
+  if (project.mediaCategory === 'game' && isGameFolder(row)) {
     const disabled = busy || !row.record || row.readonly || row.stopped || !!row.error
     const fields = [
       ...new Map(
@@ -112,19 +249,27 @@ export function FolderContent({
     return (
       <div className="game-content">
         <div className="game-banner">
+          {(row.boundary?.state === 'candidate' ||
+            row.record?.details?.boundary?.state === 'candidate') && (
+            <small className="game-candidate" role="status">
+              {tr('候選遊戲，尚未確認')}
+            </small>
+          )}
           {cover ? (
             <img src={`media://asset/${row.rowId}/${cover.assetId}`} alt={cover.originalName} />
           ) : (
-            <span>{tr("沒有遊戲封面")}</span>
+            <span>{tr('沒有遊戲封面')}</span>
           )}
           <Menu position="bottom-end">
             <Menu.Target>
               <ActionIcon
                 className="cover-change"
-                aria-label={tr("更換遊戲封面")}
+                aria-label={tr('更換遊戲封面')}
                 disabled={disabled}
                 variant="default"
-              ><Icon name="edit"/></ActionIcon>
+              >
+                <Icon name="edit" />
+              </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
               {row.record?.assets.map((a) => (
@@ -163,48 +308,61 @@ export function FolderContent({
                     })
                 }}
               >
-                {tr("匯入封面圖片")}</Menu.Item>
+                {tr('匯入封面圖片')}
+              </Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </div>
         <Group className="game-actions" gap="sm">
-          {project.actionTemplates?.map((t) => (
+          {gameActionTemplates(project).map((t) => (
             <Button
               key={t.id}
               color={t.color}
-              disabled={busy || !row.record?.details?.targets?.[t.id]}
-              title={row.record?.details?.targets?.[t.id]?.path ?? tr("尚未綁定")}
+              disabled={busy || row.record?.details?.targets?.[t.id]?.kind !== t.kind}
+              title={row.record?.details?.targets?.[t.id]?.path ?? tr('尚未綁定')}
               onClick={() => {
-                if (t.kind === 'exe' && !window.confirm(tr("啟動「{0}」？",t.label))) return
+                if (
+                  ['exe', 'file-app'].includes(t.kind) &&
+                  !window.confirm(tr('啟動「{0}」？', t.label))
+                )
+                  return
                 void run({ action: 'runTarget', rowId: row.rowId, templateId: t.id })
               }}
             >
-              {t.label}
+              {t.id === 'default-launch-game' ? tr(t.label) : t.label}
             </Button>
           ))}
-          {!project.actionTemplates?.length && <small className="muted">{tr("尚未設定操作按鈕")}</small>}
-          <Tooltip label={tr("自訂操作與目標")}>
-            <ActionIcon aria-label={tr("自訂遊戲操作")} variant="subtle" onClick={configure}><Icon name="sliders"/></ActionIcon>
+          {!gameActionTemplates(project).length && (
+            <small className="muted">{tr('尚未設定操作按鈕')}</small>
+          )}
+          <Tooltip label={tr('自訂操作與目標')}>
+            <ActionIcon
+              aria-label={tr('自訂遊戲操作')}
+              variant="subtle"
+              onClick={() => configure('game')}
+            >
+              <Icon name="sliders" />
+            </ActionIcon>
           </Tooltip>
         </Group>
         <table className="attribute-table game-fields">
           <thead>
             <tr>
-              <th>{tr("欄位")}</th>
-              <th>{tr("內容")}</th>
-              <th>{tr("來源")}</th>
+              <th>{tr('欄位')}</th>
+              <th>{tr('內容')}</th>
+              <th>{tr('來源')}</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>{tr("資料夾名稱")}</td>
+              <td>{tr('資料夾名稱')}</td>
               <td>{row.name}</td>
-              <td>{tr("檔案系統")}</td>
+              <td>{tr('檔案系統')}</td>
             </tr>
             <tr>
-              <td>{tr("目前路徑")}</td>
+              <td>{tr('目前路徑')}</td>
               <td>{row.path}</td>
-              <td>{tr("檔案系統")}</td>
+              <td>{tr('檔案系統')}</td>
             </tr>
             {fields.map((f) => {
               const value = fieldValue(row, f.attributeId),
@@ -227,7 +385,7 @@ export function FolderContent({
                           ? JSON.stringify(value)
                           : String(value)}
                   </td>
-                  <td>{attribute?.source ?? tr("未設定")}</td>
+                  <td>{attribute?.source ?? tr('未設定')}</td>
                 </tr>
               )
             })}
@@ -238,9 +396,49 @@ export function FolderContent({
   }
   return (
     <div className="media-content">
-      {documentFile&&<DocumentViewer rowId={row.rowId} file={documentFile} close={()=>setDocumentFile(undefined)}/>}
-      <Group gap="xs">{content.entries.filter(entry=>['archive','pdf'].includes(entry.kind)).map(entry=><Button key={entry.id} variant="light" onClick={()=>setDocumentFile(entry)}><Icon name="file"/>{entry.name}</Button>)}</Group>
-      {error&&<p role="alert" className="media-content-error">{tr("部分內容讀取未完成，已載入的圖片仍可查看。")}{error}<Button size="compact-xs" variant="subtle" onClick={()=>setReload(value=>value+1)}>{tr("重新載入")}</Button></p>}
+      {galleryFile && (
+        <MediaViewer
+          row={row}
+          project={project}
+          file={galleryFile}
+          entries={visibleEntries}
+          loading={!!content.nextCursor}
+          run={run}
+          act={act}
+          busy={busy}
+          close={() => setGalleryFile(undefined)}
+        />
+      )}
+      {documentFile && (
+        <DocumentViewer
+          rowId={row.rowId}
+          file={documentFile}
+          close={() => setDocumentFile(undefined)}
+        />
+      )}
+      <Group gap="xs">
+        {content.entries
+          .filter((entry) => ['archive', 'pdf'].includes(entry.kind))
+          .map((entry) => (
+            <Button key={entry.id} variant="light" onClick={() => setDocumentFile(entry)}>
+              <Icon name="file" />
+              {entry.name}
+            </Button>
+          ))}
+      </Group>
+      {error && (
+        <p role="alert" className="media-content-error">
+          {tr('部分內容讀取未完成，已載入的圖片仍可查看。')}
+          {error}
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            onClick={() => setReload((value) => value + 1)}
+          >
+            {tr('重新載入')}
+          </Button>
+        </p>
+      )}
       <div className="media-info-template">
         {project.mediaCategory === 'manga' && first && (
           <img
@@ -254,7 +452,11 @@ export function FolderContent({
           />
         )}
         <Card
-          project={{ ...project, folderLayouts: undefined, cells: contentCells(project, project.mediaCategory) }}
+          project={{
+            ...project,
+            folderLayouts: undefined,
+            cells: contentCells(project, project.mediaCategory),
+          }}
           row={row}
           open={() => {
             void window.media.request({ action: 'open', rowId: row.rowId })
@@ -264,10 +466,12 @@ export function FolderContent({
       {['manga', 'album'].includes(project.mediaCategory) ? (
         <Gallery
           entries={content.entries}
-          loading={!!content.nextCursor&&!error}
+          loading={!!content.nextCursor && !error}
           manga={project.mediaCategory === 'manga'}
           prefs={row.record?.details?.reading}
           onReader={setReader}
+          suspended={!!galleryFile}
+          onOpen={(entry) => setGalleryFile(entry)}
           save={(prefs) => {
             if (row.record && !row.readonly && !row.stopped && !row.error)
               void run({
@@ -284,9 +488,16 @@ export function FolderContent({
           {content.entries
             .filter((e) => e.kind === 'folder')
             .map((e) => (
-              <Button key={e.id} variant="subtle" onClick={() => onChild(e.name)}>
-                <Icon name="folder" size={15}/> {e.name}
-              </Button>
+              <div className="media-subfolder" key={e.id}>
+                <Button
+                  variant="subtle"
+                  disabled={busy || !childNames?.includes(e.name)}
+                  title={childNames?.includes(e.name) ? e.name : tr('尚未建立或受保護')}
+                  onClick={() => onChild(e.name)}
+                >
+                  <Icon name="folder" size={15} /> {e.name}
+                </Button>
+              </div>
             ))}
         </div>
       )}

@@ -1,5 +1,5 @@
 import {writeSettingsFile} from './settings-file'
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, net, protocol, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import fs from 'node:fs/promises'
@@ -9,6 +9,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Library } from './library'
 import { safePath } from './files'
 import type { Request, Response } from '../shared/model'
+import {fieldValue} from '../shared/model'
+import {copyableValue} from '../shared/cells'
 import { WorkspaceStore } from './workspace'
 import type { WorkspaceCommand, WindowAction } from '../shared/workspace'
 import { Explorer } from './explorer'
@@ -36,6 +38,12 @@ async function dispatch(request: Request): Promise<Response> {
   let extra: Partial<Response> = {}
   switch (request.action) {
     case 'snapshot': break
+    case 'copyFieldValue': {
+      const row=await library.readableRow(request.rowId),project=library.snapshot().projects.find(ref=>ref.projectId===row.projectId)?.project
+      if(!project?.fieldBindings.some(field=>field.attributeId===request.attributeId))throw new Error('欄位不存在，無法複製')
+      const value=copyableValue(fieldValue(row,request.attributeId));if(value===undefined)throw new Error('此欄位沒有可複製的值')
+      clipboard.writeText(value);break
+    }
     case 'scan': await library.scan(); break
     case 'chooseRoot': { const root=await selectFolder();if(root){for(const [id,item]of rootChoices)if(item.expires<Date.now())rootChoices.delete(id);if(rootChoices.size>=10)rootChoices.delete(rootChoices.keys().next().value!);const token=randomUUID();rootChoices.set(token,{path:root,expires:Date.now()+60*60*1000});extra.rootSelection={token,path:root}}else extra.cancelled=true;break }
     case 'create': { const choice=request.rootToken?rootChoices.get(request.rootToken):undefined;if(request.rootToken&&(!choice||choice.expires<Date.now()))throw new Error('資料夾選擇已失效，請重新選擇');const root=choice?.path??await selectFolder();if(root){await library.create(root,request.input);if(request.rootToken)rootChoices.delete(request.rootToken)}else extra.cancelled=true;break }
@@ -43,6 +51,10 @@ async function dispatch(request: Request): Promise<Response> {
     case 'unlink': await library.unlink(request.projectId); break
     case 'removeProjectPreview': extra.removalPreview=await library.previewRemoveProject(request.projectId);break
     case 'removeProject': extra.removal=await library.removeProject(request.token);break
+    case 'fullRemovalPreview': extra.fullRemovalPreview=await library.previewFullRemoval(request.projectId);break
+    case 'fullRemoval': extra.removal=await library.fullRemoveProject(request.token);break
+    case 'deleteFieldPreview': extra.fieldDeletionPreview=await library.previewDeleteField(request.projectId,request.attributeId);break
+    case 'deleteField': extra.recoveryPath=await library.deleteField(request.token);break
     case 'saveProject': await library.saveProject(request.project); break
     case 'saveFolder': await library.saveValues(request.rowId, request.revision, request.values); break
     case 'image': {
@@ -91,7 +103,7 @@ else {
     nativeLocale=(await workspace.read(projectIds())).prefs.locale??'zh-TW'
     const explorer = new Explorer(library,app.getPath('userData'),{
       external: url=>shell.openExternal(url),
-      choose: async kind => { const result=await dialog.showOpenDialog(win!,{properties:[kind==='folder'?'openDirectory':'openFile'],...(kind==='folder'?{}:{filters:[{name:nt(kind==='exe'?'程式':'字幕'),extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
+      choose: async (kind,initialPath) => { const result=await dialog.showOpenDialog(win!,{defaultPath:initialPath,properties:[kind==='folder'?'openDirectory':'openFile'],...(['folder','file'].includes(kind)?{}:{filters:[{name:nt(kind==='exe'?'程式':'字幕'),extensions:kind==='exe'?['exe']:['srt','vtt']}]})});return result.canceled?undefined:result.filePaths[0] },
       open: async file=>{const error=await shell.openPath(file);if(error)throw new Error(error)},
       launch: (file,args)=>new Promise<void>((resolve,reject)=>{const child=spawn(file,args,{cwd:path.dirname(file),shell:false,detached:true,stdio:'ignore',windowsHide:false});child.once('error',reject);child.once('spawn',()=>{child.unref();resolve()})}),
       thumbnail: async (file,mime,url)=>{
@@ -147,6 +159,7 @@ else {
     protocol.handle('media', async request => {
       try {
         const url = new URL(request.url), parts = url.pathname.split('/').filter(Boolean)
+        if(url.hostname==='audio-cover'&&parts.length===2){const response=await explorer.audioCover(parts[0],parts[1],request.signal);response.headers.set('Access-Control-Allow-Origin',devUrl?new URL(devUrl).origin:'app://ui');return response}
         if (['file','thumb'].includes(url.hostname) && parts.length===2) { const response=await explorer.stream(parts[0],parts[1],request,url.hostname==='thumb');response.headers.set('Access-Control-Allow-Origin',devUrl?new URL(devUrl).origin:'app://ui');response.headers.set('Access-Control-Expose-Headers','Content-Range, Accept-Ranges');return response }
         if (url.hostname==='archive'&&parts.length===4)return explorer.archiveStream(parts[0],parts[1],parts[2],parts[3])
         if (url.hostname !== 'asset' || parts.length !== 2) return new Response(null, { status: 403 })
@@ -164,6 +177,13 @@ else {
     })
     win = new BrowserWindow({ width: 1280, height: 850, minWidth: 760, minHeight: 580, frame: false, backgroundColor: '#202124', show: false, webPreferences: { preload: path.join(directory, '../preload/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, plugins: true } })
     win.setMenu(null)
+    win.on('app-command',(event,command)=>{
+      if(command!=='browser-backward'&&command!=='browser-forward')return
+      event.preventDefault()
+      if(!win?.isFocused()||!win.isVisible()||win.isMinimized())return
+      const cursor=screen.getCursorScreenPoint(),bounds=win.getContentBounds(),zoom=win.webContents.getZoomFactor()
+      win.webContents.send('folder:navigate',{delta:command==='browser-backward'?-1:1,x:(cursor.x-bounds.x)/zoom,y:(cursor.y-bounds.y)/zoom})
+    })
     const contents = win.webContents
     contents.on('before-input-event', (event, input) => {
       if (input.key !== 'F12') return

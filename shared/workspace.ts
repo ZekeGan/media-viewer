@@ -13,6 +13,7 @@ export interface WorkspacePrefs {
   locale?: LocaleId
   autoOpenContent?: boolean
   videoAudio?: {volume:number;muted:boolean}
+  fileVisibility?: {hidden:boolean;dotfiles:boolean}
   groups: { id: string; name: string; collapsed: boolean }[]
   projects: Record<string, ProjectPlacement>
 }
@@ -27,6 +28,7 @@ export type WorkspaceCommand =
   | { action:'listBackups' }
   | { action:'browseBehavior'; autoOpenContent:boolean }
   | { action:'videoAudio'; value:{volume:number;muted:boolean} }
+  | { action:'fileVisibility'; value:{hidden:boolean;dotfiles:boolean} }
   | { action: 'appearance'; theme: ThemeId; locale: LocaleId }
   | { action: 'createGroup'; name: string }
   | { action: 'renameGroup'; id: string; name: string }
@@ -41,12 +43,14 @@ export type WorkspaceCommand =
   | { action: 'browse'; projectId: string; value: BrowseState }
 export type WindowAction = 'state' | 'minimize' | 'toggleMaximize' | 'close'
 export interface WindowState { maximized: boolean; visible?:boolean }
+export interface FolderNavigation { delta: -1|1; x: number; y: number }
 export interface DesktopApi {
   settingsFile(action:'export'|'import'):Promise<WorkspaceState>
   workspace(): Promise<WorkspaceState>
   updateWorkspace(command: WorkspaceCommand): Promise<WorkspaceState>
   windowAction(action: WindowAction): Promise<WindowState>
   onWindowState(callback: (state: WindowState) => void): () => void
+  onFolderNavigation(callback: (navigation: FolderNavigation) => void): () => void
 }
 export const defaultWorkspace = (): WorkspacePrefs => ({ schemaVersion: 1, revision: 0, nextOrder: 1, sidebarWidth: 240, sidebarHidden: false, collapsed: { favorites: false, recent: false, unclassified: false }, sections: ['favorites', 'unclassified'], projectOrder: {}, groups: [], projects: {} })
 export function sectionIds(prefs: WorkspacePrefs) {

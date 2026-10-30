@@ -1,17 +1,28 @@
+import { visibleFile } from '../shared/media'
+import { useFileVisibility } from './useFileVisibility'
+import {createPortal} from 'react-dom'
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'
-import {Alert,Button,Group,Loader,SegmentedControl,Select,Text} from '@mantine/core'
+import {Alert,Button,Group,Loader,SegmentedControl,Select,Text,Tooltip} from '@mantine/core'
 import type {FolderRow} from '../shared/model'
 import type {OverviewEntry} from '../shared/explorer'
 import {Icon} from './icons'
+import {orderedFileFolders} from '../shared/browse'
 import {t as tr,useLocale} from './i18n'
 
 type Presentation='tiles'|'groups'|'list'
-export function FileOverview({root,folders,scope,presentation,manga,busy,change,open,chooseRoot}:{
-  root:FolderRow;folders:FolderRow[];scope:'current'|'descendants';presentation:Presentation;manga:boolean;busy:boolean
+export function FileOverview({toolbarTarget,root,folders,scope,presentation,busy,change,open,chooseRoot}:{
+  toolbarTarget:HTMLDivElement|null;root:FolderRow;folders:FolderRow[];scope:'current'|'descendants';presentation:Presentation;busy:boolean
   change:(scope:'current'|'descendants',presentation:Presentation)=>void
   open:(entry:OverviewEntry)=>void;chooseRoot:(id:string)=>void
 }){
   const locale=useLocale()
+  const {visibility}=useFileVisibility()
+  const folderOptions=useMemo(()=>{
+    const base=folders.reduce<FolderRow|undefined>((first,folder)=>!first||folder.depth<first.depth?folder:first,undefined)?.path??root.path
+    return orderedFileFolders(folders).map(folder=>({value:folder.rowId,label:folder.name,path:folder.path,relative:folder.path.slice(base.length).replace(/^[/\\]+/,'')||folder.name}))
+  },[folders,root.path])
+  const folderById=useMemo(()=>new Map(folderOptions.map(folder=>[folder.value,folder])),[folderOptions])
+  const [keyboardPath,setKeyboardPath]=useState('')
   const [entries,setEntries]=useState<OverviewEntry[]>([]),[notices,setNotices]=useState<string[]>([]),[loading,setLoading]=useState(false),[reload,setReload]=useState(0),[filter,setFilter]=useState('all')
   const [view,setView]=useState({top:0,height:500,width:600}),viewport=useRef<HTMLDivElement>(null)
   useEffect(()=>{
@@ -19,7 +30,7 @@ export function FileOverview({root,folders,scope,presentation,manga,busy,change,
     void(async()=>{
       let cursor:string|undefined
       do{
-        const response=await window.explorer.request({action:'overview',rowId:root.rowId,scope:manga?'current':scope,limit:96,cursor})
+        const response=await window.explorer.request({action:'overview',rowId:root.rowId,scope,limit:96,cursor})
         if(!alive)return
         if(!response.overview)throw new Error(tr('無法取得檔案總覽'))
         const result=response.overview
@@ -28,14 +39,14 @@ export function FileOverview({root,folders,scope,presentation,manga,busy,change,
       }while(alive&&cursor)
     })().catch(reason=>{if(alive)setNotices(previous=>[...previous,String(reason)])}).finally(()=>{if(alive)setLoading(false)})
     return()=>{alive=false}
-  },[root.rowId,root.path,scope,manga,reload])
+  },[root.rowId,root.path,scope,reload])
   useLayoutEffect(()=>{
     const element=viewport.current;if(!element)return
     const update=()=>setView({top:element.scrollTop,height:element.clientHeight,width:element.clientWidth})
     const observer=new ResizeObserver(update);observer.observe(element);update()
     return()=>observer.disconnect()
   },[])
-  const visibleEntries=useMemo(()=>entries.filter(entry=>filter==='all'||(filter==='other'?!['image','video'].includes(entry.kind):entry.kind===filter)),[entries,filter])
+  const visibleEntries=useMemo(()=>entries.filter(entry=>visibleFile(entry,visibility)&&(filter==='all'||(filter==='other'?!['image','video'].includes(entry.kind):entry.kind===filter))),[entries,filter,visibility])
   const columns=presentation==='list'?1:Math.max(1,Math.floor((view.width-20)/160))
   const layout=useMemo(()=>{
     const rows:{top:number;height:number;label?:string;entries:OverviewEntry[]}[]=[]
@@ -50,13 +61,19 @@ export function FileOverview({root,folders,scope,presentation,manga,busy,change,
   },[visibleEntries,columns,presentation,locale])
   const rendered=layout.rows.filter(row=>row.top+row.height>=view.top-250&&row.top<=view.top+view.height+250)
   return <div className="file-overview">
-    <Group className="file-overview-toolbar" gap="sm">
-      <Select aria-label={tr('檔案總覽範圍資料夾')} searchable limit={100} allowDeselect={false} value={root.rowId} data={folders.filter(folder=>folder.record&&!folder.readonly&&!folder.error&&!folder.stopped).map(folder=>({value:folder.rowId,label:folder.path}))} onChange={id=>id&&chooseRoot(id)} disabled={busy}/>
-      <SegmentedControl aria-label={tr('檔案總覽範圍')} value={manga?'current':scope} disabled={busy||manga} onChange={value=>change(value as typeof scope,presentation)} data={[{value:'current',label:tr('目前資料夾')},{value:'descendants',label:tr('包含子資料夾')}]}/>
+    {toolbarTarget&&createPortal(<Group className="file-overview-toolbar" gap="sm">
+      <Tooltip label={keyboardPath} opened={!!keyboardPath} position="top-start" multiline maw={420}>
+      <Select className="overview-folder-select" classNames={{dropdown:'overview-folder-dropdown'}} aria-label={tr('檔案總覽範圍資料夾')} title={root.path} searchable limit={100} maxDropdownHeight={300} nothingFoundMessage={tr('找不到符合的資料夾')} allowDeselect={false} value={root.rowId} data={folderOptions}
+        onKeyUp={event=>{const id=event.currentTarget.getAttribute('aria-activedescendant');setKeyboardPath(id?document.getElementById(id)?.querySelector<HTMLElement>('.overview-folder-option')?.title??'':'')}}
+        onDropdownClose={()=>setKeyboardPath('')} onBlur={()=>setKeyboardPath('')} onPointerMove={()=>setKeyboardPath('')}
+        filter={({options,search,limit})=>{const query=search.toLocaleLowerCase().trim();return options.filter(option=>{const folder='value' in option?folderById.get(option.value):undefined;return folder&&(folder.label+' '+folder.path).toLocaleLowerCase().includes(query)}).slice(0,limit)}}
+        renderOption={({option})=>{const folder=folderById.get(option.value)!;return <span className="overview-folder-option" title={folder.path} aria-label={folder.path}><strong>{folder.label}</strong><small>{folder.relative}</small></span>}}
+        onChange={id=>id&&chooseRoot(id)} disabled={busy}/></Tooltip>
+      <SegmentedControl aria-label={tr('檔案總覽範圍')} value={scope} disabled={busy} onChange={value=>change(value as typeof scope,presentation)} data={[{value:'current',label:tr('目前資料夾')},{value:'descendants',label:tr('包含子資料夾')}]}/>
       <Select aria-label={tr('檔案展示方式')} allowDeselect={false} value={presentation} disabled={busy} data={[{value:'tiles',label:tr('平鋪縮圖')},{value:'groups',label:tr('依來源分組')},{value:'list',label:tr('完整路徑清單')}]} onChange={value=>change(scope,value as Presentation)}/>
       <Select aria-label={tr('檔案類型')} value={filter} allowDeselect={false} onChange={value=>setFilter(value??'all')} data={[{value:'all',label:tr('全部')},{value:'image',label:tr('圖片')},{value:'video',label:tr('影片')},{value:'other',label:tr('其他')}]}/>
       <Button size="xs" variant="subtle" disabled={loading||busy} onClick={()=>setReload(value=>value+1)}>{tr('重新整理')}</Button>
-    </Group>
+    </Group>,toolbarTarget)}
     <Group gap="xs" px="sm" py={4}><Text size="xs" c="dimmed">{tr('已找到 {0} 個檔案',entries.length)} · {tr('目前已納入且允許瀏覽的範圍')}</Text>{loading&&<Loader size="xs"/>}</Group>
     {!!notices.length&&<Alert color="orange" className="file-overview-notices"><details><summary>{tr('部分內容未能列出')}</summary>{notices.map((notice,index)=><div key={index}>{notice}</div>)}</details></Alert>}
     <div className="file-overview-scroll" ref={viewport} onScroll={event=>{

@@ -33,16 +33,20 @@ try{
  const input=reader().getByRole('textbox',{name:'頁碼',exact:true}),inputBox=(await input.boundingBox())!
  await page.mouse.click(inputBox.x+inputBox.width-2,inputBox.y+inputBox.height/2)
  await page.getByRole('listbox',{name:'頁碼',exact:true}).waitFor({state:'visible'})
- await page.getByRole('option',{name:'3',exact:true}).click();await waitPages('3');await page.keyboard.press('ArrowRight');await waitPages('4')
+ await page.getByRole('option',{name:'3',exact:true}).click();await waitPages('3');await page.keyboard.press('ArrowLeft');await waitPages('4')
  await reader().getByRole('button',{name:'上一頁',exact:true}).click();await waitPages('3')
- await page.keyboard.press('g');await input.fill('8');await page.getByRole('option',{name:'8',exact:true}).click();await waitPages('8');await page.keyboard.press('ArrowRight');await waitPages('9')
+ await page.keyboard.press('g');await input.fill('8');await page.getByRole('option',{name:'8',exact:true}).click();await waitPages('8');await page.keyboard.press('ArrowLeft');await waitPages('9')
  for(let i=0;i<3;i++)await reader().getByRole('button',{name:'下一頁',exact:true}).click();await waitPages('12')
  await reader().getByText('雙頁',{exact:true}).click();await waitPages('11–12')
- const prevPath=await reader().getByRole('button',{name:'上一頁',exact:true}).locator('path').getAttribute('d'),nextPath=await reader().getByRole('button',{name:'下一頁',exact:true}).locator('path').getAttribute('d')
- await reader().getByRole('button',{name:'閱讀設定',exact:true}).click();await page.getByRole('menuitem',{name:'由右至左',exact:true}).click();await page.keyboard.press('ArrowLeft');await waitPages('13–14');await page.keyboard.press('ArrowRight');await waitPages('11–12')
- assert.equal(await reader().getByRole('button',{name:'上一頁',exact:true}).locator('path').getAttribute('d'),prevPath);assert.equal(await reader().getByRole('button',{name:'下一頁',exact:true}).locator('path').getAttribute('d'),nextPath)
+ const prevPath=await reader().locator('.reader-tool-group').first().getByRole('button').first().locator('path').getAttribute('d'),nextPath=await reader().locator('.reader-tool-group').first().getByRole('button').last().locator('path').getAttribute('d')
+ await reader().getByRole('button',{name:'閱讀設定',exact:true}).click();await page.getByRole('menuitem',{name:'由右至左',exact:true}).click();await page.keyboard.press('ArrowRight');await waitPages('13–14');await page.keyboard.press('ArrowLeft');await waitPages('11–12')
+ assert.equal(await reader().locator('.reader-tool-group').first().getByRole('button').first().locator('path').getAttribute('d'),prevPath);assert.equal(await reader().locator('.reader-tool-group').first().getByRole('button').last().locator('path').getAttribute('d'),nextPath)
  assert.equal(await reader().locator('.reader-stage').evaluate(element=>getComputedStyle(element).outlineStyle),'none')
- await fit();assert.equal(await reader().getByRole('button',{name:'放大',exact:true}).isDisabled(),false)
+ await fit();assert.equal(await reader().evaluate(element=>getComputedStyle(element).getPropertyValue('-webkit-app-region')),'no-drag');
+ await reader().getByRole('button',{name:'放大',exact:true}).click({position:{x:3,y:3}});await page.waitForFunction(()=>document.querySelector('.reader-zoom-value')?.textContent==='125%');
+ await reader().getByRole('button',{name:'縮小',exact:true}).click({position:{x:30,y:30}});await fit();await page.keyboard.press('+');await page.keyboard.press('r');await fit();
+ const clickStage=async(left:boolean)=>{const box=(await reader().locator('.reader-stage').boundingBox())!;await page.mouse.click(box.x+box.width*(left?.2:.8),box.y+box.height/2)};
+ await clickStage(false);await waitPages('13–14');await clickStage(true);await waitPages('11–12');
  await reader().locator('.reader-stage').hover();await page.mouse.wheel(0,400)
  await fit();await page.mouse.wheel(0,-400)
  await page.waitForFunction(()=>document.querySelector('.is-active .reader-spread')!.getBoundingClientRect().height>document.querySelector('.reader-stage')!.getBoundingClientRect().height*1.5)
@@ -61,7 +65,7 @@ try{
  await page.keyboard.press('F11');await fullscreen(true);await page.keyboard.press('F11');await fullscreen(false);await reader().waitFor()
  await page.keyboard.press('t');await fullscreen(true);await page.mouse.move(10,2);await page.waitForTimeout(300);assert.equal(await reader().locator('.reader-toolbar,.reader-info,.reader-close').count(),0);await fit();await page.keyboard.press('t');await fullscreen(false)
  await reader().getByRole('button',{name:'退出閱讀器',exact:true}).click();await reader().waitFor({state:'hidden'});await fullscreen(false);sameBounds((await native()).bounds,before.bounds)
- await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].maximize());await page.locator('.manga-gallery .media-thumbnail').first().click();await waitPages('1–2');await page.keyboard.press('F11');await fullscreen(true);await page.keyboard.press('Escape');await fullscreen(false);assert.equal((await native()).maximized,true)
+ await page.waitForFunction(()=>document.querySelector('.statusbar')?.textContent?.includes('就緒'));await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].maximize());await page.locator('.manga-gallery .media-thumbnail').first().click();await waitPages('1–2');await page.keyboard.press('F11');await fullscreen(true);await page.keyboard.press('Escape');await fullscreen(false);assert.equal((await native()).maximized,true)
  await page.keyboard.press('Escape');await reader().waitFor({state:'hidden'});assert.deepEqual(errors,[])
  assert.equal(await page.evaluate(async()=>(await navigator.permissions.query({name:'geolocation'})).state),'denied')
  console.log('PASS: windowed/maximized fullscreen restore; fit-height minimum, detail zoom and pan; immersive stays hidden on hover; stable RTL chevrons and stage focus; whole-select hit area; page selection followed by arrows, repeated next and spreads. Artifacts: '+root)

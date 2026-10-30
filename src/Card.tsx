@@ -1,13 +1,22 @@
 import {t as tr, useLocale, currentLocale} from './i18n'
-import { Badge, Button, Group } from '@mantine/core'
+import { Badge, Button, Group, Progress, Rating } from '@mantine/core'
 import { fieldValue, type Cell, type FolderRow, type Project } from '../shared/model'
-import { visibleCells } from '../shared/layouts'
+import { cellVisible, copyableValue, numericDisplay } from '../shared/cells'
 import { rowCells } from '../shared/layouts'
 import { useState } from 'react'
 import { httpUrl } from '../shared/fields'
 import { useFolderStats } from './folderStats'
 import { cellColors } from './themes/cellStyle'
-export function CellContent({ cell, row, open, preview = false, project }: { cell: Cell; row?: FolderRow; open?: () => void; preview?: boolean; project?:Project }) {
+import './cells.css'
+type CellProps={ cell: Cell; row?: FolderRow; open?: () => void; preview?: boolean; project?:Project }
+export function CellContent(props:CellProps) {
+ useLocale()
+ const {cell,row,preview,project}=props,[copied,setCopied]=useState<string>(),[copyError,setCopyError]=useState('')
+ if(!cellVisible(cell,row))return preview?<span className="cell-condition-hidden">{tr('條件未符合')}</span>:null
+ const value=row&&cell.attributeId?fieldValue(row,cell.attributeId):undefined,copy=copyableValue(value)
+ return <><CellValue {...props}/>{cell.copyValue&&<span className="cell-copy"><button type="button" title={tr('複製欄位值')} aria-label={tr('複製 {0}',project?.fieldBindings.find(field=>field.attributeId===cell.attributeId)?.alias??tr('欄位'))} disabled={preview||copy===undefined} onDoubleClick={event=>event.stopPropagation()} onKeyDown={event=>event.stopPropagation()} onMouseDown={event=>event.stopPropagation()} onClick={async event=>{event.stopPropagation();if(copy===undefined||!row||!cell.attributeId)return;try{await window.media.request({action:'copyFieldValue',rowId:row.rowId,attributeId:cell.attributeId});setCopied(copy);setCopyError('')}catch(reason){setCopied(undefined);setCopyError(String(reason))}}}>{copy!==undefined&&copied===copy?tr('已複製'):tr('複製')}</button>{copyError&&<small role="alert">{copyError}</small>}</span>}</>
+}
+function CellValue({ cell, row, open, preview = false, project }:CellProps) {
  useLocale()
   const stats=useFolderStats(row?.rowId),[linkError,setLinkError]=useState('')
   if(cell.kind==='static-text')return <span style={{whiteSpace:'pre-wrap'}}>{cell.text??''}</span>
@@ -25,10 +34,17 @@ export function CellContent({ cell, row, open, preview = false, project }: { cel
   const value = cell.kind === 'name' ? row?.name : cell.kind === 'path' ? row?.path : row && cell.attributeId ? fieldValue(row, cell.attributeId) : undefined
   const label = typeof value === 'string' ? value : value == null ? '' : tr("⚠ 型別不符：{0}",String(value))
   if(cell.kind==='field-tags') return Array.isArray(value)?<Group gap={4}>{value.map((v,i)=><Badge key={i} color="gray" variant="light">{String(v)}</Badge>)}</Group>:<span>{value==null?'': tr("⚠ 型別不符")}</span>
-  if(cell.kind==='field-number')return <span>{typeof value==='number'?value.toLocaleString(currentLocale()):value==null?'':tr("⚠ 型別不符")}</span>
+  if(cell.kind==='field-number'){
+    const display=numericDisplay(value,cell.maximum??(cell.presentation==='rating'?5:100))
+    if(!display)return <span>{value==null?tr('未填'):tr('⚠ 型別不符')}</span>
+    const label=`${display.value.toLocaleString(currentLocale())} / ${display.maximum.toLocaleString(currentLocale())}`
+    if(cell.presentation==='rating')return <span className="cell-rating" title={label}><Rating value={display.percent/20} fractions={2} readOnly aria-label={label} size="xs"/><span>{label}</span></span>
+    if(cell.presentation==='progress')return <span className="cell-progress"><Progress value={display.percent} aria-label={label}/><span>{label}</span></span>
+    return <span>{display.value.toLocaleString(currentLocale())}</span>
+  }
   if(cell.kind==='field-date')return <span>{typeof value==='string'?value.replace('T',' '):value==null?'':tr("⚠ 型別不符")}</span>
-  if(cell.kind==='field-boolean')return <span>{value===true?tr('是'):value===false?tr('否'):value==null?tr('未填'):tr('⚠ 型別不符')}</span>
-  if(cell.kind==='field-date-only'||cell.kind==='field-enum')return <span>{typeof value==='string'?value:value==null?tr('未填'):tr('⚠ 型別不符')}</span>
+  if(cell.kind==='field-boolean'){const label=value===true?tr('是'):value===false?tr('否'):value==null?tr('未填'):tr('⚠ 型別不符');return cell.presentation==='badge'&&typeof value==='boolean'?<Badge color={value?'teal':'gray'} variant="light">{label}</Badge>:<span>{label}</span>}
+  if(cell.kind==='field-date-only'||cell.kind==='field-enum'){const label=typeof value==='string'?value:value==null?tr('未填'):tr('⚠ 型別不符');return cell.presentation==='badge'&&typeof value==='string'&&value.length?<Badge color="gray" variant="light" title={label}>{label}</Badge>:<span>{label}</span>}
   if(cell.kind==='field-url')return httpUrl(value)?<span><button className="cell-link" disabled={preview} onKeyDown={event=>event.stopPropagation()} onDoubleClick={event=>event.stopPropagation()} onClick={async event=>{event.stopPropagation();try{await window.explorer.request({action:'openExternal',url:value});setLinkError('')}catch(reason){setLinkError(String(reason))}}}>{cell.text||value}</button>{linkError&&<small role="alert">{linkError}</small>}</span>:<span>{value==null?tr('未填'):tr('⚠ 型別不符')}</span>
   return <span className={cell.kind === 'name' ? 'cell-name' : ''} title={label}>{label || (preview ? tr("（此筆沒有值）") : '\u00a0')}</span>
 }

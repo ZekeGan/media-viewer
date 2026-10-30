@@ -9,20 +9,24 @@ import { Readable } from 'node:stream'
 import type { Library } from './library'
 import { atomicJson, exists, folderFile, readFolder, relPath, safePath, saveFolder, within } from './files'
 import { DATA_DIR, validateDetails, type Attribute, type FolderRecord } from '../shared/model'
-import { newDetails, type ContentResult, type ExplorerRequest, type ExplorerResponse, type MediaEntry, type MetadataPreview, type OverviewResult } from '../shared/explorer'
+import { gameActionTemplates, newDetails, type ContentResult, type ExplorerRequest, type ExplorerResponse, type MediaEntry, type MetadataPreview, type OverviewResult } from '../shared/explorer'
 import { SearchIndex } from './search-index'
 import { completionNotice } from '../shared/notifications'
 import {projectImageCells} from '../shared/layouts'
 import { metadata } from './metadata'
 import { parseSubtitles } from '../shared/subtitles'
+import { hiddenFileNames } from './hidden'
 import { imageTypes } from '../shared/images'
+import { identifyImage } from '../shared/images'
+import { openAsBlob } from 'node:fs'
+import { parseBlob, selectCover } from 'music-metadata'
 
-const types: Record<string,[MediaEntry['kind'],string]> = { '.pdf':['pdf','application/pdf'],'.zip':['archive','application/zip'],'.cbz':['archive','application/zip'],'.png':['image','image/png'],'.jpg':['image','image/jpeg'],'.jpeg':['image','image/jpeg'],'.gif':['image','image/gif'],'.webp':['image','image/webp'],'.mp4':['video','video/mp4'],'.webm':['video','video/webm'],'.mkv':['video','video/x-matroska'],'.avi':['video','video/x-msvideo'],'.mov':['video','video/quicktime'],'.srt':['subtitle','text/plain'],'.vtt':['subtitle','text/vtt'] }
+const types: Record<string,[MediaEntry['kind'],string]> = { '.mp3':['audio','audio/mpeg'],'.m4a':['audio','audio/mp4'],'.aac':['audio','audio/aac'],'.wav':['audio','audio/wav'],'.flac':['audio','audio/flac'],'.ogg':['audio','audio/ogg'],'.opus':['audio','audio/ogg'],'.weba':['audio','audio/webm'], '.pdf':['pdf','application/pdf'],'.zip':['archive','application/zip'],'.cbz':['archive','application/zip'],'.png':['image','image/png'],'.jpg':['image','image/jpeg'],'.jpeg':['image','image/jpeg'],'.gif':['image','image/gif'],'.webp':['image','image/webp'],'.mp4':['video','video/mp4'],'.webm':['video','video/webm'],'.mkv':['video','video/x-matroska'],'.avi':['video','video/x-msvideo'],'.mov':['video','video/quicktime'],'.srt':['subtitle','text/plain'],'.vtt':['subtitle','text/vtt'] }
 const key = (v: unknown): v is string => typeof v === 'string' && /^[\w-]{1,100}$/.test(v)
 const mediaNames=new Intl.Collator('zh-Hant',{numeric:true})
 export interface DesktopOperations {
   external?(url: string): Promise<void>
-  choose(kind: 'exe'|'folder'|'subtitle'): Promise<string|undefined>
+  choose(kind: 'exe'|'folder'|'file'|'subtitle', initialPath?: string): Promise<string|undefined>
   open(file: string): Promise<void>; launch(file: string,args: string[]): Promise<void>
   thumbnail(file: string, mime?:string, url?:string): Promise<Buffer>
 }
@@ -34,11 +38,12 @@ export class Explorer {
   private externals = new Map<string,{rowId:string;file:string}>()
   private previews = new Map<string,{preview:MetadataPreview;cover?:{bytes:Buffer;mime:string;ext:string};expires:number}>()
   private thumbnailReads=0
+  private audioCoverTail:Promise<unknown>=Promise.resolve()
   private thumbnailJobs=new Map<string,{promise:Promise<Buffer>;signals:AbortSignal[]}>()
   private thumbnailTail:Promise<unknown>=Promise.resolve()
   private thumbnailTrim?:Promise<void>
   private thumbnailTrimAt=0
-  private contentPages=new Map<string,{rowId:string;path:string;folderId?:string;names:string[];expires:number}>()
+  private contentPages=new Map<string,{rowId:string;path:string;folderId?:string;names:string[];hidden:Set<string>;expires:number}>()
   constructor(private library: Library, private root: string, private desktop: DesktopOperations) { this.index = new SearchIndex(path.join(root,'search.sqlite')); this.index.sync(library.snapshot()) }
   private async record(rowId: string, revision: number) {
     const row = await this.library.checkedRow(rowId,true), record = await readFolder(row.path)
@@ -49,18 +54,32 @@ export class Explorer {
     const {row,record} = await this.record(rowId,revision); record.details ??= newDetails(); mutate(record.details,record); validateDetails(record.details)
     await saveFolder(row.path,record,revision); return this.library.refreshRecord(rowId)
   }
+  private async targetPath(root:string,file:string,kind:'exe'|'folder'|'file') {
+    if(!path.isAbsolute(file)||file.includes('\0'))throw new Error('目標路徑不合法')
+    await safePath(path.parse(file).root,file)
+    const target=await fs.realpath(file),stat=await fs.stat(target)
+    if(kind==='folder'?!stat.isDirectory():!stat.isFile()||kind==='exe'&&path.extname(target).toLowerCase()!=='.exe')throw new Error('目標類型不符')
+    return {path:within(root,target)?relPath(root,target):target,relative:within(root,target)}
+  }
+  private async resolvedTarget(root:string,target:{path:string;relative:boolean},kind:'exe'|'folder'|'file') {
+    const file=target.relative?path.join(root,target.path):target.path
+    if(target.relative)await safePath(root,file)
+    await this.targetPath(root,file,kind)
+    return file
+  }
   async content(rowId: string,limit?:number,cursor?:string): Promise<ContentResult> {
     if(limit!==undefined&&(!Number.isInteger(limit)||limit<1||limit>500)||cursor!==undefined&&(typeof cursor!=='string'||cursor.length>150||limit===undefined))throw new Error('內容分批設定不合法')
     const row = await this.library.readableRow(rowId), notices: string[] = [], entries: MediaEntry[] = []
-    let offset=0,token='',names:string[]
+    let offset=0,token='',names:string[],hidden=new Set<string>()
     for(const [id,session]of this.contentPages)if(session.expires<Date.now())this.contentPages.delete(id)
     if(cursor){
       const match=/^([\w-]+):(\d+)$/.exec(cursor),session=match&&this.contentPages.get(match[1]);offset=Number(match?.[2])
       if(!session||session.rowId!==rowId||session.path!==row.path||session.folderId!==row.record?.folderId||!Number.isSafeInteger(offset)||offset<0||offset>=session.names.length)throw new Error('資料夾內容批次已失效，請重新開啟資料夾')
-      names=session.names;token=match![1];session.expires=Date.now()+120000
+      hidden=session.hidden;names=session.names;token=match![1];session.expires=Date.now()+120000
     }else{
+      try{hidden=await hiddenFileNames(row.path)}catch(error){notices.push('無法確認隱藏屬性：'+String(error))}
       names=(await fs.readdir(row.path,{withFileTypes:true})).filter(entry=>entry.name.toLowerCase()!==DATA_DIR&&!entry.isSymbolicLink()&&(entry.isFile()||entry.isDirectory())).map(entry=>entry.name).sort((a,b)=>mediaNames.compare(a,b)||(a<b?-1:a>b?1:0))
-      if(limit&&names.length>limit){while(this.contentPages.size>=8)this.contentPages.delete(this.contentPages.keys().next().value!);token=randomUUID();this.contentPages.set(token,{rowId,path:row.path,folderId:row.record?.folderId,names,expires:Date.now()+120000})}
+      if(limit&&names.length>limit){while(this.contentPages.size>=8)this.contentPages.delete(this.contentPages.keys().next().value!);token=randomUUID();this.contentPages.set(token,{rowId,path:row.path,folderId:row.record?.folderId,names,hidden,expires:Date.now()+120000})}
     }
     const batch=names.slice(offset,limit?offset+limit:undefined)
     for (let start=0;start<batch.length;start+=16) await Promise.all(batch.slice(start,start+16).map(async name=>{
@@ -71,7 +90,7 @@ export class Explorer {
         const [kind,mime] = stat.isDirectory() ? ['folder','application/octet-stream'] as const : imageMime?['image',imageMime] as const:types[path.extname(file).toLowerCase()] ?? ['other','application/octet-stream']
         const id = createHash('sha256').update(name).digest('hex'), url = `media://file/${rowId}/${id}`
         this.files.set(`${rowId}/${id}`,{rowId,name,file,mime})
-        entries.push({ id,name,kind,mime,size:stat.size,modified:stat.mtimeMs,url, ...(['image','video'].includes(kind)?{thumb:`media://thumb/${rowId}/${id}?v=${stat.size}-${stat.mtimeMs}`}:{}) })
+        entries.push({ id,name,kind,mime,...(hidden.has(name)?{hidden:true}:{}),size:stat.size,modified:stat.mtimeMs,url, ...(['image','video'].includes(kind)?{thumb:`media://thumb/${rowId}/${id}?v=${stat.size}-${stat.mtimeMs}`}:{}) })
       } catch(e) { notices.push(`${name}: ${String(e)}`) }
     }))
     entries.sort((a,b)=>mediaNames.compare(a.name,b.name)||(a.name<b.name?-1:a.name>b.name?1:0))
@@ -92,6 +111,26 @@ export class Explorer {
     const stat=await fs.stat(entry.file); if(!stat.isFile()) throw new Error('不是檔案')
     return {...entry,stat,row}
   }
+  async audioCover(rowId:string,id:string,signal?:AbortSignal):Promise<globalThis.Response>{
+    const task=this.audioCoverTail.then(()=>signal?.aborted?new Response(null,{status:499}):this.readAudioCover(rowId,id))
+    this.audioCoverTail=task.catch(()=>{})
+    return task
+  }
+  private async readAudioCover(rowId:string,id:string):Promise<globalThis.Response>{
+    try{
+      const entry=await this.file(rowId,id)
+      if(!entry.mime.startsWith('audio/'))return new Response(null,{status:415})
+      // Blob parsing seeks through the original read-only file; never load the whole file into RAM.
+      if(entry.stat.size>256*1024*1024)return new Response(null,{status:413})
+      const metadata=await parseBlob(await openAsBlob(entry.file,{type:entry.mime}),{duration:false,skipPostHeaders:true})
+      const cover=selectCover(metadata.common.picture)
+      if(!cover)return new Response(null,{status:204})
+      if(cover.data.byteLength>8*1024*1024)return new Response(null,{status:413})
+      const image=identifyImage(cover.data)
+      if(!image)return new Response(null,{status:415})
+      return new Response(new Uint8Array(cover.data),{headers:{'Content-Type':image.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}})
+    }catch{return new Response(null,{status:422})}
+  }
   async stream(rowId: string,id: string,request: globalThis.Request, thumbnail=false): Promise<globalThis.Response> {
     try {
       const entry=await this.file(rowId,id)
@@ -105,7 +144,7 @@ export class Explorer {
         const version=new URL(request.url).searchParams.get('v')===`${entry.stat.size}-${entry.stat.mtimeMs}`
         return new globalThis.Response(new Uint8Array(bytes),{headers:{'Content-Type':'image/jpeg','Cache-Control':version?'private, max-age=86400, immutable':'no-cache'}})
       }
-      if(!/^(image|video)\//.test(entry.mime)&&entry.mime!=='application/pdf') return new globalThis.Response(null,{status:415})
+      if(!/^(image|video|audio)\//.test(entry.mime)&&entry.mime!=='application/pdf') return new globalThis.Response(null,{status:415})
       const size=entry.stat.size, headers:Record<string,string>={'Content-Type':entry.mime,'Accept-Ranges':'bytes','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
       const range=request.headers.get('range'); let start=0,end=size-1,status=200
       if(range) {
@@ -207,17 +246,39 @@ export class Explorer {
       case 'boundary': { if(!['root','candidate','not-game'].includes(req.state)||req.traverse!==undefined&&typeof req.traverse!=='boolean')throw new Error('邊界設定不合法'); const detected=(await this.library.checkedRow(req.rowId)).boundary;await this.details(req.rowId,req.revision,(d)=>{d.boundary={state:req.state,engines:d.boundary?.engines??detected?.engines??[],evidence:d.boundary?.evidence??detected?.evidence??['使用者指定']}});const row=await this.library.checkedRow(req.rowId),p=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)!.project!;if(req.traverse!==undefined)await this.library.saveProject({...p,traversal:{...p.traversal,[row.record!.folderId]:req.traverse}});break }
       case 'banner': return this.after(await this.details(req.rowId,req.revision,(d,r)=>{if(!r.assets.some(a=>a.assetId===req.assetId))throw new Error('圖片不屬於此資料夾');d.bannerAssetId=req.assetId}))
       case 'bindTarget': {
-        const {row,record}=await this.record(req.rowId,req.revision),template=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)?.project?.actionTemplates?.find(t=>t.id===req.templateId)
-        if(!template)throw new Error('任務版型不存在');const file=await this.desktop.choose(template.kind);if(!file)return {cancelled:true}
-        const target=await fs.realpath(file),stat=await fs.stat(target);if(template.kind==='exe'?(!stat.isFile()||path.extname(target).toLowerCase()!=='.exe'):!stat.isDirectory())throw new Error('目標類型不符')
-        record.details??=newDetails();record.details.targets??={};record.details.targets[template.id]={kind:template.kind,path:within(row.path,target)?relPath(row.path,target):target,relative:within(row.path,target),args:req.args};validateDetails(record.details);await saveFolder(row.path,record,req.revision);break
+        const {row,record}=await this.record(req.rowId,req.revision),project=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)?.project,template=project&&gameActionTemplates(project).find(t=>t.id===req.templateId)
+        if(!template)throw new Error('任務版型不存在')
+        if(!Array.isArray(req.args)||req.args.length>100||!req.args.every(arg=>typeof arg==='string'&&arg.length<=10000&&!arg.includes('\0'))||['url','folder'].includes(template.kind)&&req.args.length)throw new Error('參數不合法')
+        let target:NonNullable<NonNullable<FolderRecord['details']>['targets']>[string]
+        if(template.kind==='url'){
+          if(!httpUrl(req.url))throw new Error('網址無法開啟')
+          target={kind:'url',path:req.url!,relative:false,args:[]}
+        }else{
+          const chosen=await this.desktop.choose(template.kind==='file-app'?'exe':template.kind,row.path);if(!chosen)return {cancelled:true}
+          const selected=await this.targetPath(row.path,chosen,template.kind==='folder'?'folder':'exe')
+          if(template.kind==='file-app'){
+            const file=await this.desktop.choose('file',row.path);if(!file)return {cancelled:true}
+            target={kind:template.kind,...await this.targetPath(row.path,file,'file'),args:req.args,application:selected}
+          }else target={kind:template.kind,...selected,args:req.args}
+        }
+        record.details??=newDetails();record.details.targets??={};record.details.targets[template.id]=target;validateDetails(record.details);await saveFolder(row.path,record,req.revision);break
       }
       case 'runTarget': {
-        const row=await this.library.checkedRow(req.rowId),record=await readFolder(row.path),p=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)!.project!,template=p.actionTemplates?.find(t=>t.id===req.templateId),target=record.details?.targets?.[req.templateId]
+        const row=await this.library.checkedRow(req.rowId),record=await readFolder(row.path),p=this.library.snapshot().projects.find(p=>p.projectId===row.projectId)!.project!,template=gameActionTemplates(p).find(t=>t.id===req.templateId),target=record.details?.targets?.[req.templateId]
         if(!template||!target||template.kind!==target.kind)throw new Error('任務尚未綁定；請重新指定')
-        const file=target.relative?path.join(row.path,target.path):target.path;if(target.relative)await safePath(row.path,file);else if(!path.isAbsolute(file))throw new Error('外部路徑不合法')
-        const stat=await fs.stat(file)
-        if(target.kind==='exe'){if(!stat.isFile()||path.extname(file).toLowerCase()!=='.exe')throw new Error('EXE 已失效');await this.desktop.launch(file,target.args)}else{if(!stat.isDirectory())throw new Error('資料夾已失效');await this.desktop.open(file)}
+        if(target.kind==='url'){
+          if(!httpUrl(target.path)||!this.desktop.external)throw new Error('網址無法開啟')
+          await this.desktop.external(target.path)
+        }else{
+          const file=await this.resolvedTarget(row.path,target,target.kind==='folder'?'folder':target.kind==='exe'?'exe':'file')
+          if(target.kind==='folder')await this.desktop.open(file)
+          else if(target.kind==='exe')await this.desktop.launch(file,target.args)
+          else{
+            if(!target.application)throw new Error('應用程式尚未綁定')
+            const application=await this.resolvedTarget(row.path,target.application,'exe')
+            await this.desktop.launch(application,[...target.args,file])
+          }
+        }
         return {notice:{level:'success',message:'已開啟指定目標'}}
       }
       case 'chooseSubtitle': {

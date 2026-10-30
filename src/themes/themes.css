@@ -55,7 +55,7 @@ button, input, select, textarea { font-family: inherit; }
 .center-mode .mantine-SegmentedControl-label[data-active] { color: var(--selected-text); }
 .mantine-ActionIcon-root[data-variant='subtle'] { color: var(--muted); }
 .mantine-ActionIcon-root:disabled { opacity: .45; }
-.mantine-Modal-content, .mantine-Modal-header, .mantine-Drawer-content, .mantine-Drawer-header,
+.mantine-Modal-content, .mantine-Drawer-content,
 .mantine-Menu-dropdown, .mantine-Popover-dropdown { background: var(--panel); color: var(--text); }
 .tree-canvas { --xy-edge-stroke: var(--edge); --xy-background-pattern-dots-color: var(--line); --xy-minimap-background-color: var(--inset); --xy-minimap-mask-background-color: var(--surface); --xy-minimap-node-background-color: var(--accent); }
 .tree-canvas .react-flow__node-default { border-radius: var(--radius); background: var(--surface); color: var(--text); border-color: var(--line); }
@@ -100,3 +100,7 @@ button, input, select, textarea { font-family: inherit; }
 .sample-panel i { display: block; height: 5px; margin-bottom: 6px; background: var(--line); }
 .sample-panel i:first-child { height: 30px; background: var(--selected); }
 @media (max-width:600px) { .theme-options { grid-template-columns: 1fr; }.theme-option { display: grid; grid-template-columns: 120px 1fr; column-gap: 14px; }.theme-sample { grid-row: 1 / 3; height: 96px; }.theme-option-heading { align-self: end; }.theme-description { grid-column: 2; }.global-settings { margin-inline: 0 3px; } }
+
+.mantine-Modal-header,.mantine-Modal-body,.mantine-Drawer-header,.mantine-Drawer-body { background:transparent; color:inherit; }
+
+.mantine-Modal-header,.mantine-Drawer-header { position:static; }

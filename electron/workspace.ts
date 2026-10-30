@@ -19,6 +19,7 @@ export function validateWorkspace(v: unknown): asserts v is WorkspacePrefs {
   if (v.theme !== undefined && !isThemeId(v.theme)) throw new Error('主題設定不合法')
   if (v.locale !== undefined && !isLocaleId(v.locale)) throw new Error('語言設定不合法')
   if (v.autoOpenContent !== undefined && typeof v.autoOpenContent !== 'boolean') throw new Error('瀏覽設定不合法')
+  if(v.fileVisibility!==undefined&&(!object(v.fileVisibility)||typeof v.fileVisibility.hidden!=='boolean'||typeof v.fileVisibility.dotfiles!=='boolean'))throw new Error('檔案顯示設定不合法')
   if (v.videoAudio !== undefined && (!object(v.videoAudio)||!Number.isFinite(v.videoAudio.volume)||v.videoAudio.volume<0||v.videoAudio.volume>1||typeof v.videoAudio.muted!=='boolean')) throw new Error('影片音量設定不合法')
   const groups = new Set(v.groups.map(g => g.id)), names = new Set(v.groups.map(g => g.name.toLocaleLowerCase()))
   if (groups.size !== v.groups.length || names.size !== v.groups.length || !Object.entries(v.projects).every(([id, p]) => key(id) && object(p) && (p.groupId === null || groups.has(p.groupId)) && typeof p.favorite === 'boolean' && integer(p.addedOrder, 1) && p.addedOrder < v.nextOrder)) throw new Error('側欄群組或專案引用不合法')
@@ -30,6 +31,7 @@ export function validateWorkspace(v: unknown): asserts v is WorkspacePrefs {
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.scrolls!==undefined&&(!object(b.scrolls)||!Object.entries(b.scrolls).every(([mode,value])=>['CARD','TREE','TABLE'].includes(mode)&&typeof value==='number'&&value>=0&&value<1e9))))throw new Error('捲動位置不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.panelVisible!==undefined&&typeof b.panelVisible!=='boolean'||b.detailId!==undefined&&!key(b.detailId)||b.locations!==undefined&&(!object(b.locations)||!Object.entries(b.locations).every(([k,p])=>['CARD','TREE','TABLE'].includes(k)&&typeof p==='string'&&p.length<=10000))))throw new Error('瀏覽位置或內容面板設定不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.treeCollapsed!==undefined&&(!Array.isArray(b.treeCollapsed)||b.treeCollapsed.length>50000||new Set(b.treeCollapsed).size!==b.treeCollapsed.length||!b.treeCollapsed.every(key))))throw new Error('樹狀收合設定不合法')
+  if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.hiddenColumns!==undefined&&(!Array.isArray(b.hiddenColumns)||b.hiddenColumns.length>1002||b.hiddenColumns.includes('name')||new Set(b.hiddenColumns).size!==b.hiddenColumns.length||!b.hiddenColumns.every(key))))throw new Error('表格欄位顯示不合法')
   if(v.browse&&Object.values(v.browse).some(b=>!object(b)||b.columnOrder!==undefined&&(!Array.isArray(b.columnOrder)||b.columnOrder.length>1003||new Set(b.columnOrder).size!==b.columnOrder.length||!b.columnOrder.every(key))))throw new Error('表格欄位順序不合法')
 }
 export class WorkspaceStore {
@@ -125,6 +127,7 @@ export class WorkspaceStore {
           }
           return {...this.state(),backups:backups.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,30)}
         }
+        case 'fileVisibility': next.fileVisibility={hidden:bool(command.value?.hidden),dotfiles:bool(command.value?.dotfiles)};break
         case 'browseBehavior': next.autoOpenContent = bool(command.autoOpenContent); break
         case 'videoAudio': if(!object(command.value))throw new Error('影片音量設定不合法');next.videoAudio=structuredClone(command.value);break
         case 'appearance': if (!isThemeId(command.theme) || !isLocaleId(command.locale)) throw new Error('外觀設定不合法'); next.theme=command.theme; next.locale=command.locale; break

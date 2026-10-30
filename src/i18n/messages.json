@@ -1,4 +1,70 @@
 {
+  "檔案範圍": {
+    "zh-CN": "文件范围",
+    "en": "File scope",
+    "ja": "ファイルの範囲",
+    "es": "Ámbito de archivos"
+  },
+  "內嵌封面無法讀取，仍可選擇資料夾圖片": {
+    "zh-CN": "无法读取内嵌封面，仍可选择文件夹图片",
+    "en": "Embedded artwork could not be read; you can still choose a folder image",
+    "ja": "埋め込みカバーを読み込めません。フォルダーの画像を選択できます",
+    "es": "No se pudo leer la portada integrada; puedes elegir una imagen de la carpeta"
+  },
+  "前往此資料夾": {
+    "zh-CN": "前往此文件夹",
+    "en": "Go to this folder",
+    "ja": "このフォルダーへ移動",
+    "es": "Ir a esta carpeta"
+  },
+  "前往資料夾 {0}": {
+    "zh-CN": "前往文件夹 {0}",
+    "en": "Go to folder {0}",
+    "ja": "フォルダー {0} へ移動",
+    "es": "Ir a la carpeta {0}"
+  },
+  "不支援內建預覽": {
+    "zh-CN": "不支持内置预览",
+    "en": "Built-in preview unavailable",
+    "ja": "内蔵プレビュー非対応",
+    "es": "Vista previa integrada no disponible"
+  },
+  "影片佇列展示": {
+    "zh-CN": "影片队列展示",
+    "en": "Video queue view",
+    "ja": "動画キューの表示",
+    "es": "Vista de la cola de vídeos"
+  },
+  "清單模式": {
+    "zh-CN": "列表模式",
+    "en": "List view",
+    "ja": "リスト表示",
+    "es": "Vista de lista"
+  },
+  "選擇專輯封面": {
+    "zh-CN": "选择专辑封面",
+    "en": "Choose album cover",
+    "ja": "アルバムカバーを選択",
+    "es": "Elegir portada del álbum"
+  },
+  "使用資料夾指定封面": {
+    "zh-CN": "使用文件夹指定封面",
+    "en": "Use folder cover",
+    "ja": "フォルダーのカバーを使用",
+    "es": "Usar portada de la carpeta"
+  },
+  "無法載入專輯封面": {
+    "zh-CN": "无法加载专辑封面",
+    "en": "Unable to load album cover",
+    "ja": "アルバムカバーを読み込めません",
+    "es": "No se puede cargar la portada del álbum"
+  },
+  "尚未設定專輯封面": {
+    "zh-CN": "尚未设置专辑封面",
+    "en": "No album cover selected",
+    "ja": "アルバムカバーが未設定です",
+    "es": "No se ha seleccionado una portada"
+  },
   "漫畫": {
     "ja": "漫画",
     "zh-CN": "漫画",
@@ -234,9 +300,9 @@
     "es": "Categoría multimedia"
   },
   "選擇資料夾": {
+    "en": "Choose folder",
     "ja": "フォルダーを選択",
     "zh-CN": "选择文件夹",
-    "en": "Choose folder",
     "es": "Elegir carpeta"
   },
   "已選資料夾": {
@@ -3888,9 +3954,9 @@
     "es": "Opción única"
   },
   "網址": {
+    "en": "URL",
     "ja": "URL",
     "zh-CN": "网址",
-    "en": "URL",
     "es": "URL"
   },
   "固定文字": {
@@ -4318,5 +4384,707 @@
     "zh-CN": "类型",
     "en": "Genre",
     "es": "Género"
+  },
+  "遵循通用設定（此專案版面）": {
+    "ja": "プロジェクトのレイアウトに従う",
+    "zh-CN": "遵循通用设置（此项目版面）",
+    "en": "Follow project layout",
+    "es": "Usar diseño del proyecto"
+  },
+  "由左至右": {
+    "ja": "左から右",
+    "zh-CN": "由左至右",
+    "en": "Left to right",
+    "es": "De izquierda a derecha"
+  },
+  "開啟圖片 {0}": {
+    "ja": "画像を開く {0}",
+    "zh-CN": "打开图片 {0}",
+    "en": "Open image {0}",
+    "es": "Abrir imagen {0}"
+  },
+  "先保存版面後才能刪除欄位": {
+    "en": "Save the layout before deleting a field",
+    "ja": "フィールドを削除する前にレイアウトを保存してください",
+    "zh-CN": "请先保存版面再删除字段",
+    "es": "Guarda el diseño antes de eliminar un campo"
+  },
+  "刪除欄位及資料": {
+    "en": "Delete field and data",
+    "ja": "フィールドとデータを削除",
+    "zh-CN": "删除字段及数据",
+    "es": "Eliminar campo y datos"
+  },
+  "刪除欄位 {0}": {
+    "en": "Delete field {0}",
+    "ja": "フィールド {0} を削除",
+    "zh-CN": "删除字段 {0}",
+    "es": "Eliminar campo {0}"
+  },
+  "刪除自訂欄位": {
+    "en": "Delete custom field",
+    "ja": "カスタムフィールドを削除",
+    "zh-CN": "删除自定义字段",
+    "es": "Eliminar campo personalizado"
+  },
+  "刪除欄位「{0}」及其資料": {
+    "en": "Delete field “{0}” and its data",
+    "ja": "フィールド「{0}」とそのデータを削除",
+    "zh-CN": "删除字段“{0}”及其数据",
+    "es": "Eliminar el campo «{0}» y sus datos"
+  },
+  "受影響欄位：{0}；資料夾：{1}；已有值：{2}": {
+    "en": "Affected field definitions: {0}; folders: {1}; stored values: {2}",
+    "ja": "影響するフィールド定義：{0}、フォルダー：{1}、保存値：{2}",
+    "zh-CN": "受影响字段定义：{0}；文件夹：{1}；已有值：{2}",
+    "es": "Definiciones afectadas: {0}; carpetas: {1}; valores guardados: {2}"
+  },
+  "版面引用：{0}；表格引用：{1}；常用搜尋：{2}": {
+    "en": "Layout references: {0}; table references: {1}; saved searches: {2}",
+    "ja": "レイアウト参照：{0}、表の参照：{1}、保存した検索：{2}",
+    "zh-CN": "版面引用：{0}；表格引用：{1}；常用搜索：{2}",
+    "es": "Referencias de diseño: {0}; tabla: {1}; búsquedas guardadas: {2}"
+  },
+  "刪除影響以下專案；原始媒體保留。": {
+    "en": "Deletion affects the projects below. Original media is kept.",
+    "ja": "以下のプロジェクトに影響します。元のメディアは保持します。",
+    "zh-CN": "删除影响以下项目；原始媒体保留。",
+    "es": "La eliminación afecta a estos proyectos. Se conservan los medios originales."
+  },
+  "確認刪除欄位及資料": {
+    "en": "Confirm field and data deletion",
+    "ja": "フィールドとデータの削除を確認",
+    "zh-CN": "确认删除字段及数据",
+    "es": "Confirmar eliminación del campo y sus datos"
+  },
+  "完全移除專案資料": {
+    "en": "Remove all project data",
+    "ja": "プロジェクトデータを完全削除",
+    "zh-CN": "完全移除项目数据",
+    "es": "Eliminar todos los datos del proyecto"
+  },
+  "清除根目錄與所有子資料夾內的本工具資料、共用值、設定及原位置備份。原始媒體保留；可能影響其他綁定專案。": {
+    "en": "Remove this app’s data, shared values, settings and local backups from the root and all subfolders. Original media is kept. Other linked projects may be affected.",
+    "ja": "ルートと全サブフォルダーの本アプリのデータ、共有値、設定、元の場所のバックアップを削除します。元のメディアは保持します。他のリンク済みプロジェクトにも影響する場合があります。",
+    "zh-CN": "清除根目录和所有子文件夹内的本工具数据、共享值、设置和原位置备份。保留原始媒体；可能影响其他绑定项目。",
+    "es": "Elimina los datos de esta aplicación, valores compartidos, ajustes y copias locales de la raíz y sus subcarpetas. Se conservan los medios originales. Puede afectar a otros proyectos vinculados."
+  },
+  "預覽完全移除": {
+    "en": "Preview full removal",
+    "ja": "完全削除をプレビュー",
+    "zh-CN": "预览完全移除",
+    "es": "Vista previa de eliminación completa"
+  },
+  "可能受影響的其他專案（{0}）": {
+    "en": "Other projects possibly affected ({0})",
+    "ja": "影響する可能性のある他のプロジェクト（{0}）",
+    "zh-CN": "可能受影响的其他项目（{0}）",
+    "es": "Otros proyectos que pueden verse afectados ({0})"
+  },
+  "此範圍內的綁定或共用資料會被清除，可能影響其他專案。": {
+    "en": "Linked or shared data in this scope will be removed and may affect other projects.",
+    "ja": "この範囲のリンク済み・共有データが削除され、他のプロジェクトに影響する可能性があります。",
+    "zh-CN": "此范围内的绑定或共享数据将被清除，可能影响其他项目。",
+    "es": "Se eliminarán los datos vinculados o compartidos de este ámbito, lo que puede afectar a otros proyectos."
+  },
+  "已檢查目前已連結的同根、巢狀及重疊專案。": {
+    "en": "Checked currently linked projects with the same, nested or overlapping roots.",
+    "ja": "現在リンクされている同一ルート・入れ子・重複するプロジェクトを確認しました。",
+    "zh-CN": "已检查当前已链接的同根、嵌套及重叠项目。",
+    "es": "Se han comprobado los proyectos vinculados con raíces iguales, anidadas o superpuestas."
+  },
+  "確認完全移除列出的程式資料": {
+    "en": "Confirm full removal of the listed app data",
+    "ja": "一覧のアプリデータの完全削除を確認",
+    "zh-CN": "确认完全移除列出的程序数据",
+    "es": "Confirmar eliminación completa de los datos indicados"
+  },
+  "引用此欄位的組件與常用搜尋會一併移除；其他欄位值保留。": {
+    "en": "Components and saved searches referencing this field will also be removed. Other field values are kept.",
+    "ja": "このフィールドを参照するコンポーネントと保存した検索も削除します。他のフィールドの値は保持します。",
+    "zh-CN": "引用此字段的组件和常用搜索将一并移除；其他字段值保留。",
+    "es": "También se eliminarán los componentes y búsquedas guardadas que usen este campo. Se conservan los valores de otros campos."
+  },
+  "已驗證備份：{0}": {
+    "en": "Verified backups: {0}",
+    "ja": "検証済みバックアップ：{0}",
+    "zh-CN": "已验证备份：{0}",
+    "es": "Copias verificadas: {0}"
+  },
+  "選擇表格欄位": {
+    "en": "Choose table columns",
+    "ja": "表の列を選択",
+    "zh-CN": "选择表格列",
+    "es": "Elegir columnas"
+  },
+  "搜尋欄位": {
+    "en": "Search columns",
+    "ja": "列を検索",
+    "zh-CN": "搜索字段",
+    "es": "Buscar columnas"
+  },
+  "恢復預設": {
+    "en": "Restore defaults",
+    "ja": "既定に戻す",
+    "zh-CN": "恢复默认",
+    "es": "Restaurar valores predeterminados"
+  },
+  "搜尋資料夾名稱、路徑或欄位值…": {
+    "en": "Search folder names, paths, or field values…",
+    "ja": "フォルダー名、パス、フィールド値を検索…",
+    "zh-CN": "搜索文件夹名称、路径或字段值…",
+    "es": "Buscar nombres de carpetas, rutas o valores de campos…"
+  },
+  "常用搜尋名稱": {
+    "en": "Saved search name",
+    "ja": "保存する検索の名前",
+    "zh-CN": "常用搜索名称",
+    "es": "Nombre de la búsqueda guardada"
+  },
+  "取消保存": {
+    "en": "Cancel saving",
+    "ja": "保存をキャンセル",
+    "zh-CN": "取消保存",
+    "es": "Cancelar guardado"
+  },
+  "符合的常用搜尋": {
+    "en": "Matching saved searches",
+    "ja": "一致する保存済み検索",
+    "zh-CN": "匹配的常用搜索",
+    "es": "Búsquedas guardadas coincidentes"
+  },
+  "選擇條件以套用；右側 × 可刪除。": {
+    "en": "Select a search to apply it; use × on the right to delete it.",
+    "ja": "検索条件を選ぶと適用されます。右の × で削除できます。",
+    "zh-CN": "选择条件以应用；右侧 × 可删除。",
+    "es": "Selecciona una búsqueda para aplicarla; usa la × de la derecha para eliminarla."
+  },
+  "沒有符合的常用搜尋": {
+    "en": "No matching saved searches",
+    "ja": "一致する保存済み検索はありません",
+    "zh-CN": "没有匹配的常用搜索",
+    "es": "No hay búsquedas guardadas coincidentes"
+  },
+  "尚未保存常用搜尋": {
+    "en": "No saved searches yet",
+    "ja": "保存済み検索はまだありません",
+    "zh-CN": "尚未保存常用搜索",
+    "es": "Aún no hay búsquedas guardadas"
+  },
+  "輸入會搜尋資料夾，並配對常用搜尋名稱與條件；按 + 保存目前條件。": {
+    "en": "Type to search folders and match saved search names and conditions. Press + to save the current conditions.",
+    "ja": "入力するとフォルダーを検索し、保存済み検索の名前と条件も照合します。+ で現在の条件を保存できます。",
+    "zh-CN": "输入会搜索文件夹，并匹配常用搜索名称与条件；按 + 保存当前条件。",
+    "es": "Escribe para buscar carpetas y encontrar búsquedas guardadas por nombre o condiciones. Pulsa + para guardar las condiciones actuales."
+  },
+  "常用搜尋未更新": {
+    "en": "Saved searches were not updated",
+    "ja": "保存済み検索を更新できませんでした",
+    "zh-CN": "常用搜索未更新",
+    "es": "No se actualizaron las búsquedas guardadas"
+  },
+  "啟動遊戲": {
+    "en": "Launch game",
+    "ja": "ゲームを起動",
+    "zh-CN": "启动游戏",
+    "es": "Iniciar juego"
+  },
+  "以指定應用程式開啟檔案": {
+    "en": "Open file with an application",
+    "ja": "指定したアプリでファイルを開く",
+    "zh-CN": "用指定应用打开文件",
+    "es": "Abrir archivo con una aplicación"
+  },
+  "開啟網址": {
+    "en": "Open URL",
+    "ja": "URL を開く",
+    "zh-CN": "打开网址",
+    "es": "Abrir URL"
+  },
+  "應用程式": {
+    "en": "Application",
+    "ja": "アプリ",
+    "zh-CN": "应用程序",
+    "es": "Aplicación"
+  },
+  "保存網址": {
+    "en": "Save URL",
+    "ja": "URL を保存",
+    "zh-CN": "保存网址",
+    "es": "Guardar URL"
+  },
+  "選擇應用程式與檔案": {
+    "en": "Choose application and file",
+    "ja": "アプリとファイルを選択",
+    "zh-CN": "选择应用和文件",
+    "es": "Elegir aplicación y archivo"
+  },
+  "選擇 EXE 並保存參數": {
+    "en": "Choose EXE and save arguments",
+    "ja": "EXE を選択して引数を保存",
+    "zh-CN": "选择 EXE 并保存参数",
+    "es": "Elegir EXE y guardar argumentos"
+  },
+  "取消變更": {
+    "en": "Discard changes",
+    "ja": "変更を破棄",
+    "zh-CN": "取消更改",
+    "es": "Descartar cambios"
+  },
+  "操作順序": {
+    "en": "Action order",
+    "ja": "操作の順序",
+    "zh-CN": "操作顺序",
+    "es": "Orden de acciones"
+  },
+  "上移 {0}": {
+    "en": "Move {0} up",
+    "ja": "{0} を上へ移動",
+    "zh-CN": "上移 {0}",
+    "es": "Subir {0}"
+  },
+  "下移 {0}": {
+    "en": "Move {0} down",
+    "ja": "{0} を下へ移動",
+    "zh-CN": "下移 {0}",
+    "es": "Bajar {0}"
+  },
+  "保存版型後，在遊戲操作中指定此資料夾的目標。": {
+    "en": "Save the template, then choose this folder's targets under Game actions.",
+    "ja": "テンプレートを保存後、ゲーム操作でこのフォルダーの対象を指定します。",
+    "zh-CN": "保存模板后，在游戏操作中指定此文件夹的目标。",
+    "es": "Guarda la plantilla y elige los destinos de esta carpeta en Acciones del juego."
+  },
+  "加入按鈕以建立操作。": {
+    "en": "Add a button to create an action.",
+    "ja": "ボタンを追加して操作を作成します。",
+    "zh-CN": "添加按钮以创建操作。",
+    "es": "Añade un botón para crear una acción."
+  },
+  "版型套用全專案；目標與參數只屬於目前資料夾。": {
+    "en": "The template applies to the project; targets and arguments belong to this folder.",
+    "ja": "テンプレートはプロジェクト全体、対象と引数は現在のフォルダーに適用されます。",
+    "zh-CN": "模板应用于整个项目；目标与参数仅属于当前文件夹。",
+    "es": "La plantilla se aplica al proyecto; los destinos y argumentos pertenecen a esta carpeta."
+  },
+  "條件未符合": {
+    "en": "Condition not met",
+    "ja": "条件未達成",
+    "zh-CN": "条件未满足",
+    "es": "Condición no cumplida"
+  },
+  "複製欄位值": {
+    "en": "Copy field value",
+    "ja": "項目の値をコピー",
+    "zh-CN": "复制字段值",
+    "es": "Copiar valor del campo"
+  },
+  "複製 {0}": {
+    "en": "Copy {0}",
+    "ja": "{0}をコピー",
+    "zh-CN": "复制 {0}",
+    "es": "Copiar {0}"
+  },
+  "已複製": {
+    "en": "Copied",
+    "ja": "コピー済み",
+    "zh-CN": "已复制",
+    "es": "Copiado"
+  },
+  "複製": {
+    "en": "Copy",
+    "ja": "コピー",
+    "zh-CN": "复制",
+    "es": "Copiar"
+  },
+  "顯示方式": {
+    "en": "Display style",
+    "ja": "表示形式",
+    "zh-CN": "显示方式",
+    "es": "Estilo de visualización"
+  },
+  "一般文字": {
+    "en": "Plain text",
+    "ja": "通常のテキスト",
+    "zh-CN": "普通文本",
+    "es": "Texto simple"
+  },
+  "評分": {
+    "en": "Rating",
+    "ja": "評価",
+    "zh-CN": "评分",
+    "es": "Valoración"
+  },
+  "進度": {
+    "en": "Progress",
+    "ja": "進捗",
+    "zh-CN": "进度",
+    "es": "Progreso"
+  },
+  "狀態徽章": {
+    "en": "Status badge",
+    "ja": "ステータスバッジ",
+    "zh-CN": "状态徽章",
+    "es": "Insignia de estado"
+  },
+  "滿分／總量": {
+    "en": "Maximum / total",
+    "ja": "満点／合計",
+    "zh-CN": "满分／总量",
+    "es": "Máximo / total"
+  },
+  "顯示複製按鈕": {
+    "en": "Show copy button",
+    "ja": "コピーボタンを表示",
+    "zh-CN": "显示复制按钮",
+    "es": "Mostrar botón de copiar"
+  },
+  "顯示條件欄位": {
+    "en": "Visibility condition field",
+    "ja": "表示条件の項目",
+    "zh-CN": "显示条件字段",
+    "es": "Campo de condición de visibilidad"
+  },
+  "一律顯示": {
+    "en": "Always visible",
+    "ja": "常に表示",
+    "zh-CN": "始终显示",
+    "es": "Siempre visible"
+  },
+  "顯示條件": {
+    "en": "Visibility condition",
+    "ja": "表示条件",
+    "zh-CN": "显示条件",
+    "es": "Condición de visibilidad"
+  },
+  "已有值": {
+    "en": "Has a value",
+    "ja": "値がある",
+    "zh-CN": "已有值",
+    "es": "Tiene un valor"
+  },
+  "等於": {
+    "en": "Equals",
+    "ja": "等しい",
+    "zh-CN": "等于",
+    "es": "Igual a"
+  },
+  "不等於": {
+    "en": "Does not equal",
+    "ja": "等しくない",
+    "zh-CN": "不等于",
+    "es": "Distinto de"
+  },
+  "比較值": {
+    "en": "Comparison value",
+    "ja": "比較値",
+    "zh-CN": "比较值",
+    "es": "Valor de comparación"
+  },
+  "下移": {
+    "en": "Move down",
+    "ja": "下へ移動",
+    "zh-CN": "下移",
+    "es": "Mover abajo"
+  },
+  "預設 CARD 單層／第 1 層，每列 3 張。完成後掃描允許範圍並建立隱藏可攜記錄；原始媒體保留，遊戲 ROOT 內部受保護。": {
+    "en": "Cards start at a single level (level 1), three per row. Creation scans the allowed scope and adds hidden portable records; original media and game boundaries are preserved.",
+    "ja": "カードは単一階層の第1階層、1行3枚が初期値です。許可範囲をスキャンし、元ファイルとゲーム境界を保護します。",
+    "es": "Las tarjetas comienzan en un nivel (nivel 1), tres por fila. Se analiza el ámbito permitido y se conservan los medios originales y los límites de los juegos.",
+    "zh-CN": "默认卡片单层／第 1 层，每行 3 张。完成后扫描允许范围并建立隐藏便携记录；保留原始媒体并保护游戏根目录内部。"
+  },
+  "音樂播放器": {
+    "en": "Music player",
+    "ja": "音楽プレーヤー",
+    "es": "Reproductor de música",
+    "zh-CN": "音乐播放器"
+  },
+  "無法播放此音樂格式或檔案已失效": {
+    "en": "This audio format cannot be played or the file is unavailable",
+    "ja": "この音声形式は再生できないか、ファイルが利用できません",
+    "es": "Este formato de audio no se puede reproducir o el archivo no está disponible",
+    "zh-CN": "无法播放此音乐格式或文件已失效"
+  },
+  "專輯封面": {
+    "en": "Album cover",
+    "ja": "アルバムカバー",
+    "es": "Portada del álbum",
+    "zh-CN": "专辑封面"
+  },
+  "音樂進度": {
+    "en": "Audio position",
+    "ja": "再生位置",
+    "es": "Posición del audio",
+    "zh-CN": "音乐进度"
+  },
+  "上一首": {
+    "en": "Previous track",
+    "ja": "前の曲",
+    "es": "Pista anterior",
+    "zh-CN": "上一首"
+  },
+  "下一首": {
+    "en": "Next track",
+    "ja": "次の曲",
+    "es": "Pista siguiente",
+    "zh-CN": "下一首"
+  },
+  "播完接下一首": {
+    "en": "Play the next track",
+    "ja": "次の曲を続けて再生",
+    "es": "Reproducir la siguiente pista",
+    "zh-CN": "播完接下一首"
+  },
+  "顯示設定未保存，請重試": {
+    "en": "Display settings were not saved. Retry",
+    "ja": "表示設定を保存できませんでした。再試行",
+    "es": "No se guardaron los ajustes de vista. Reintentar",
+    "zh-CN": "显示设置未保存，请重试"
+  },
+  "遊戲資料夾篩選": {
+    "en": "Game folder filter",
+    "ja": "ゲームフォルダーの絞り込み",
+    "es": "Filtro de carpetas de juegos",
+    "zh-CN": "游戏文件夹筛选"
+  },
+  "全部資料夾": {
+    "en": "All folders",
+    "ja": "すべてのフォルダー",
+    "es": "Todas las carpetas",
+    "zh-CN": "全部文件夹"
+  },
+  "邊界的資料夾": {
+    "en": "Game boundaries",
+    "ja": "ゲーム境界",
+    "es": "Límites de juegos",
+    "zh-CN": "边界文件夹"
+  },
+  "移出音樂佇列 {0}": {
+    "en": "Remove {0} from the music queue",
+    "ja": "音楽キューから {0} を削除",
+    "es": "Quitar {0} de la cola de música",
+    "zh-CN": "将 {0} 移出音乐队列"
+  },
+  "加入音樂佇列 {0}": {
+    "en": "Add {0} to the music queue",
+    "ja": "音楽キューに {0} を追加",
+    "es": "Añadir {0} a la cola de música",
+    "zh-CN": "将 {0} 加入音乐队列"
+  },
+  "個檔案": {
+    "en": "files",
+    "ja": "ファイル",
+    "es": "archivos",
+    "zh-CN": "个文件"
+  },
+  "移除 {0}": {
+    "en": "Remove {0}",
+    "ja": "{0} を削除",
+    "es": "Quitar {0}",
+    "zh-CN": "移除 {0}"
+  },
+  "縮圖": {
+    "en": "Thumbnails",
+    "ja": "サムネイル",
+    "es": "Miniaturas",
+    "zh-CN": "缩略图"
+  },
+  "更多檔案選項": {
+    "en": "More file options",
+    "ja": "ファイルのその他の操作",
+    "es": "Más opciones de archivos",
+    "zh-CN": "更多文件选项"
+  },
+  "顯示隱藏檔案": {
+    "en": "Show hidden files",
+    "ja": "隠しファイルを表示",
+    "es": "Mostrar archivos ocultos",
+    "zh-CN": "显示隐藏文件"
+  },
+  "顯示點開頭檔案": {
+    "en": "Show dotfiles",
+    "ja": "ドットで始まるファイルを表示",
+    "es": "Mostrar archivos con punto inicial",
+    "zh-CN": "显示点开头文件"
+  },
+  "播放已加入的音樂": {
+    "en": "Play queued music",
+    "ja": "追加した音楽を再生",
+    "es": "Reproducir música en cola",
+    "zh-CN": "播放已加入的音乐"
+  },
+  "資料夾資訊": {
+    "en": "Folder information",
+    "ja": "フォルダー情報",
+    "es": "Información de la carpeta",
+    "zh-CN": "文件夹信息"
+  },
+  "編輯資料夾資料": {
+    "en": "Edit folder data",
+    "ja": "フォルダーデータを編集",
+    "es": "Editar datos de la carpeta",
+    "zh-CN": "编辑文件夹数据"
+  },
+  "尚未建立或受保護": {
+    "en": "Not initialized or protected",
+    "ja": "未作成または保護されています",
+    "es": "Sin inicializar o protegida",
+    "zh-CN": "尚未建立或受保护"
+  },
+  "媒體佇列": {
+    "en": "Media queue",
+    "ja": "メディアキュー",
+    "es": "Cola de medios",
+    "zh-CN": "媒体队列"
+  },
+  "隱藏佇列": {
+    "en": "Hide queue",
+    "ja": "キューを非表示",
+    "es": "Ocultar cola",
+    "zh-CN": "隐藏队列"
+  },
+  "顯示佇列": {
+    "en": "Show queue",
+    "ja": "キューを表示",
+    "es": "Mostrar cola",
+    "zh-CN": "显示队列"
+  },
+  "切換媒體佇列": {
+    "en": "Toggle media queue",
+    "ja": "メディアキューの表示切替",
+    "es": "Alternar cola de medios",
+    "zh-CN": "切换媒体队列"
+  },
+  "媒體檢視器": {
+    "en": "Media viewer",
+    "ja": "メディアビューアー",
+    "es": "Visor de medios",
+    "zh-CN": "媒体查看器"
+  },
+  "關閉媒體檢視器": {
+    "en": "Close media viewer",
+    "ja": "メディアビューアーを閉じる",
+    "es": "Cerrar visor de medios",
+    "zh-CN": "关闭媒体查看器"
+  },
+  "檔案已不存在於目前清單，請關閉後重新整理。": {
+    "en": "The file is no longer in this list. Close the viewer and refresh.",
+    "ja": "ファイルは現在の一覧にありません。閉じて更新してください。",
+    "es": "El archivo ya no está en esta lista. Cierra el visor y actualiza.",
+    "zh-CN": "文件已不在当前列表中，请关闭后刷新。"
+  },
+  "圖片模式": {
+    "en": "Image mode",
+    "ja": "画像モード",
+    "es": "Modo de imagen",
+    "zh-CN": "图片模式"
+  },
+  "漫畫模式": {
+    "en": "Manga mode",
+    "ja": "漫画モード",
+    "es": "Modo manga",
+    "zh-CN": "漫画模式"
+  },
+  "此檔案沒有內建預覽，不會自動執行。": {
+    "en": "No built-in preview. This file will not run automatically.",
+    "ja": "内蔵プレビューはありません。自動実行されません。",
+    "es": "Sin vista previa integrada. El archivo no se ejecutará automáticamente.",
+    "zh-CN": "此文件没有内置预览，不会自动执行。"
+  },
+  "上一個檔案": {
+    "en": "Previous file",
+    "ja": "前のファイル",
+    "es": "Archivo anterior",
+    "zh-CN": "上一个文件"
+  },
+  "下一個檔案": {
+    "en": "Next file",
+    "ja": "次のファイル",
+    "es": "Archivo siguiente",
+    "zh-CN": "下一个文件"
+  },
+  "沒有符合條件的檔案": {
+    "en": "No matching files",
+    "ja": "一致するファイルはありません",
+    "es": "No hay archivos coincidentes",
+    "zh-CN": "没有符合条件的文件"
+  },
+  "候選遊戲，尚未確認": {
+    "en": "Candidate game — not confirmed",
+    "ja": "ゲーム候補・未確認",
+    "es": "Juego candidato sin confirmar",
+    "zh-CN": "候选游戏，尚未确认"
+  },
+  "播放佇列": {
+    "zh-CN": "播放队列",
+    "en": "Play queue",
+    "ja": "再生キュー",
+    "es": "Cola de reproducción"
+  },
+  "自動接續": {
+    "zh-CN": "自动接续",
+    "en": "Auto advance",
+    "ja": "自動で次へ",
+    "es": "Reproducción continua"
+  },
+  "返回播放佇列": {
+    "zh-CN": "返回播放队列",
+    "en": "Return to play queue",
+    "ja": "再生キューへ戻る",
+    "es": "Volver a la cola"
+  },
+  "縮小播放": {
+    "zh-CN": "缩小播放",
+    "en": "Mini player",
+    "ja": "ミニプレーヤー",
+    "es": "Minirreproductor"
+  },
+  "上一個媒體": {
+    "zh-CN": "上一个媒体",
+    "en": "Previous media",
+    "ja": "前のメディア",
+    "es": "Medio anterior"
+  },
+  "下一個媒體": {
+    "zh-CN": "下一个媒体",
+    "en": "Next media",
+    "ja": "次のメディア",
+    "es": "Medio siguiente"
+  },
+  "媒體不存在或需重新載入": {
+    "zh-CN": "媒体不存在或需重新载入",
+    "en": "Media is unavailable; reload the folder",
+    "ja": "メディアがありません。再読み込みしてください",
+    "es": "El medio no está disponible; recarga la carpeta"
+  },
+  "加入佇列": {
+    "zh-CN": "加入队列",
+    "en": "Add to queue",
+    "ja": "キューに追加",
+    "es": "Añadir a la cola"
+  },
+  "預覽轉換為媒體專案": {
+    "zh-CN": "预览转换为媒体项目",
+    "en": "Preview conversion to media project",
+    "ja": "メディアプロジェクトへの変換を確認",
+    "es": "Vista previa de conversión"
+  },
+  "確認轉換": {
+    "zh-CN": "确认转换",
+    "en": "Confirm conversion",
+    "ja": "変換を確定",
+    "es": "Confirmar conversión"
+  },
+  "恢復原分類": {
+    "zh-CN": "恢复原分类",
+    "en": "Restore original category",
+    "ja": "元の分類に戻す",
+    "es": "Restaurar categoría original"
+  },
+  "保留專案身分、欄位、版面、封面及舊播放偏好。改用共用媒體頁，進入資料夾不自動播放；保存前可取消，保存時建立原設定備份。": {
+    "zh-CN": "保留项目身份、字段、布局、封面及旧播放偏好。使用共用媒体页，进入文件夹不自动播放；保存前可取消，保存时备份原设置。",
+    "en": "Keep project identity, fields, layouts, covers and legacy playback preferences. The media page does not autoplay on folder entry. Cancel before saving; saving backs up original settings.",
+    "ja": "ID・フィールド・レイアウト・カバー・旧再生設定を保持します。フォルダー移動で自動再生しません。保存前はキャンセル可能で、保存時に元の設定をバックアップします。",
+    "es": "Conserva identidad, campos, diseños, portadas y preferencias anteriores. No reproduce al entrar en carpetas. Puedes cancelar antes de guardar; se crea una copia de la configuración original."
   }
 }

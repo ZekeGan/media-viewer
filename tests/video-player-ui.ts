@@ -213,7 +213,8 @@ async function runGroup(group: Group, fixture: string) {
     },
 
     "subtitles": async () => {
-      await tool('載入字幕').click()
+      assert.equal(await controls.locator('[aria-label="載入字幕"],[aria-label="顯示／隱藏字幕"]').count(),0)
+      await section('字幕來源')
       const subtitles = settingsPanel
       await subtitles.getByRole('button', { name: 'first.srt', exact: true }).click()
       await page.keyboard.press('Escape')
@@ -221,7 +222,7 @@ async function runGroup(group: Group, fixture: string) {
 
       await page.locator('.subtitle-overlay').getByText('Controlled subtitle', { exact: true }).waitFor()
 
-      await tool('顯示／隱藏字幕').click()
+      await section('字幕來源'); await subtitles.getByRole('switch', {name:'顯示／隱藏字幕',exact:true}).click(); await subtitles.getByRole('button', {name:'關閉播放設定',exact:true}).click()
       assert.equal(await page.locator('.subtitle-overlay').count(), 0)
 
       await focus()
@@ -294,7 +295,7 @@ async function runGroup(group: Group, fixture: string) {
     "auto-next": async () => {
       await page.clock.install()
 
-      await tool('載入字幕').click()
+      await section('字幕來源')
       const subtitles = settingsPanel
       await subtitles.getByRole('button', { name: 'first.srt', exact: true }).click()
       await page.keyboard.press('Escape')

@@ -1,7 +1,7 @@
 import type { ActionTemplate, FolderDetails } from './explorer'
 import type { Notice } from './notifications'
 import { imageTypes } from './images'
-import { validFieldValue } from './fields'
+import { httpUrl, validFieldValue } from './fields'
 import { validStableQuery, type StableQuery } from './query'
 export const DATA_DIR = '.media-viewer'
 export type CellKind = 'name' | 'path' | 'field-text' | 'field-tags' | 'field-number' | 'field-date' | 'field-boolean' | 'field-enum' | 'field-url' | 'field-date-only' | 'static-text' | 'spacer' | 'system-info' | 'image' | 'divider' | 'open-folder'
@@ -11,6 +11,10 @@ export interface Cell {
   style: { textColor: string; backgroundColor: string }
   text?: string
   systemInfo?: 'category' | 'files' | 'size'
+  presentation?: 'badge' | 'rating' | 'progress'
+  maximum?: number
+  copyValue?: boolean
+  condition?: { attributeId:string; operator:'set'|'unset'|'equals'|'not-equals'; value?:string|number|boolean }
 }
 export interface SourceRecord { provider:string; url:string; fetchedAt:string }
 export interface Attribute { attributeId: string; key: string; type: string; value: unknown; source: string; sourceRecord?:SourceRecord }
@@ -27,6 +31,7 @@ export interface Project {
   fieldBindings: { alias: string; attributeId: string; type: string; options?: string[] }[]
   cells: Cell[]; list: { itemsPerRow: number; pageSize: number }; excludedRelativePaths: string[]
   contentCells?: Record<string, Cell[]>; actionTemplates?: ActionTemplate[]
+  mediaSourceCategory?: 'album'|'video'|'music'|'other'
   layoutPresets?: { id:string; name:string; cells:Cell[] }[]; activeLayoutId?:string
   folderLayouts?: Record<string, string>
   scanAll?: boolean
@@ -42,6 +47,8 @@ export interface Snapshot { projects: LinkedProject[]; rows: FolderRow[]; proble
 export interface CleanupPreview { token: string; paths: string[]; skipped: string[]; count: number; scope: 'folder' | 'private' | 'all' }
 export interface CleanupResult { removed: number; failed: string[]; skipped: string[] }
 export interface ProjectRemovalPreview { token:string; projectId:string; name:string; paths:string[]; skipped:string[]; privateCount:number; rootCleanup?:boolean; recoveryPath?:string }
+export interface FullRemovalPreview {token:string;projectId:string;name:string;root:string;paths:string[];skipped:string[];affectedProjects:{projectId:string;name:string;root:string}[];recoveryPath:string}
+export interface FieldDeletionPreview {token:string;attributeId:string;name:string;fields:number;folders:number;values:number;references:number;layouts:number;tables:number;searches:number;backups:number;projects:{projectId:string;name:string;root:string}[];skipped:string[];recoveryPath:string}
 export interface ProjectInput { name: string; mediaCategory: string; depth: Project['depth']; scanAll?:boolean }
 export interface LegacyPreview { token: string; projects: { id: string; name: string; root: string; values: number }[]; warnings: string[] }
 export interface LegacyImportResult { imported: string[]; warnings: string[]; backup: string }
@@ -52,6 +59,11 @@ export type Request =
   | { action: 'unlink'; projectId: string }
   | { action: 'removeProjectPreview'; projectId:string }
   | { action: 'removeProject'; token:string }
+  | { action:'fullRemovalPreview';projectId:string }
+  | { action:'fullRemoval';token:string }
+  | { action:'deleteFieldPreview';projectId:string;attributeId:string }
+  | { action:'deleteField';token:string }
+  | { action:'copyFieldValue';rowId:string;attributeId:string }
   | { action: 'restoreProject'; projectId: string }
   | { action: 'saveFolder'; rowId: string; revision: number; values: Record<string, string> }
   | { action: 'image'; rowId: string; revision: number; cellId?:string }
@@ -59,7 +71,7 @@ export type Request =
   | { action: 'cleanupPreview'; rowId: string; scope: 'folder' | 'private' }
   | { action: 'cleanup'; token: string; restart: boolean }
   | { action: 'legacyImport'; token: string; ids: string[]; depth: Project['depth'] }
-export interface Response { snapshot: Snapshot; preview?: CleanupPreview; cleanup?: CleanupResult; removalPreview?:ProjectRemovalPreview; removal?:CleanupResult; legacy?: LegacyPreview; notice?: Notice; cancelled?: boolean; rootSelection?:{token:string;path:string} }
+export interface Response { snapshot: Snapshot; preview?: CleanupPreview; cleanup?: CleanupResult; removalPreview?:ProjectRemovalPreview; removal?:CleanupResult; fullRemovalPreview?:FullRemovalPreview;fieldDeletionPreview?:FieldDeletionPreview;recoveryPath?:string;legacy?: LegacyPreview; notice?: Notice; cancelled?: boolean; rootSelection?:{token:string;path:string} }
 export interface MediaApi { request(request: Request): Promise<Response>; onProgress(callback: (progress: ScanProgress) => void): () => void }
 
 const obj = (v: unknown): v is Record<string, any> => !!v
@@ -110,6 +122,10 @@ function validCell(c: unknown): boolean {
     && ['name', 'path', 'field-text', 'field-tags', 'field-number', 'field-date', 'field-boolean', 'field-enum', 'field-url', 'field-date-only', 'static-text', 'spacer', 'system-info', 'image', 'divider', 'open-folder'].includes(c.kind)
     && (c.text === undefined || text(c.text, 10000))
     && (c.systemInfo === undefined || ['category', 'files', 'size'].includes(c.systemInfo))
+    && (c.presentation === undefined || c.presentation === 'badge' && ['field-enum','field-boolean'].includes(c.kind) || ['rating','progress'].includes(c.presentation) && c.kind === 'field-number')
+    && (c.maximum === undefined || c.kind === 'field-number' && typeof c.maximum === 'number' && Number.isFinite(c.maximum) && c.maximum > 0 && c.maximum <= 1e9)
+    && (c.copyValue === undefined || c.kind.startsWith('field-') && typeof c.copyValue === 'boolean')
+    && (c.condition === undefined || obj(c.condition) && id(c.condition.attributeId) && ['set','unset','equals','not-equals'].includes(c.condition.operator) && (['set','unset'].includes(c.condition.operator) ? c.condition.value === undefined : typeof c.condition.value === 'boolean' || typeof c.condition.value === 'number' && Number.isFinite(c.condition.value) || text(c.condition.value,10000)))
     && (!c.kind.startsWith('field-')
       || id(c.attributeId))
     && (c.kind !== 'image'
@@ -131,7 +147,7 @@ function validCell(c: unknown): boolean {
 function validTargetEntry([k, t]: [string, unknown]): boolean {
   return id(k)
     && obj(t)
-    && ['exe', 'folder'].includes(t.kind)
+    && ['exe', 'folder', 'file-app', 'url'].includes(t.kind)
     && text(t.path, 10000)
     && typeof t.relative === 'boolean'
     && (!t.relative
@@ -140,6 +156,9 @@ function validTargetEntry([k, t]: [string, unknown]): boolean {
     && t.args.length <= 100
     && t.args.every((a: unknown) => text(a, 10000)
       && !String(a).includes('\0'))
+    && (t.kind !== 'url' || t.args.length === 0)
+    && (t.kind !== 'url' || httpUrl(t.path) && t.relative === false)
+    && (t.kind === 'file-app' ? obj(t.application) && text(t.application.path,10000) && /\.exe$/i.test(t.application.path) && typeof t.application.relative === 'boolean' && (!t.application.relative || relative(t.application.path)) : t.application === undefined)
 }
 
 function validSubtitleSettings(s: unknown): boolean {
@@ -208,6 +227,7 @@ export function validateDetails(v: unknown): asserts v is FolderDetails {
         && id(asset)))) throw new Error('圖片組件設定不合法')
   if (v.reading
     && (!obj(v.reading)
+      || (v.reading.mode !== undefined && !['image','manga'].includes(v.reading.mode))
       || (v.reading.page !== undefined
         && !integer(v.reading.page, 0, 1000000))
       || (v.reading.fit !== undefined
@@ -269,6 +289,10 @@ export function validateProject(v: unknown): asserts v is Project {
     || !v.cells.every(validCell)) throw new Error('專案設定不合法或版本不支援')
   if (new Set(v.cells.map(c => c.cellId)).size !== v.cells.length
     || new Set(v.fieldBindings.map(f => f.alias.toLowerCase())).size !== v.fieldBindings.length) throw new Error('組件 ID 或欄位別名重複')
+  for(const cell of v.cells)if(cell.condition){
+    const field=v.fieldBindings.find(field=>field.attributeId===cell.condition.attributeId)
+    if(!field || ['equals','not-equals'].includes(cell.condition.operator) && (!['string','enum','url','date','datetime','number','boolean'].includes(field.type) || !validFieldValue(field.type,cell.condition.value,field.type==='enum'?undefined:field.options)))throw new Error('組件顯示條件不合法')
+  }
   if(v.folderLayouts!==undefined&&(!obj(v.folderLayouts)||Object.keys(v.folderLayouts).length>50000||!Object.entries(v.folderLayouts).every(([folder,preset])=>id(folder)&&id(preset))))throw new Error('資料夾版面指定不合法')
   if (v.layoutPresets !== undefined) {
     if (!Array.isArray(v.layoutPresets)
@@ -284,6 +308,7 @@ export function validateProject(v: unknown): asserts v is Project {
       || !v.layoutPresets.some(p => p.id === v.activeLayoutId)) throw new Error('作用中方案不存在')
     for (const preset of v.layoutPresets) validateProject({ ...v, cells: preset.cells, layoutPresets: undefined, activeLayoutId: undefined, contentCells: undefined })
   } else if (v.activeLayoutId !== undefined) throw new Error('方案清單不存在')
+  if(v.mediaSourceCategory!==undefined&&!['album','video','music','other'].includes(v.mediaSourceCategory))throw new Error('媒體來源分類不合法')
   if (v.contentCells !== undefined) {
     if (!obj(v.contentCells)
       || !Object.keys(v.contentCells).every(k => ['manga', 'album', 'game', 'video', 'other'].includes(k))) throw new Error('內容模板不合法')
@@ -300,7 +325,7 @@ export function validateProject(v: unknown): asserts v is Project {
       || !v.actionTemplates.every(t => obj(t)
         && id(t.id)
         && text(t.label, 100)
-        && ['exe', 'folder'].includes(t.kind)
+        && ['exe', 'folder', 'file-app', 'url'].includes(t.kind)
         && /^#[0-9a-f]{6}$/i.test(t.color)))) throw new Error('任務版型不合法')
   if (v.savedSearches !== undefined
     && (!Array.isArray(v.savedSearches)

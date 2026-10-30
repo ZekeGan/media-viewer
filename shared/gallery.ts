@@ -1,6 +1,17 @@
 export type GalleryMode='masonry'|'manga'|'list'
 export interface GalleryTile {index:number;x:number;y:number;width:number;height:number}
 export interface GalleryLayout {tiles:GalleryTile[];height:number;columns:number}
+export function groupedGalleryLayout(groups:{id:string;indices:number[]}[],width:number,mode:GalleryMode,ratios:ReadonlyMap<number,number>,collapsed:ReadonlySet<string>){
+ const tiles:GalleryTile[]=[],headers:{id:string;top:number}[]=[];let top=0,columns=1
+ for(const group of groups){
+  headers.push({id:group.id,top});top+=40
+  if(collapsed.has(group.id))continue
+  const localRatios=new Map(group.indices.flatMap((index,local)=>ratios.has(index)?[[local,ratios.get(index)!] as const]:[]))
+  const layout=galleryLayout(group.indices.length,width,mode,localRatios);columns=layout.columns
+  tiles.push(...layout.tiles.map(tile=>({...tile,index:group.indices[tile.index],y:tile.y+top})));top+=layout.height+8
+ }
+ return{tiles,headers,height:top,columns}
+}
 export function galleryLayout(count:number,width:number,mode:GalleryMode,ratios:ReadonlyMap<number,number>):GalleryLayout{
  const gap=mode==='manga'?8:mode==='masonry'?10:0,minWidth=mode==='manga'?105:140
  const columns=mode==='list'?1:Math.max(1,Math.floor((width+gap)/(minWidth+gap))),cellWidth=Math.max(1,(width-gap*(columns-1))/columns),bottom=Array(columns).fill(0) as number[],tiles:GalleryTile[]=[]

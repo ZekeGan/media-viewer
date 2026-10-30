@@ -11,7 +11,7 @@ type Result={preview:Omit<MetadataPreview,'token'>;cover?:{bytes:Buffer;mime:str
 export async function publicMetadata(provider:Exclude<MetadataSourceId,'eh'|'exh'|'steam'>,source:string,fetcher:typeof fetch):Promise<Result> {
   const input=new URL(source)
   const request=async(url:string,body?:unknown)=>{
-    const response=await fetcher(url,{method:body?'POST':'GET',headers:{Accept:'application/json','User-Agent':'MediaViewer/0.7.0 (manual desktop metadata preview)',...(body?{'Content-Type':'application/json'}:{}),...(['pixiv','hitomi'].includes(provider)?{Referer:source}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000),redirect:'error'})
+    const response=await fetcher(url,{method:body?'POST':'GET',headers:{Accept:'application/json','User-Agent':'MediaViewer/0.9.0 (manual desktop metadata preview)',...(body?{'Content-Type':'application/json'}:{}),...(['pixiv','hitomi'].includes(provider)?{Referer:source}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(15000),redirect:'error'})
     return (await limitedBytes(response,2*1024*1024)).toString('utf8')
   }
   const json=async(url:string,body?:unknown)=>JSON.parse(await request(url,body))

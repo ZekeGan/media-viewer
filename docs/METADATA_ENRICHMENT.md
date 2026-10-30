@@ -14,6 +14,8 @@
 
 目前使用 [Steam 商店公開資料端點](https://store.steampowered.com/api/appdetails?appids=620&l=english)，不宣稱是有相容承諾的 Steamworks API。main 固定請求主機／路徑、限制大小／逾時／重新導向並驗證 App ID；封面只允許指定官方 CDN 與同 App 路徑，失敗可略過。不需要使用者交出帳號憑證。
 
+<a id="分類來源"></a>
+
 ## 分類來源（2026-10-28）
 
 使用者已核定加入下列不需要 API 憑證的來源，選單依種類分組，並標示適合目前專案分類的網站。以精確作品網址預覽，不搜尋、模糊配對、合併跨站作品或下載作品內容。來源註冊在 shared/sources.ts；固定端點與映射在 electron/metadata.ts、electron/metadata-public.ts。

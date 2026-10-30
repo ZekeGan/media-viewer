@@ -2,6 +2,36 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.9.0 — 2026-10-30
+
+- Add a unified media workspace with source-aware cross-folder browsing, collapsible source groups and virtualized file layouts.
+- Add shared audio/video playback, cross-project mixed queues, independent duplicate entries, drag ordering, removal and optional auto-advance.
+- Add a draggable in-app mini player with edge snapping, background playback and playback continuity across project and window changes.
+- Add MP3 playback and embedded artwork extraction; fix StrictMode source cleanup that left music duration at zero and playback unresponsive.
+- Display audio volume on a 0–100 scale and improve the visibility of unfilled slider tracks across themes.
+- Share folder back/forward history across panes and accept both native and DOM mouse side-button events with duplicate suppression.
+- Add per-project conversion previews, atomic backups and original-category restoration; preserve project/folder identity, templates and original media.
+- Retire legacy categories from project creation while keeping compatible reads and applicable single-file previews.
+- Keep unsupported files visible without opening unsupported full-screen previews; retain queue transitions, source validation and file visibility controls.
+- Refine Agent task batching, focused reading and verification rules; expand controlled-data and Electron UI regression coverage.
+
+Known follow-ups: S9–S12 cover manual-only queue addition, folder-details presentation, queue UI redesign and mini-player dragging near the native title bar. These requests are recorded but are not included as implemented fixes. Physical mouse drivers, sound output and other platforms still require user acceptance.
+
+Portable record `schemaVersion` remains 1. Optional `mediaSourceCategory` preserves legacy template selection during conversion. No bulk scan, migration or cleanup of actual user collections accompanies this release.
+
+## 0.8.0 — 2026-10-29
+
+- Consolidate folder/file tools, expose CARD controls inline and add persistent TABLE column visibility.
+- Redesign saved searches with inline creation, matching and deletion while preserving stable query identities.
+- Add status badges, rating/progress displays, field-value copying and conditional CELL content using existing field types.
+- Correct palette and canvas drag coordinates; improve editor and folder-settings layout and shared overlay backgrounds.
+- Add explicit game launch defaults, application/file and URL actions, per-action arguments, contextual settings and drag ordering.
+- Fix shared reader hit areas, directional navigation, page selection and zoom reset; preserve manga work boundaries in file overview.
+- Add confirmed field deletion and full project-data removal with impact previews, verified external backups and guarded recovery.
+- Streamline Agent instructions and task navigation; add controlled data and Electron regression coverage.
+
+Portable record schemaVersion remains 1 with optional validated capabilities. Original media is retained; no actual collection migration or scan accompanies this release. Music playback, nested containers and native macOS game launching remain deferred.
+
 ## 0.7.0 — 2026-10-29
 
 - Add dark, glass-white and paper themes, five UI languages, shared SVG icons and system-language defaults.

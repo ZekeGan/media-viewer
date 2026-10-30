@@ -1,9 +1,11 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { Accordion, Alert, Button, ColorInput, Group, NumberInput, Select, Stack, Text } from '@mantine/core'
+import { Accordion, Alert, Button, ColorInput, Group, NumberInput, Select, Stack, Switch, Text } from '@mantine/core'
 import { defaultSubtitle, type ExplorerResponse, type MediaEntry, type SubtitlePrefs } from '../shared/explorer'
 import { t as tr, useLocale } from './i18n'
 
 interface Props {
+  captions: boolean
+  toggleCaptions: () => void
   section: string | null
   changeSection: (value: string | null) => void
   error: string
@@ -22,12 +24,13 @@ interface Props {
 
 // Controlled view: playback state, file access and persistence stay in VideoViewer.
 export function VideoSubtitleSettings({
-  section, changeSection, error, subtitle, files, subtitles, settings, readonly,
+  captions, toggleCaptions, section, changeSection, error, subtitle, files, subtitles, settings, readonly,
   load, clear, save, importSubtitle, changeEncoding, setSettings,
 }: Props) {
   useLocale()
   return (
     <Stack gap="xs" className="player-subtitle-settings">
+      <Switch label={tr('顯示／隱藏字幕')} checked={captions} disabled={!subtitle} onChange={toggleCaptions}/>
       {error && <Alert color="orange">
         {error}
       </Alert>}

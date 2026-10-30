@@ -4,6 +4,10 @@ export const pathKey=(p:string)=>p.replace(/\\/g,'/').replace(/\/$/,'').toLocale
 export const parentPath=(p:string)=>p.replace(/[\\/][^\\/]+[\\/]?$/,'')
 export const cardDisplay=(p:Project):NonNullable<Project['cardView']>=>p.cardView??{mode:p.depth.mode==='exact'?'single':'multi',level:p.scanAll?'all':p.depth.level}
 export const maxBrowseDepth=(rows:FolderRow[])=>rows.reduce((depth,row)=>!row.readonly&&(row.record||row.error||row.stopped)?Math.max(depth,row.depth):depth,1)
+export function orderedFileFolders(rows:FolderRow[]) {
+ const compare=(a:string,b:string)=>a<b?-1:a>b?1:0
+ return rows.filter(row=>row.record&&!row.readonly&&!row.error&&!row.stopped).sort((a,b)=>a.depth-b.depth||compare(a.name,b.name)||compare(a.path.replaceAll('\\','/'),b.path.replaceAll('\\','/')))
+}
 export function folderBreadcrumbs(rows:FolderRow[],root:string,target:string){
   const rootKey=pathKey(root),targetKey=pathKey(target)
   if(targetKey!==rootKey&&!targetKey.startsWith(rootKey+'/'))return rows.filter(r=>pathKey(r.path)===rootKey).slice(0,1)

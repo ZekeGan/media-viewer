@@ -4,9 +4,11 @@
 
 ## 資料流與邊界
 
-`src/main.tsx → App → DesktopShell / BrowseWorkspace → window.media / explorer / desktop → preload → main → Library / Explorer / WorkspaceStore`
+`src/main.tsx → PlaybackProvider → App → DesktopShell / BrowseWorkspace → window.media / explorer / desktop → preload → main → Library / Explorer / WorkspaceStore`
 
 Renderer 負責畫面、草稿與互動；preload 只暴露受控 API；main 驗證請求與呼叫來源、執行檔案及系統操作。保留 contextIsolation、sandbox、停用 nodeIntegration；不能讓 renderer 任意讀路徑、執行命令或繞過 main 的身分／邊界檢查。
+
+側鍵導覽由 main 的 `app-command` 經 `folder:navigate`／`desktop.onFolderNavigation` 傳入工作區；preload 同時接收原生命令與一般 mouseup，取消側鍵 DOM 預設動作，以短時間配對去重，兼容僅送一般事件的驅動。main 換算內容座標及縮放，BrowseWorkspace 再檢查命中區域、可見浮層與忙碌狀態，最後仍經 `visit` 驗證目的地；此通知不授予讀寫路徑權限。訂閱隨工作區卸載清除。
 
 ## 按問題找入口
 
@@ -27,6 +29,7 @@ Renderer 負責畫面、草稿與互動；preload 只暴露受控 API；main 驗
 | 全域外觀／語言／圖示 | [ApplicationSettings](../src/ApplicationSettings.tsx)、[themes](../src/themes/ThemeProvider.tsx)、[i18n](../src/i18n/index.ts)、[icons](../src/icons.tsx) | 主題／語言預覽與本機保存、共用 CSS 變數、介面翻譯；不改寫使用者資料 |
 | 瀏覽與設定 | [BrowseWorkspace](../src/BrowseWorkspace.tsx)、[TreeView](../src/TreeView.tsx)、[FolderPanel](../src/FolderPanel.tsx) | 三模式、歷史、獨立右區、設定 Drawer；TREE 用 React Flow＋Dagre |
 | CELL／內容 | [Card](../src/Card.tsx)、[Editor](../src/Editor.tsx)、[FolderContent](../src/FolderContent.tsx) | 共用編輯引擎、分開版面、各屬性內容 |
+| 統一媒體／音訊 | [MediaBrowser](../src/MediaBrowser.tsx)、[MediaViewer](../src/MediaViewer.tsx)、[MediaQueue](../src/MediaQueue.tsx)、[AudioViewer](../src/AudioViewer.tsx) | 跨層 `overview`、來源身分、來源分組與圖片／文件單來源清單；舊四分類以共用媒體頁相容讀取，保留單檔預覽。main 的 `audio-cover` 透過 Explorer 與 music-metadata 讀取封面，播放器仍用 Video.js；影音由 [PlaybackProvider](../src/Playback.tsx) 在 App 外持有唯一工作階段、跨專案佇列與大小視窗呈現。轉換僅增可選的 mediaSourceCategory，保留舊內容模板與原始分類恢復入口 |
 | 媒體／搜尋／通知 | [Gallery](../src/Gallery.tsx)、[Reader](../src/Reader.tsx)、[VideoViewer](../src/VideoViewer.tsx)、[SearchDialog](../src/SearchDialog.tsx)、[Toasts](../src/Toasts.tsx) | 相簿／閱讀器、Video.js、查詢 UI、右下通知 |
 | 影片控制與本機音量 | [VideoControls](../src/VideoControls.tsx)、[useVideoAudio](../src/useVideoAudio.ts) | native video 操作、控制列、可選接續；本機音量經 WorkspaceStore 保存。main 的 `window:state` 另發布可見／最小化狀態，供播放器暫停與取消倒數 |
 | 影片字幕設定畫面 | [VideoSubtitleSettings](../src/VideoSubtitleSettings.tsx) | 控制列內受控字幕群組、來源選擇、外觀／時間／編碼欄位；狀態、讀取／解析／保存由 VideoViewer 管理，選單留在播放器容器內 |

@@ -1,6 +1,6 @@
 import {t as tr, useLocale} from './i18n'
-import { Icon } from './icons'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Icon,projectIconName } from './icons'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ActionIcon,
   Alert,
@@ -64,6 +64,8 @@ export function DesktopShell(props: Props) {
   const [groupDrop, setGroupDrop] = useState<{ id: string; after: boolean }>()
   const [openMenu, setOpenMenu] = useState('')
   const resizing = useRef(false)
+  const sidebarSlot=useRef<HTMLDivElement>(null),sidebarToggle=useRef<HTMLButtonElement>(null)
+  const groupPositions=useRef(new Map<string,number>())
   const idsKey = projects.map((p) => p.projectId).join('|')
   useEffect(() => {
     let alive = true
@@ -138,6 +140,11 @@ export function DesktopShell(props: Props) {
     }
   }, [])
   const prefs = workspace.prefs
+  useLayoutEffect(()=>{
+    const slot=sidebarSlot.current;if(!slot)return
+    if(prefs.sidebarHidden&&slot.contains(document.activeElement))sidebarToggle.current?.focus()
+    slot.inert=!!prefs.sidebarHidden
+  },[prefs.sidebarHidden])
   // A failed settings write must not hide otherwise usable projects.
   const placements = { ...prefs.projects }
   projects.forEach((p, i) => {
@@ -155,6 +162,17 @@ export function DesktopShell(props: Props) {
     favorites = members('favorites'),
     sections = sectionIds(prefs)
   const locked = props.busy || saving || !ready || !!workspace.error
+  useLayoutEffect(()=>{
+    const elements=[...sidebarSlot.current?.querySelectorAll<HTMLElement>('[data-group-id]')??[]]
+    for(const element of elements)element.getAnimations().forEach(animation=>animation.cancel())
+    const next=new Map<string,number>()
+    for(const element of elements){
+      const id=element.dataset.groupId!,top=element.getBoundingClientRect().top,previous=groupPositions.current.get(id)
+      next.set(id,top)
+      if(previous!==undefined&&previous!==top&&!matchMedia('(prefers-reduced-motion: reduce)').matches)element.animate([{transform:`translateY(${previous-top}px)`},{transform:'translateY(0)'}],{duration:180,easing:'ease-out'})
+    }
+    groupPositions.current=next
+  },[prefs.sections])
   const closeForm = () => {
     if (!form || name === form.original || window.confirm(tr("放棄尚未保存的群組名稱？")))
       setForm(undefined)
@@ -245,7 +263,7 @@ export function DesktopShell(props: Props) {
         aria-label={tr("開啟專案 {0}",title(p))}
         onClick={() => props.onSelect(p.projectId)}
       >
-        <span className="project-mark">{p.error ? '!' : <Icon name="folder"/>}</span>
+        <span className="project-mark">{p.error ? '!' : <Icon name={projectIconName(p.project?.mediaCategory)}/>}</span>
         <span className="project-name">{title(p)}</span>
       </button>
       <div
@@ -438,6 +456,7 @@ export function DesktopShell(props: Props) {
         </button>
         <Tooltip label={prefs.sidebarHidden ? tr("顯示專案欄") : tr("隱藏專案欄")}>
           <ActionIcon
+            ref={sidebarToggle}
             color="gray"
             variant="subtle"
             aria-label={tr("切換專案欄")}
@@ -482,8 +501,7 @@ export function DesktopShell(props: Props) {
         </div>
       </header>
       <div className="desktop-body">
-        {!prefs.sidebarHidden && (
-          <>
+        <div ref={sidebarSlot} className="sidebar-slot" data-open={!prefs.sidebarHidden} data-resizing={liveWidth!==undefined} aria-hidden={!!prefs.sidebarHidden} style={{'--sidebar-width':(liveWidth??prefs.sidebarWidth)+'px'} as React.CSSProperties}>
             <aside className="project-sidebar" style={{ width: liveWidth ?? prefs.sidebarWidth }}>
               <div className="sidebar-tools">
                 <Tooltip label={tr("首頁")}>
@@ -591,8 +609,7 @@ export function DesktopShell(props: Props) {
                 }
               }}
             />
-          </>
-        )}
+        </div>
         <main className={'content' + (selected ? ' workspace-content' : '')}>
           {(error || workspace.error) && (
             <Alert color="orange" mb="md" title={tr("側欄／視窗設定")}>
@@ -644,7 +661,7 @@ export function DesktopShell(props: Props) {
                         disabled={props.busy}
                         onClick={() => props.onSelect(p.projectId)}
                       >
-                        <span><Icon name="folder"/></span>
+                        <span><Icon name={projectIconName(p.project?.mediaCategory)}/></span>
                         <strong>{title(p)}</strong>
                         <small>{p.root}</small>
                         <em>{p.error ? tr("需要重新連結") : tr("開啟專案 →")}</em>
