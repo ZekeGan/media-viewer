@@ -1,6 +1,6 @@
 # 共用 UI 規則
 
-此頁只持有跨畫面的互動原則。工作區位置／手勢只改 [WORKSPACE_REVISION](WORKSPACE_REVISION.md)，各媒體規則改專項文件；[畫面索引](UI_SCREEN_CATALOG.md) 用於找入口。最終視覺風格未定案。
+此頁只持有跨畫面的互動原則。工作區位置／手勢只改 [WORKSPACE_REVISION](WORKSPACE_REVISION.md)，各媒體規則改專項文件；[畫面索引](UI_SCREEN_CATALOG.md) 用於找入口。現有三套主題與共用 UI 規則已定；品牌／專屬字型延後。
 
 ## 保存、焦點與狀態
 
