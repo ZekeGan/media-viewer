@@ -5,7 +5,13 @@ import { t as tr } from './i18n'
 export type QueueView = 'list' | 'images'
 
 // The list/image presentation switch shared by every media queue.
-export function ViewToggle({ view, change }: { view: QueueView; change: (view: QueueView) => void }) {
+export function ViewToggle({
+  view,
+  change,
+}: {
+  view: QueueView
+  change: (view: QueueView) => void
+}) {
   return (
     <div role="group" aria-label={tr('影片佇列展示')}>
       {(['list', 'images'] as const).map((mode) => (

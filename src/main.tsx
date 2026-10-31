@@ -7,5 +7,13 @@ import './style.css'
 import './video-player.css'
 import './themes/themes.css'
 import { App } from './App'
-import {PlaybackProvider} from './Playback'
-createRoot(document.getElementById('root')!).render(<React.StrictMode><AppThemeProvider><PlaybackProvider><App /></PlaybackProvider></AppThemeProvider></React.StrictMode>)
+import { PlaybackProvider } from './Playback'
+createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AppThemeProvider>
+      <PlaybackProvider>
+        <App />
+      </PlaybackProvider>
+    </AppThemeProvider>
+  </React.StrictMode>
+)

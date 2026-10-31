@@ -2,6 +2,10 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.13.2 — 2026-11-01
+
+- Add Prettier as a dev dependency with format and format:check scripts, and format all TypeScript sources and tests (formatting only, no behaviour change).
+
 ## 0.13.1 — 2026-11-01
 
 - DocumentViewer now uses the shared full-window overlay frame.

@@ -1,5 +1,5 @@
 import { metadataSources, sourceForUrl, type MetadataSourceId } from '../shared/sources'
-import {GameActionEditor,GameActionTargets} from './GameActions'
+import { GameActionEditor, GameActionTargets } from './GameActions'
 import { cardPresets, rowCells } from '../shared/layouts'
 import { t as tr, useLocale } from './i18n'
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
@@ -763,7 +763,14 @@ export function FolderPanel({
             <Text size="sm" c="dimmed">
               {tr('版型套用全專案；目標與參數只屬於目前資料夾。')}
             </Text>
-            <GameActionTargets key={row.rowId} row={row} project={project} disabled={disabled || fieldDirty} run={run} onDirty={setTargetDirty} />
+            <GameActionTargets
+              key={row.rowId}
+              row={row}
+              project={project}
+              disabled={disabled || fieldDirty}
+              run={run}
+              onDirty={setTargetDirty}
+            />
           </Stack>
         </Tabs.Panel>
         <Tabs.Panel value="advanced" pt="md">
@@ -978,7 +985,7 @@ export function FolderPanel({
         <Stack>
           {tasks && <GameActionEditor tasks={tasks} onChange={setTasks} disabled={busy} />}
           <Button
-            disabled={busy || !tasks?.every(task => task.label.trim())}
+            disabled={busy || !tasks?.every((task) => task.label.trim())}
             onClick={async () => {
               if (
                 await act({

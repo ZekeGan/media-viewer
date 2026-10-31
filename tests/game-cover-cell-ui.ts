@@ -15,7 +15,12 @@ const root = await fs.mkdtemp(path.join(base, 'game-cover-cell-ui-')),
 await fs.mkdir(media)
 const lib = new Library(local, undefined, false)
 await lib.init()
-await lib.create(media, { name: 'Cover Test', mediaCategory: 'game', scanAll: true, depth: { mode: 'through', level: 1 } })
+await lib.create(media, {
+  name: 'Cover Test',
+  mediaCategory: 'game',
+  scanAll: true,
+  depth: { mode: 'through', level: 1 },
+})
 const project = lib.snapshot().projects[0].project!,
   style = { textColor: '#e4e6e8', backgroundColor: 'transparent' }
 const layout = (w: number, h: number): Cell[] => [
@@ -26,11 +31,18 @@ const record = await readFolder(media),
   assetId = 'cover-asset-1'
 await fs.mkdir(path.join(media, DATA_DIR, 'assets'), { recursive: true })
 await fs.writeFile(path.join(media, DATA_DIR, 'assets', assetId + '.png'), tinyPng)
-record.assets.push({ assetId, relativePath: 'assets/' + assetId + '.png', originalName: 'cover.png', mediaType: 'image/png' })
+record.assets.push({
+  assetId,
+  relativePath: 'assets/' + assetId + '.png',
+  originalName: 'cover.png',
+  mediaType: 'image/png',
+})
 record.details = { schemaVersion: 1, bannerAssetId: assetId }
 await fs.writeFile(folderFile(media), JSON.stringify(record))
 const env = Object.fromEntries(
-  Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local }).filter((entry): entry is [string, string] => entry[1] !== undefined)
+  Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local }).filter(
+    (entry): entry is [string, string] => entry[1] !== undefined
+  )
 )
 delete env.ELECTRON_RUN_AS_NODE
 let page: import('playwright-core').Page
@@ -39,25 +51,56 @@ const button = (name: string) => page.getByRole('button', { name, exact: true })
 const fits = async (selector: string, host: string, label: string) => {
   const result = await page.evaluate(
     ({ selector, host }) => {
-      const cell = document.querySelector<HTMLElement>(host + ' .cell-image, ' + host + ' .cell-image-placeholder')!,
+      const cell = document.querySelector<HTMLElement>(
+          host + ' .cell-image, ' + host + ' .cell-image-placeholder'
+        )!,
         parent = cell.parentElement!,
         box = cell.getBoundingClientRect(),
         outer = parent.getBoundingClientRect(),
         css = getComputedStyle(parent),
-        padX = parseFloat(css.paddingLeft) + parseFloat(css.paddingRight) + parseFloat(css.borderLeftWidth) + parseFloat(css.borderRightWidth),
-        padY = parseFloat(css.paddingTop) + parseFloat(css.paddingBottom) + parseFloat(css.borderTopWidth) + parseFloat(css.borderBottomWidth)
-      return { width: box.width, height: box.height, innerWidth: outer.width - padX, innerHeight: outer.height - padY, selector }
+        padX =
+          parseFloat(css.paddingLeft) +
+          parseFloat(css.paddingRight) +
+          parseFloat(css.borderLeftWidth) +
+          parseFloat(css.borderRightWidth),
+        padY =
+          parseFloat(css.paddingTop) +
+          parseFloat(css.paddingBottom) +
+          parseFloat(css.borderTopWidth) +
+          parseFloat(css.borderBottomWidth)
+      return {
+        width: box.width,
+        height: box.height,
+        innerWidth: outer.width - padX,
+        innerHeight: outer.height - padY,
+        selector,
+      }
     },
     { selector, host }
   )
-  assert.ok(Math.abs(result.width - result.innerWidth) < 2, label + ' width ' + JSON.stringify(result))
-  assert.ok(Math.abs(result.height - result.innerHeight) < 2, label + ' height ' + JSON.stringify(result))
+  assert.ok(
+    Math.abs(result.width - result.innerWidth) < 2,
+    label + ' width ' + JSON.stringify(result)
+  )
+  assert.ok(
+    Math.abs(result.height - result.innerHeight) < 2,
+    label + ' height ' + JSON.stringify(result)
+  )
 }
 
 const errors: string[] = []
-for (const [w, h] of [[12, 3], [4, 2], [8, 6]]) {
+for (const [w, h] of [
+  [12, 3],
+  [4, 2],
+  [8, 6],
+]) {
   const current = lib.snapshot().projects[0].project!
-  await lib.saveProject({ ...current, cells: layout(w, h), layoutPresets: [{ id: 'default', name: 'Default', cells: layout(w, h) }], activeLayoutId: 'default' })
+  await lib.saveProject({
+    ...current,
+    cells: layout(w, h),
+    layoutPresets: [{ id: 'default', name: 'Default', cells: layout(w, h) }],
+    activeLayoutId: 'default',
+  })
   const app = await electron.launch({ args: ['.'], env, timeout: 30000 })
   page = await app.firstWindow()
   page.on('pageerror', (error) => errors.push(error.message))
@@ -72,11 +115,26 @@ for (const [w, h] of [[12, 3], [4, 2], [8, 6]]) {
     await button('開啟專案 Cover Test').first().click()
     await page.locator('.folder-card .cell-image').first().waitFor()
     await fits('card', '.folder-card', 'card ' + w + 'x' + h)
-    assert.equal(await page.locator('.folder-card .cell-image').first().evaluate((node) => getComputedStyle(node).objectFit), 'cover')
+    assert.equal(
+      await page
+        .locator('.folder-card .cell-image')
+        .first()
+        .evaluate((node) => getComputedStyle(node).objectFit),
+      'cover'
+    )
     await button('更改樣式').click()
-    await page.locator('.editor-cell .cell-image, .editor-cell .cell-image-placeholder').first().waitFor()
+    await page
+      .locator('.editor-cell .cell-image, .editor-cell .cell-image-placeholder')
+      .first()
+      .waitFor()
     await fits('editor', '.editor-cell', 'editor ' + w + 'x' + h)
-    assert.equal(await page.locator('.editor-cell .cell-image').first().evaluate((node) => getComputedStyle(node).objectFit), 'cover')
+    assert.equal(
+      await page
+        .locator('.editor-cell .cell-image')
+        .first()
+        .evaluate((node) => getComputedStyle(node).objectFit),
+      'cover'
+    )
     await page.screenshot({ path: path.join(root, 'editor-' + w + 'x' + h + '.png') })
   } catch (error) {
     await page.screenshot({ path: path.join(root, 'failure.png') }).catch(() => {})
@@ -92,6 +150,11 @@ for (const [w, h] of [[12, 3], [4, 2], [8, 6]]) {
     await app.close()
   }
 }
-assert.equal((await fs.readFile(path.join(media, DATA_DIR, 'assets', assetId + '.png'))).length, tinyPng.length)
+assert.equal(
+  (await fs.readFile(path.join(media, DATA_DIR, 'assets', assetId + '.png'))).length,
+  tinyPng.length
+)
 assert.deepEqual(errors, [])
-console.log('PASS game cover cell fills its container in cards and editor at several sizes. ' + root)
+console.log(
+  'PASS game cover cell fills its container in cards and editor at several sizes. ' + root
+)

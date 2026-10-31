@@ -20,9 +20,11 @@ export function useVideoAudio() {
 
     if (blocked.current) return
 
-    void window.desktop.updateWorkspace({ action: 'videoAudio', value: current.current }).catch(reason => {
-      if (mounted.current) setError(tr('音量偏好尚未保存：') + String(reason))
-    })
+    void window.desktop
+      .updateWorkspace({ action: 'videoAudio', value: current.current })
+      .catch((reason) => {
+        if (mounted.current) setError(tr('音量偏好尚未保存：') + String(reason))
+      })
   }
 
   useEffect(() => {
@@ -30,23 +32,27 @@ export function useVideoAudio() {
 
     let alive = true
 
-    window.desktop.workspace().then(state => {
-      if (!alive) return
+    window.desktop
+      .workspace()
+      .then((state) => {
+        if (!alive) return
 
-      blocked.current = !!state.error
+        blocked.current = !!state.error
 
-      current.current = state.prefs.videoAudio ?? { volume: 1, muted: false }
-      setValue(current.current)
+        current.current = state.prefs.videoAudio ?? { volume: 1, muted: false }
+        setValue(current.current)
 
-      if (state.error) setError(tr('音量偏好無法讀取，暫用本次設定。'))
-    }).catch(() => {
-      if (alive) {
-        blocked.current = true
-        setError(tr('音量偏好無法讀取，暫用本次設定。'))
-      }
-    }).finally(() => {
-      if (alive) setReady(true)
-    })
+        if (state.error) setError(tr('音量偏好無法讀取，暫用本次設定。'))
+      })
+      .catch(() => {
+        if (alive) {
+          blocked.current = true
+          setError(tr('音量偏好無法讀取，暫用本次設定。'))
+        }
+      })
+      .finally(() => {
+        if (alive) setReady(true)
+      })
 
     return () => {
       alive = false

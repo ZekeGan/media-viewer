@@ -13,7 +13,12 @@ await fs.mkdir(path.join(media, 'Child'), { recursive: true })
 await fs.writeFile(path.join(media, 'original.txt'), 'PRESERVE ORIGINAL')
 const lib = new Library(local, undefined, false)
 await lib.init()
-await lib.create(media, { name: 'Dock Test', mediaCategory: 'other', scanAll: true, depth: { mode: 'through', level: 2 } })
+await lib.create(media, {
+  name: 'Dock Test',
+  mediaCategory: 'other',
+  scanAll: true,
+  depth: { mode: 'through', level: 2 },
+})
 const errors: string[] = []
 const launch = () => launchApp(local, errors)
 const close = closeApp
@@ -38,9 +43,13 @@ try {
   await page.getByRole('tab', { name: /^設定/ }).click()
   await page.locator('.folder-panel-dock-settings').waitFor()
   // Narrow windows fall back to the drawer without changing the preference.
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setBounds({ width: 1000, height: 800 }))
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].setBounds({ width: 1000, height: 800 })
+  )
   await page.locator('.mantine-Drawer-content').waitFor()
-  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setBounds({ width: 1500, height: 900 }))
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].setBounds({ width: 1500, height: 900 })
+  )
   await page.locator('.folder-panel-dock-settings').waitFor()
   // The preference survives a restart.
   await close(app)
@@ -55,7 +64,10 @@ try {
   await page.locator('.mantine-Drawer-content').waitFor()
   assert.equal(await fs.readFile(path.join(media, 'original.txt'), 'utf8'), 'PRESERVE ORIGINAL')
   assert.deepEqual(errors, [])
-  console.log('PASS settings dock: default drawer, dock/undock, tab switching, narrow fallback and restart persistence. ' + root)
+  console.log(
+    'PASS settings dock: default drawer, dock/undock, tab switching, narrow fallback and restart persistence. ' +
+      root
+  )
 } catch (error) {
   await page.screenshot({ path: path.join(root, 'failure.png') }).catch(() => {})
   console.error('Artifacts: ' + root)

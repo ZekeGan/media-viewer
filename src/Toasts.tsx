@@ -4,7 +4,12 @@ import { Notification, Portal } from '@mantine/core'
 import type { ReactNode } from 'react'
 import type { Notice } from '../shared/notifications'
 
-export function Toasts({ notice, version, close, progress }: {
+export function Toasts({
+  notice,
+  version,
+  close,
+  progress,
+}: {
   notice?: Notice
   version: number
   close: () => void
@@ -17,20 +22,34 @@ export function Toasts({ notice, version, close, progress }: {
     return () => clearTimeout(timer)
   }, [notice, version, close])
 
-  return <Portal>
-    <div className="app-toasts" aria-live="polite">
-      {progress && <Notification withCloseButton={false} loading title={tr('處理進度')}>
-        {progress}
-      </Notification>}
-      {notice && <Notification
-        color={notice.level === 'error' ? 'red' : notice.level === 'warning' ? 'orange' : 'teal'}
-        title={notice.level === 'error' ? tr('操作未完成') : notice.level === 'warning' ? tr('需要注意') : tr('提示')}
-        onClose={close}
-        role={notice.level === 'success' ? 'status' : 'alert'}
-        data-level={notice.level}
-      >
-        <div className="message">{notice.message}</div>
-      </Notification>}
-    </div>
-  </Portal>
+  return (
+    <Portal>
+      <div className="app-toasts" aria-live="polite">
+        {progress && (
+          <Notification withCloseButton={false} loading title={tr('處理進度')}>
+            {progress}
+          </Notification>
+        )}
+        {notice && (
+          <Notification
+            color={
+              notice.level === 'error' ? 'red' : notice.level === 'warning' ? 'orange' : 'teal'
+            }
+            title={
+              notice.level === 'error'
+                ? tr('操作未完成')
+                : notice.level === 'warning'
+                  ? tr('需要注意')
+                  : tr('提示')
+            }
+            onClose={close}
+            role={notice.level === 'success' ? 'status' : 'alert'}
+            data-level={notice.level}
+          >
+            <div className="message">{notice.message}</div>
+          </Notification>
+        )}
+      </div>
+    </Portal>
+  )
 }

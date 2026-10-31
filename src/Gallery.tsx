@@ -12,7 +12,16 @@ import {
 } from 'react'
 import { Icon } from './icons'
 import { FileMenu } from './FileMenu'
-import { ActionIcon, Button, Center, Group, Modal, SegmentedControl, Stack, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Button,
+  Center,
+  Group,
+  Modal,
+  SegmentedControl,
+  Stack,
+  Tooltip,
+} from '@mantine/core'
 import { canPreviewMedia, mediaIdentity } from '../shared/media'
 import type { MediaEntry, OverviewEntry, ReadingPrefs } from '../shared/explorer'
 import {
@@ -39,7 +48,9 @@ const friendlyType = (entry: MediaEntry) => {
   return extension && entry.kind !== 'pdf' ? label + ' · ' + extension : label
 }
 const fileSize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + ' MB' : (bytes / 1024).toFixed(1) + ' KB'
+  bytes >= 1024 * 1024
+    ? (bytes / 1024 / 1024).toFixed(1) + ' MB'
+    : (bytes / 1024).toFixed(1) + ' KB'
 const Tile = memo(
   function Tile({
     entry,
@@ -183,7 +194,9 @@ const Tile = memo(
     const style = { left: tile.x, top: tile.y, width: tile.width, height: tile.height }
     return mode === 'list' ? (
       <div
-        className={'gallery-tile image-file-row ' + (selected ? 'selected ' : '') + (picked ? 'picked' : '')}
+        className={
+          'gallery-tile image-file-row ' + (selected ? 'selected ' : '') + (picked ? 'picked' : '')
+        }
         style={style}
         data-index={tile.index}
         onClick={() => select(tile.index)}

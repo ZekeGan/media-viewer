@@ -12,6 +12,7 @@
 | `pnpm typecheck` | 單獨型別檢查；若本輪已 build 成功，不再重跑 |
 | `pnpm exec tsx --test tests/<name>.test.ts` | 受影響資料測試 |
 | `pnpm test` | 所有 `tests/*.test.ts`，適用跨模組風險／交付 |
+| `pnpm format`／`pnpm format:check` | Prettier（設定見 prettier.config.cjs）；只涵蓋 src、shared、electron、tests、scripts 的 ts／tsx／mjs，不含 CSS、JSON 與文件。提交前跑 format:check |
 | `pnpm test:workspace` | 現行完整 Electron UI：`tests/workspace-ui.ts`；需相符建置 |
 
 `test:ui` 與 `test:workspace` 是同一 runner，選一個即可。不要臆造 lint／舊 UI script；需新命令先查 package.json。未改依賴且環境可用，不例行安裝或更新套件。

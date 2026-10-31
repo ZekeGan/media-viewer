@@ -1,7 +1,10 @@
-node_modules/
-dist/
-.next/
-out/
-*.png
-*.jpg
-*.ico
+node_modules
+out
+.test-output
+graphify-out
+docs
+pnpm-lock.yaml
+src/i18n/messages.json
+*.css
+*.md
+*.json

@@ -104,7 +104,12 @@ export function ImageUrlImport({
           <figcaption>
             {preview.name} · {(preview.size / 1024).toFixed(1)} KB
           </figcaption>
-          <Button size="xs" loading={busy === 'save'} disabled={disabled} onClick={() => void apply()}>
+          <Button
+            size="xs"
+            loading={busy === 'save'}
+            disabled={disabled}
+            onClick={() => void apply()}
+          >
             {tr('設為封面')}
           </Button>
         </figure>

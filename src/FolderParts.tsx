@@ -117,7 +117,9 @@ export function FolderHeader({
   return (
     <>
       <FolderDetails row={row} project={project} openFolder={openFolder} />
-      {folders && <SubfolderList folders={folders} childNames={childNames} busy={busy} onChild={onChild} />}
+      {folders && (
+        <SubfolderList folders={folders} childNames={childNames} busy={busy} onChild={onChild} />
+      )}
     </>
   )
 }

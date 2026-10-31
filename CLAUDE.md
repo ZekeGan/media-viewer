@@ -44,7 +44,7 @@ Windows 優先的資料夾檢視器（Electron + React + Vite，pnpm），POC �
 
 ## 命令與驗證
 
-`pnpm dev`／`pnpm build`（含 tsc）／`pnpm typecheck`／`pnpm exec tsx --test tests/<name>.test.ts`／`pnpm test`（全部資料測試）／`pnpm test:workspace`（Electron UI，需相符建置）。不臆造 lint 或其他 script；未改依賴不重裝。
+`pnpm dev`／`pnpm build`（含 tsc）／`pnpm typecheck`／`pnpm exec tsx --test tests/<name>.test.ts`／`pnpm test`（全部資料測試）／`pnpm test:workspace`（Electron UI，需相符建置）。格式用 `pnpm format`（提交前 `pnpm format:check`）；不臆造 lint 或其他 script；未改依賴不重裝。
 
 依風險選最小有效驗證（完整表：`docs/IMPLEMENTATION.md#驗證選擇`）：
 

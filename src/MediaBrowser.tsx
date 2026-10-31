@@ -167,8 +167,7 @@ export function MediaBrowser({
         )
         return
       }
-      if (source?.record)
-        setSession({ file: entry, source, filter })
+      if (source?.record) setSession({ file: entry, source, filter })
     } finally {
       if (alive.current && token === operation.current) setOpening('')
     }
@@ -176,9 +175,7 @@ export function MediaBrowser({
   const sourceFiles = session ? visible.filter((entry) => entry.rowId === session.source.rowId) : []
   const viewerFiles = session
     ? sourceFiles.filter(
-        (entry) =>
-          entry.kind === 'subtitle' ||
-          matchesMedia(entry, session.filter)
+        (entry) => entry.kind === 'subtitle' || matchesMedia(entry, session.filter)
       )
     : []
   return (

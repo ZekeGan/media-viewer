@@ -1,7 +1,14 @@
-export const localeIds=['zh-TW','ja','zh-CN','en','es'] as const
-export type LocaleId=typeof localeIds[number]
-export const isLocaleId=(value:unknown):value is LocaleId=>typeof value==='string'&&localeIds.includes(value as LocaleId)
-export const localeOptions=[{value:'zh-TW',label:'繁體中文'},{value:'ja',label:'日本語'},{value:'zh-CN',label:'简体中文'},{value:'en',label:'English'},{value:'es',label:'Español'}]
+export const localeIds = ['zh-TW', 'ja', 'zh-CN', 'en', 'es'] as const
+export type LocaleId = (typeof localeIds)[number]
+export const isLocaleId = (value: unknown): value is LocaleId =>
+  typeof value === 'string' && localeIds.includes(value as LocaleId)
+export const localeOptions = [
+  { value: 'zh-TW', label: '繁體中文' },
+  { value: 'ja', label: '日本語' },
+  { value: 'zh-CN', label: '简体中文' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+]
 export function systemLocale(languages: readonly string[]): LocaleId {
   for (const language of languages) {
     const tag = language.toLowerCase().replaceAll('_', '-')

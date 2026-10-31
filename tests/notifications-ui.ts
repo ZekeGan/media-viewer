@@ -6,7 +6,8 @@ import assert from 'node:assert/strict'
 const base = path.resolve('.test-output')
 await fs.mkdir(base, { recursive: true })
 const root = await fs.mkdtemp(path.join(base, 'notifications-'))
-const local = path.join(root, 'local'), legacy = path.join(local, 'app-data')
+const local = path.join(root, 'local'),
+  legacy = path.join(local, 'app-data')
 const screens = path.join(root, 'screens')
 await fs.mkdir(screens)
 const projects = [
@@ -23,20 +24,26 @@ const write = async (file: string, value: unknown) => {
 }
 await write(path.join(legacy, 'view.json'), projects)
 for (const project of projects) {
-  await write(path.join(legacy, 'viewColumn', project.id + '.json'), project.id === 'warning' ? ['../invalid-key'] : [])
+  await write(
+    path.join(legacy, 'viewColumn', project.id + '.json'),
+    project.id === 'warning' ? ['../invalid-key'] : []
+  )
   await write(path.join(legacy, 'viewFolder', project.id + '.json'), [])
-  if (project.id !== 'error') await write(path.join(project.targetFolderPath, 'keep.json'), { original: project.id })
+  if (project.id !== 'error')
+    await write(path.join(project.targetFolderPath, 'keep.json'), { original: project.id })
 }
 
 const env: Record<string, string> = Object.fromEntries(
-  Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local })
-    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+  Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local }).filter(
+    (entry): entry is [string, string] => entry[1] !== undefined
+  )
 )
 delete env.ELECTRON_RUN_AS_NODE
 const app = await electron.launch({ args: ['.'], env, timeout: 30000 })
-const page = await app.firstWindow(), errors: string[] = []
+const page = await app.firstWindow(),
+  errors: string[] = []
 page.setDefaultTimeout(15000)
-page.on('pageerror', error => errors.push(error.message))
+page.on('pageerror', (error) => errors.push(error.message))
 const toast = page.locator('.app-toasts [data-level]')
 const importProject = async (name: string) => {
   await page.getByRole('button', { name: '應用程式設定', exact: true }).click()
@@ -50,7 +57,11 @@ const importProject = async (name: string) => {
   await toast.waitFor()
 }
 try {
-  await app.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows()[0]; win.show(); win.focus() })
+  await app.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    win.show()
+    win.focus()
+  })
   await page.bringToFront()
   await page.clock.install()
 
@@ -79,9 +90,15 @@ try {
   await toast.waitFor({ state: 'hidden' })
 
   await app.evaluate(({ dialog }) => {
-    dialog.showOpenDialog = (async () => ({ canceled: true, filePaths: [] })) as typeof dialog.showOpenDialog
+    dialog.showOpenDialog = (async () => ({
+      canceled: true,
+      filePaths: [],
+    })) as typeof dialog.showOpenDialog
   })
-  await page.locator('.project-sidebar').getByRole('button', { name: '新增專案', exact: true }).click()
+  await page
+    .locator('.project-sidebar')
+    .getByRole('button', { name: '新增專案', exact: true })
+    .click()
   const create = page.getByRole('dialog', { name: '建立媒體專案', exact: true })
   await create.getByLabel('專案名稱', { exact: true }).fill('Keep draft')
   await create.getByRole('button', { name: '選擇資料夾', exact: true }).click()
@@ -89,7 +106,9 @@ try {
   assert.equal(await create.getByLabel('已選資料夾', { exact: true }).innerText(), '尚未選擇資料夾')
 
   await app.evaluate(({ dialog }) => {
-    dialog.showOpenDialog = (async () => { throw new Error('Forced failure without Chinese keywords') }) as typeof dialog.showOpenDialog
+    dialog.showOpenDialog = (async () => {
+      throw new Error('Forced failure without Chinese keywords')
+    }) as typeof dialog.showOpenDialog
   })
   await create.getByRole('button', { name: '選擇資料夾', exact: true }).click()
   await toast.waitFor()
@@ -100,9 +119,18 @@ try {
 
   for (const [file, bytes] of originals) assert.deepEqual(await fs.readFile(file), bytes)
   assert.equal((await fs.readdir(path.join(local, 'legacy-backups'))).length, 3)
-  assert.equal(await fs.stat(projects[2].targetFolderPath).then(() => true, () => false), false)
+  assert.equal(
+    await fs.stat(projects[2].targetFolderPath).then(
+      () => true,
+      () => false
+    ),
+    false
+  )
   assert.deepEqual(errors, [])
-  console.log('PASS real success/warning/error responses, names independent of severity, expiry/persistence, cancellation, IPC exceptions and retained drafts; originals/backups preserved. Artifacts: ' + root)
+  console.log(
+    'PASS real success/warning/error responses, names independent of severity, expiry/persistence, cancellation, IPC exceptions and retained drafts; originals/backups preserved. Artifacts: ' +
+      root
+  )
 } catch (error) {
   await page.screenshot({ path: path.join(screens, 'failure.png') }).catch(() => {})
   console.error('Artifacts: ' + root)
@@ -112,7 +140,7 @@ try {
     for (const win of BrowserWindow.getAllWindows()) {
       win.removeAllListeners('close')
       win.webContents.removeAllListeners('will-prevent-unload')
-      win.webContents.on('will-prevent-unload', event => event.preventDefault())
+      win.webContents.on('will-prevent-unload', (event) => event.preventDefault())
     }
   })
   await app.close()

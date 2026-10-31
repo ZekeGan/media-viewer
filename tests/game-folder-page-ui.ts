@@ -16,7 +16,12 @@ await fs.mkdir(path.join(media, 'Sub'), { recursive: true })
 await fs.writeFile(path.join(media, 'pic.png'), tinyPng)
 const lib = new Library(local, undefined, false)
 await lib.init()
-await lib.create(media, { name: 'Game Page', mediaCategory: 'game', scanAll: true, depth: { mode: 'through', level: 2 } })
+await lib.create(media, {
+  name: 'Game Page',
+  mediaCategory: 'game',
+  scanAll: true,
+  depth: { mode: 'through', level: 2 },
+})
 const errors: string[] = []
 const { app, page } = await launchApp(local, errors)
 try {
@@ -24,13 +29,18 @@ try {
   const body = page.locator('.folder-panel-body')
   await body.locator('.mixed-media-browser').waitFor()
   await body.locator('.folder-details summary').waitFor()
-  assert.equal(await body.locator('.folder-details').evaluate((node) => (node as HTMLDetailsElement).open), false)
+  assert.equal(
+    await body.locator('.folder-details').evaluate((node) => (node as HTMLDetailsElement).open),
+    false
+  )
   await body.locator('.media-subfolder').getByRole('button', { name: 'Sub', exact: true }).waitFor()
   await body.locator('.media-thumbnail').filter({ hasText: 'pic.png' }).waitFor()
   await page.screenshot({ path: path.join(root, 'game-folder-page.png') })
   assert.deepEqual(await fs.readFile(path.join(media, 'pic.png')), tinyPng)
   assert.deepEqual(errors, [])
-  console.log('PASS non-game folder in a game project uses the shared details/subfolders/files page. ' + root)
+  console.log(
+    'PASS non-game folder in a game project uses the shared details/subfolders/files page. ' + root
+  )
 } catch (error) {
   await page.screenshot({ path: path.join(root, 'failure.png') }).catch(() => {})
   console.error('Artifacts: ' + root)

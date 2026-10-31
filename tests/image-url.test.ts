@@ -26,7 +26,10 @@ test('image URL download accepts public HTTP(S) images by content and follows li
   assert.equal(image.ext, 'png')
   assert.equal(image.mime, 'image/png')
   assert.equal(image.name, 'cover.png')
-  assert.deepEqual(seen, ['https://img.example.test/start', 'https://img.example.test/cover.php?id=1'])
+  assert.deepEqual(seen, [
+    'https://img.example.test/start',
+    'https://img.example.test/cover.php?id=1',
+  ])
 })
 
 test('image URL download rejects unsafe targets, non-images, oversize content and redirect abuse', async () => {
@@ -46,30 +49,65 @@ test('image URL download rejects unsafe targets, non-images, oversize content an
     'not a url',
   ])
     await assert.rejects(fetchImageUrl(url, { fetcher: never, lookup: pub }), Error, url)
-  await assert.rejects(fetchImageUrl('https://internal.example.test/a.png', { fetcher: never, lookup: async () => ['10.0.0.8'] }), /內網/)
+  await assert.rejects(
+    fetchImageUrl('https://internal.example.test/a.png', {
+      fetcher: never,
+      lookup: async () => ['10.0.0.8'],
+    }),
+    /內網/
+  )
   assert.equal(calls, 0)
   await assert.rejects(
-    fetchImageUrl('https://example.test/page', { fetcher: (async () => respond('<html></html>')) as typeof fetch, lookup: pub }),
+    fetchImageUrl('https://example.test/page', {
+      fetcher: (async () => respond('<html></html>')) as typeof fetch,
+      lookup: pub,
+    }),
     /不是支援的圖片/
   )
   await assert.rejects(
     fetchImageUrl('https://example.test/big.png', {
-      fetcher: (async () => respond(png, { headers: { 'content-length': String(11 * 1024 * 1024) } })) as typeof fetch,
+      fetcher: (async () =>
+        respond(png, { headers: { 'content-length': String(11 * 1024 * 1024) } })) as typeof fetch,
       lookup: pub,
     }),
     /過大/
   )
   await assert.rejects(
-    fetchImageUrl('https://example.test/missing.png', { fetcher: (async () => respond('', { status: 404 })) as typeof fetch, lookup: pub }),
+    fetchImageUrl('https://example.test/missing.png', {
+      fetcher: (async () => respond('', { status: 404 })) as typeof fetch,
+      lookup: pub,
+    }),
     /HTTP 404/
   )
-  const loop = (async () => respond('', { status: 302, headers: { location: 'https://example.test/again' } })) as typeof fetch
-  await assert.rejects(fetchImageUrl('https://example.test/loop', { fetcher: loop, lookup: pub }), /重新導向/)
-  const toPrivate = (async () => respond('', { status: 302, headers: { location: 'http://10.0.0.1/a.png' } })) as typeof fetch
-  await assert.rejects(fetchImageUrl('https://example.test/r', { fetcher: toPrivate, lookup: pub }), /內網/)
-  for (const ip of ['10.1.2.3', '127.0.0.1', '169.254.1.1', '172.16.0.1', '192.168.0.1', '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1'])
+  const loop = (async () =>
+    respond('', {
+      status: 302,
+      headers: { location: 'https://example.test/again' },
+    })) as typeof fetch
+  await assert.rejects(
+    fetchImageUrl('https://example.test/loop', { fetcher: loop, lookup: pub }),
+    /重新導向/
+  )
+  const toPrivate = (async () =>
+    respond('', { status: 302, headers: { location: 'http://10.0.0.1/a.png' } })) as typeof fetch
+  await assert.rejects(
+    fetchImageUrl('https://example.test/r', { fetcher: toPrivate, lookup: pub }),
+    /內網/
+  )
+  for (const ip of [
+    '10.1.2.3',
+    '127.0.0.1',
+    '169.254.1.1',
+    '172.16.0.1',
+    '192.168.0.1',
+    '::1',
+    'fd00::1',
+    'fe80::1',
+    '::ffff:10.0.0.1',
+  ])
     assert.equal(privateAddress(ip), true, ip)
-  for (const ip of ['93.184.216.34', '8.8.8.8', '2606:4700:4700::1111']) assert.equal(privateAddress(ip), false, ip)
+  for (const ip of ['93.184.216.34', '8.8.8.8', '2606:4700:4700::1111'])
+    assert.equal(privateAddress(ip), false, ip)
 })
 
 test('cover from image URL is saved as a portable asset, and failures keep the original cover', async (t) => {
@@ -96,34 +134,78 @@ test('cover from image URL is saved as a portable asset, and failures keep the o
     if (!target.startsWith(base + path.sep)) throw new Error('Unsafe cleanup')
     await fs.rm(target, { recursive: true, force: true })
   })
-  await lib.create(media, { name: 'Games', mediaCategory: 'game', depth: { mode: 'through', level: 2 } })
+  await lib.create(media, {
+    name: 'Games',
+    mediaCategory: 'game',
+    depth: { mode: 'through', level: 2 },
+  })
   let row = lib.snapshot().rows.find((r) => r.name === 'Game A')!
-  const { imagePreview } = await explorer.request({ action: 'imageUrlPreview', url: 'https://img.example.test/cover.png' })
+  const { imagePreview } = await explorer.request({
+    action: 'imageUrlPreview',
+    url: 'https://img.example.test/cover.png',
+  })
   assert.ok(imagePreview?.image.startsWith('data:image/png;base64,'))
-  assert.equal(await exists(path.join(row.path, DATA_DIR, 'assets')), false, 'preview writes nothing')
+  assert.equal(
+    await exists(path.join(row.path, DATA_DIR, 'assets')),
+    false,
+    'preview writes nothing'
+  )
   await assert.rejects(
-    explorer.request({ action: 'imageUrlApply', rowId: row.rowId, revision: row.record!.revision - 1, token: imagePreview!.token, cover: true }),
+    explorer.request({
+      action: 'imageUrlApply',
+      rowId: row.rowId,
+      revision: row.record!.revision - 1,
+      token: imagePreview!.token,
+      cover: true,
+    }),
     /版本衝突/
   )
   let record = await readFolder(row.path)
   assert.equal(record.assets.length, 0)
   assert.equal(record.details?.bannerAssetId, undefined)
   await assert.rejects(
-    explorer.request({ action: 'imageUrlApply', rowId: row.rowId, revision: row.record!.revision, token: 'missing', cover: true }),
+    explorer.request({
+      action: 'imageUrlApply',
+      rowId: row.rowId,
+      revision: row.record!.revision,
+      token: 'missing',
+      cover: true,
+    }),
     /過期/
   )
-  await explorer.request({ action: 'imageUrlApply', rowId: row.rowId, revision: row.record!.revision, token: imagePreview!.token, cover: true })
+  await explorer.request({
+    action: 'imageUrlApply',
+    rowId: row.rowId,
+    revision: row.record!.revision,
+    token: imagePreview!.token,
+    cover: true,
+  })
   row = lib.snapshot().rows.find((r) => r.name === 'Game A')!
   record = await readFolder(row.path)
   assert.equal(record.assets.length, 1)
   assert.equal(record.details?.bannerAssetId, record.assets[0].assetId)
-  assert.deepEqual(await fs.readFile(path.join(row.path, DATA_DIR, record.assets[0].relativePath)), png)
+  assert.deepEqual(
+    await fs.readFile(path.join(row.path, DATA_DIR, record.assets[0].relativePath)),
+    png
+  )
   assert.equal(await fs.readFile(path.join(media, 'Game A', 'game.txt'), 'utf8'), 'ORIGINAL')
   await assert.rejects(
-    explorer.request({ action: 'imageUrlApply', rowId: row.rowId, revision: row.record!.revision, token: imagePreview!.token, cover: true }),
+    explorer.request({
+      action: 'imageUrlApply',
+      rowId: row.rowId,
+      revision: row.record!.revision,
+      token: imagePreview!.token,
+      cover: true,
+    }),
     /過期/
   )
-  explorer.imageUrlOptions = { fetcher: (async () => respond('<html>')) as typeof fetch, lookup: pub }
-  await assert.rejects(explorer.request({ action: 'imageUrlPreview', url: 'https://img.example.test/x' }), /不是支援的圖片/)
+  explorer.imageUrlOptions = {
+    fetcher: (async () => respond('<html>')) as typeof fetch,
+    lookup: pub,
+  }
+  await assert.rejects(
+    explorer.request({ action: 'imageUrlPreview', url: 'https://img.example.test/x' }),
+    /不是支援的圖片/
+  )
   assert.equal((await readFolder(row.path)).details?.bannerAssetId, record.assets[0].assetId)
 })

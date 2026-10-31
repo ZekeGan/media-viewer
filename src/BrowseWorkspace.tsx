@@ -1322,7 +1322,11 @@ export function BrowseWorkspace({
             }
             tabs={
               docked ? (
-                <div className="folder-panel-dock-tabs" role="tablist" aria-label={tr('右側面板分頁')}>
+                <div
+                  className="folder-panel-dock-tabs"
+                  role="tablist"
+                  aria-label={tr('右側面板分頁')}
+                >
                   <Button
                     size="compact-sm"
                     variant={config ? 'subtle' : 'light'}
@@ -1350,61 +1354,61 @@ export function BrowseWorkspace({
             }
             footer={
               <>
-              {canReturnTop && (
-                <Button
-                  className="manga-top"
-                  size="compact-sm"
-                  variant="default"
-                  aria-label={tr('返回頂部')}
-                  onClick={() =>
-                    panelBody.current?.scrollTo({
-                      top: 0,
-                      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-                        ? 'instant'
-                        : 'smooth',
-                    })
-                  }
-                >
-                  <Icon name="arrow-up" size={15} />
-                  {tr('返回頂部')}
-                </Button>
-              )}
+                {canReturnTop && (
+                  <Button
+                    className="manga-top"
+                    size="compact-sm"
+                    variant="default"
+                    aria-label={tr('返回頂部')}
+                    onClick={() =>
+                      panelBody.current?.scrollTo({
+                        top: 0,
+                        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+                          ? 'instant'
+                          : 'smooth',
+                      })
+                    }
+                  >
+                    <Icon name="arrow-up" size={15} />
+                    {tr('返回頂部')}
+                  </Button>
+                )}
               </>
             }
           >
-                {docked && config ? (
-                  <div className="folder-panel-dock-settings">{settingsBody}</div>
-                ) : (
-                <Suspense fallback={<p>{tr('載入內容…')}</p>}>
-                  {panelOpen && (folderMode || filePreview) ? (
-                    <FolderContent
-                      key={detail.rowId + '/' + (filePreview?.id ?? 'folder')}
-                      selectedFileId={folderMode ? undefined : filePreview?.id}
-                      row={detail}
-                      project={project}
-                      run={run}
-                      act={act}
-                      busy={busy}
-                      configure={(tab) => openConfig(detail.rowId, tab)}
-                      onChild={child}
-                      sourceRows={all}
-                      onSource={(id) => void open(id)}
-                      childNames={all
-                        .filter(
-                          (row) =>
-                            row.record &&
-                            !row.error &&
-                            !row.readonly &&
-                            !row.stopped &&
-                            pathKey(row.path).replace(/\/[^/]+$/, '') === pathKey(detail.path)
-                        )
-                        .map((row) => row.name)}
-                    />
-                  ) : panelOpen ? (
-                    <p>{tr('選擇檔案以預覽')}</p>
-                  ) : null}
-                </Suspense>
-                )}
+            {docked && config ? (
+              <div className="folder-panel-dock-settings">{settingsBody}</div>
+            ) : (
+              <Suspense fallback={<p>{tr('載入內容…')}</p>}>
+                {panelOpen && (folderMode || filePreview) ? (
+                  <FolderContent
+                    key={detail.rowId + '/' + (filePreview?.id ?? 'folder')}
+                    selectedFileId={folderMode ? undefined : filePreview?.id}
+                    row={detail}
+                    project={project}
+                    run={run}
+                    act={act}
+                    busy={busy}
+                    configure={(tab) => openConfig(detail.rowId, tab)}
+                    onChild={child}
+                    sourceRows={all}
+                    onSource={(id) => void open(id)}
+                    childNames={all
+                      .filter(
+                        (row) =>
+                          row.record &&
+                          !row.error &&
+                          !row.readonly &&
+                          !row.stopped &&
+                          pathKey(row.path).replace(/\/[^/]+$/, '') === pathKey(detail.path)
+                      )
+                      .map((row) => row.name)}
+                  />
+                ) : panelOpen ? (
+                  <p>{tr('選擇檔案以預覽')}</p>
+                ) : null}
+              </Suspense>
+            )}
           </RightPanel>
         )}
       </div>
@@ -1417,7 +1421,9 @@ export function BrowseWorkspace({
         zIndex={300}
         closeButtonProps={{ 'aria-label': tr('關閉資料夾設定') }}
       >
-        {panelOpen && wide && <div className="drawer-dock-row">{dockToggle(tr('停靠到右側面板'), 'panel-right')}</div>}
+        {panelOpen && wide && (
+          <div className="drawer-dock-row">{dockToggle(tr('停靠到右側面板'), 'panel-right')}</div>
+        )}
         {!docked && settingsBody}
       </Drawer>
     </div>

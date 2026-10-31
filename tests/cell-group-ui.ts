@@ -15,15 +15,37 @@ await fs.mkdir(media)
 await fs.writeFile(path.join(media, 'original.txt'), 'PRESERVE ORIGINAL')
 const lib = new Library(local, undefined, false)
 await lib.init()
-await lib.create(media, { name: 'Group Test', mediaCategory: 'other', scanAll: true, depth: { mode: 'through', level: 1 } })
+await lib.create(media, {
+  name: 'Group Test',
+  mediaCategory: 'other',
+  scanAll: true,
+  depth: { mode: 'through', level: 1 },
+})
 const project = lib.snapshot().projects[0].project!,
   style = { textColor: '#e4e6e8', backgroundColor: 'transparent' }
-const text = (cellId: string, y: number): Cell => ({ cellId, kind: 'static-text', text: cellId, grid: { x: 0, y, w: 12, h: 1 }, style })
+const text = (cellId: string, y: number): Cell => ({
+  cellId,
+  kind: 'static-text',
+  text: cellId,
+  grid: { x: 0, y, w: 12, h: 1 },
+  style,
+})
 const cells: Cell[] = [
-  { cellId: 'group', kind: 'group', grid: { x: 0, y: 0, w: 12, h: 3 }, style, cells: [text('inner-one', 0), text('inner-two', 1)] },
+  {
+    cellId: 'group',
+    kind: 'group',
+    grid: { x: 0, y: 0, w: 12, h: 3 },
+    style,
+    cells: [text('inner-one', 0), text('inner-two', 1)],
+  },
   text('outer', 3),
 ]
-await lib.saveProject({ ...project, cells, layoutPresets: [{ id: 'default', name: 'Default', cells }], activeLayoutId: 'default' })
+await lib.saveProject({
+  ...project,
+  cells,
+  layoutPresets: [{ id: 'default', name: 'Default', cells }],
+  activeLayoutId: 'default',
+})
 const errors: string[] = []
 const { app, page } = await launchApp(local, errors)
 const button = (name: string) => page.getByRole('button', { name, exact: true })
@@ -38,12 +60,26 @@ try {
   await page.locator('.editor-cell').first().dblclick()
   await page.locator('.group-editing-bar').waitFor()
   assert.equal(await page.locator('.editor-cell').count(), 2, 'inner level shows the two children')
-  assert.equal(await page.locator('.basic-palette').getByRole('button', { name: '群組', exact: true }).count(), 0, 'no nested groups')
-  await page.locator('.basic-palette').getByRole('button', { name: '固定文字', exact: true }).click()
+  assert.equal(
+    await page.locator('.basic-palette').getByRole('button', { name: '群組', exact: true }).count(),
+    0,
+    'no nested groups'
+  )
+  await page
+    .locator('.basic-palette')
+    .getByRole('button', { name: '固定文字', exact: true })
+    .click()
   assert.equal(await page.locator('.editor-cell').count(), 3)
-  await page.locator('.basic-palette').getByRole('button', { name: '固定文字', exact: true }).click()
+  await page
+    .locator('.basic-palette')
+    .getByRole('button', { name: '固定文字', exact: true })
+    .click()
   await page.getByRole('alert').filter({ hasText: '群組空間不足' }).waitFor()
-  assert.equal(await page.locator('.editor-cell').count(), 3, 'a cell outside the group bounds is refused')
+  assert.equal(
+    await page.locator('.editor-cell').count(),
+    3,
+    'a cell outside the group bounds is refused'
+  )
   await page.screenshot({ path: path.join(root, 'group-inner.png') })
   await button('← 返回上層').click()
   await page.locator('.group-editing-bar').waitFor({ state: 'detached' })
