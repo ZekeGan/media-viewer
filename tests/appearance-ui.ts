@@ -153,9 +153,9 @@ try {
     .first()
     .click()
   await page
-    .locator('.folder-card')
-    .filter({ has: page.locator('.cell-name').getByText('雨後書店', { exact: true }) })
-    .dblclick()
+    .locator('.media-subfolder')
+    .getByRole('button', { name: '雨後書店', exact: true })
+    .click()
   await page.locator('.media-thumbnail img').first().waitFor()
   const records = new Map<string, Buffer>()
   for (const row of (await page.evaluate(() => window.media.request({ action: 'snapshot' })))

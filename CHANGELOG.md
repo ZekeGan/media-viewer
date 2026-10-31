@@ -2,6 +2,11 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.13.4 — 2026-11-01
+
+- Fix the right panel collapsing to zero width for video folders (mixed media browser inside the video panel), so the file list is readable again.
+- Tests: remove obsolete editing-ui, stages-ui, shell-ui and the video auto-next/lifecycle groups; update appearance-ui and video-player-ui to the unified folder page and fix a reset race.
+
 ## 0.13.3 — 2026-11-01
 
 - Group editing is visibly distinct (accent border and tinted bar), shows the group's 12 × N capacity with used and free rows, and the group inspector states the minimum height set by its contents.

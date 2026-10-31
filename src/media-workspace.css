@@ -24,6 +24,8 @@
 
 .mixed-media-browser {
     container-type: inline-size;
+    width: 100%;
+    min-width: 0;
 }
 
 .mixed-media-toolbar .media-scope-select {

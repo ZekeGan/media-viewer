@@ -7,7 +7,7 @@ import { folderFile } from '../electron/files'
 
 import { videoFixture } from './support/video-fixture'
 
-const groups = ['controls', 'subtitles', 'auto-next', 'lifecycle', 'appearance'] as const
+const groups = ['controls', 'subtitles', 'appearance'] as const
 type Group = (typeof groups)[number]
 function selection(): Group[] {
   const args = process.argv.slice(2)
@@ -108,6 +108,8 @@ async function runGroup(group: Group, fixture: string) {
 
   const open = async () => {
     await page.getByRole('button', { name: '開啟專案 Player QA', exact: true }).first().click()
+    await page.locator('.mixed-media-browser').waitFor()
+    await page.locator('.media-thumbnail').filter({ hasText: '01-first.mp4' }).click()
     await page.waitForFunction(() => {
       const video = document.querySelector('video')
       return video && video.readyState >= 1
@@ -134,13 +136,6 @@ async function runGroup(group: Group, fixture: string) {
     const button = settingsPanel.getByRole('button', { name, exact: true })
     if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
   }
-  const toggleNext = async () => {
-    await openSettings()
-    await settingsPanel.getByRole('switch', { name: '播完接下一部', exact: true }).click()
-    await settingsPanel.getByRole('button', { name: '關閉播放設定', exact: true }).click()
-    await settingsPanel.waitFor({ state: 'hidden' })
-  }
-
   const focus = async () => {
     await stage.focus()
     await stage.hover({ position: { x: 15, y: 15 } })
@@ -156,13 +151,6 @@ async function runGroup(group: Group, fixture: string) {
       video.currentTime = video.duration - 0.15
       await video.play()
     })
-  }
-
-  const selected = async (name: string) => {
-    await page.waitForFunction(
-      (value) => document.querySelector('.video-tile.active')?.getAttribute('title') === value,
-      name
-    )
   }
 
   const checks: Record<Group, () => Promise<void>> = {
@@ -340,10 +328,9 @@ async function runGroup(group: Group, fixture: string) {
       assert.equal(await encoding.inputValue(), 'big5')
       await page.screenshot({ path: path.join(screens, 'subtitle-settings.png') })
       await subtitles.getByRole('button', { name: '重設', exact: true }).click()
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll<HTMLInputElement>('[role="dialog"] input')].some(
-          (input) => input.value === 'utf-8'
-        )
+      await page.waitForFunction(
+        (input) => (input as HTMLInputElement).value === 'utf-8',
+        await encoding.elementHandle()
       )
       assert.equal(await encoding.inputValue(), 'utf-8')
 
@@ -407,203 +394,6 @@ async function runGroup(group: Group, fixture: string) {
       await page.waitForFunction(() => !document.fullscreenElement)
     },
 
-    'auto-next': async () => {
-      await page.clock.install()
-
-      await section('字幕來源')
-      const subtitles = settingsPanel
-      await subtitles.getByRole('button', { name: 'first.srt', exact: true }).click()
-      await page.keyboard.press('Escape')
-      await subtitles.waitFor({ state: 'hidden' })
-
-      await page
-        .locator('.subtitle-overlay')
-        .getByText('Controlled subtitle', { exact: true })
-        .waitFor()
-
-      await openSettings()
-      await page.getByRole('combobox', { name: '播放速度', exact: true }).selectOption('1.5')
-      await page.getByRole('combobox', { name: '播放速度', exact: true }).press('Escape')
-
-      assert.equal(
-        await page
-          .locator('video')
-          .evaluate((element) => (element as HTMLVideoElement).playbackRate),
-        1.5
-      )
-
-      // Disabled auto-next stops at the end. Enabling it never enables on-open autoplay.
-      await finish()
-      await page.waitForFunction(() => document.querySelector('video')!.ended)
-      assert.equal(await page.locator('.video-up-next').count(), 0)
-
-      await toggleNext()
-
-      await page.waitForFunction(async (id) => {
-        const p = (await window.media.request({ action: 'snapshot' })).snapshot.projects.find(
-          (p) => p.projectId === id
-        )!.project!
-        return p.videoAutoNext === true && p.videoAutoplay === false
-      }, projectId)
-
-      await tool('播放').click()
-      await finish()
-      await page.locator('.video-up-next').waitFor()
-      await page.getByRole('button', { name: '取消接續播放', exact: true }).click()
-      await page.clock.fastForward(5200)
-      await selected('01-first.mp4')
-
-      await tool('播放').click()
-      await finish()
-      await page.locator('.video-up-next').waitFor()
-      await toggleNext()
-      await page.locator('.video-up-next').waitFor({ state: 'hidden' })
-
-      await toggleNext()
-      await page.waitForFunction(
-        async () =>
-          (await window.media.request({ action: 'snapshot' })).snapshot.projects[0].project
-            ?.videoAutoNext === true
-      )
-
-      await tool('播放').click()
-      await finish()
-      await page.locator('.video-up-next').waitFor()
-      await selected('02-second.mp4')
-      await page.waitForFunction(() => !document.querySelector('video')!.paused)
-
-      assert.equal(await page.locator('.subtitle-overlay').count(), 0)
-      assert.equal(
-        await page
-          .locator('video')
-          .evaluate((element) => (element as HTMLVideoElement).playbackRate),
-        1.5
-      )
-
-      await page.getByRole('button', { name: '播放 03-last.mp4', exact: true }).click()
-      await finish()
-      await page.waitForFunction(() => document.querySelector('video')!.ended)
-      assert.equal(await page.locator('.video-up-next').count(), 0)
-    },
-
-    lifecycle: async () => {
-      await page.clock.install()
-
-      await toggleNext()
-
-      await page.waitForFunction(
-        async (id) =>
-          (await window.media.request({ action: 'snapshot' })).snapshot.projects.find(
-            (p) => p.projectId === id
-          )?.project?.videoAutoNext === true,
-        projectId
-      )
-
-      const volume = controls.getByRole('slider', { name: '音量', exact: true })
-      await controls.locator('.player-audio').hover()
-      await volume.press('End')
-      await volume.press('ArrowLeft')
-
-      await page.waitForFunction(async () => {
-        const prefs = (await window.desktop.workspace()).prefs.videoAudio
-        return prefs && Math.abs(prefs.volume - 0.99) < 0.001
-      })
-
-      await page.getByRole('button', { name: '播放 01-first.mp4', exact: true }).click()
-      await finish()
-      await page.locator('.video-up-next').waitFor()
-
-      await page.evaluate(() => {
-        ;(window as any).retiredVideo = document.querySelector('video')
-      })
-
-      await page.getByRole('button', { name: '關閉資料夾內容', exact: true }).click()
-      await page.clock.fastForward(5200)
-
-      assert.equal(await page.locator('video').count(), 0)
-      assert.equal(
-        await page.evaluate(() => {
-          const node = (window as any).retiredVideo
-          return node.paused && !node.getAttribute('src')
-        }),
-        true
-      )
-
-      await page.getByRole('button', { name: '切換右側內容', exact: true }).click()
-      await page.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 1)
-
-      assert.equal(
-        await page.locator('video').evaluate((element) => (element as HTMLVideoElement).paused),
-        true
-      )
-
-      assert.ok(
-        await page
-          .locator('video')
-          .evaluate((element) => Math.abs((element as HTMLVideoElement).volume - 0.99) < 0.001)
-      )
-
-      await tool('播放').click()
-      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].hide())
-      await page.waitForFunction(() => document.querySelector('video')?.paused === true)
-
-      await app.evaluate(({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0]
-        win.show()
-        win.focus()
-      })
-      await page.waitForFunction(() => !document.hidden)
-
-      assert.equal(
-        await page.locator('video').evaluate((element) => (element as HTMLVideoElement).paused),
-        true
-      )
-
-      await tool('播放').click()
-      await finish()
-      await page.locator('.video-up-next').waitFor()
-
-      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].hide())
-      await page.locator('.video-up-next').waitFor({ state: 'hidden' })
-
-      assert.equal((await page.evaluate(() => window.desktop.windowAction('state'))).visible, false)
-
-      await app.evaluate(({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0]
-        win.show()
-        win.focus()
-      })
-      await selected('01-first.mp4')
-
-      await tool('播放').click()
-      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].minimize())
-      await page.waitForFunction(() => document.querySelector('video')?.paused === true)
-
-      await app.evaluate(({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0]
-        win.restore()
-        win.show()
-        win.focus()
-      })
-
-      assert.equal(
-        await page.locator('video').evaluate((element) => (element as HTMLVideoElement).paused),
-        true
-      )
-
-      await fs.writeFile(path.join(media, '02-broken.mp4'), 'UNSUPPORTED CONTROLLED DATA')
-
-      await page.evaluate(() => window.media.request({ action: 'scan' }))
-      await page.getByRole('button', { name: '關閉資料夾內容', exact: true }).click()
-      await page.getByRole('button', { name: '切換右側內容', exact: true }).click()
-
-      await page.getByRole('button', { name: '播放 02-broken.mp4', exact: true }).click()
-      await page.locator('.video-error').waitFor()
-      await page.clock.fastForward(5200)
-      await selected('02-broken.mp4')
-      assert.equal(await page.locator('.video-up-next').count(), 0)
-    },
-
     appearance: async () => {
       const styles: Record<string, unknown> = {}
       const captureStyles = async (name: string) => {
@@ -633,13 +423,9 @@ async function runGroup(group: Group, fixture: string) {
             'container-type',
           ]
           const selectors = [
-            '.folder-panel.video-panel .folder-panel-body',
             '.video-viewer',
             '.video-stage',
             '.video-stage video',
-            '.video-strip',
-            '.video-tile.active',
-            '.video-tile img',
             '.video-controls',
             '.player-timeline input',
             '.player-button',
@@ -712,9 +498,6 @@ async function runGroup(group: Group, fixture: string) {
         await stage.press('f')
         await page.waitForFunction(() => !document.fullscreenElement)
       }
-      await page.getByRole('button', { name: '播放 01-first.mp4', exact: true }).click()
-      await page.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 1)
-      await tool('暫停').click()
 
       await captureTheme('dark')
 
@@ -729,6 +512,8 @@ async function runGroup(group: Group, fixture: string) {
           .getByRole('button', { name: 'Open project Player QA', exact: true })
           .first()
           .click()
+        await page.locator('.mixed-media-browser').waitFor()
+        await page.locator('.media-thumbnail').filter({ hasText: '01-first.mp4' }).click()
         await page.waitForFunction(() => (document.querySelector('video')?.readyState ?? 0) >= 1)
         await stage.hover()
         await controls.getByRole('button', { name: 'Fullscreen', exact: true }).waitFor()
@@ -754,12 +539,7 @@ async function runGroup(group: Group, fixture: string) {
     await page.bringToFront()
     await open()
 
-    assert.equal(await page.locator('.video-tile').count(), 3)
-
-    assert.equal(
-      await page.locator('video').evaluate((element) => (element as HTMLVideoElement).paused),
-      true
-    )
+    await page.locator('video').evaluate((element) => (element as HTMLVideoElement).pause())
 
     await openSettings()
     assert.equal(

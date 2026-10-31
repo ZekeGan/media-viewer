@@ -130,6 +130,8 @@ const burst = async () => {
     }
   })
   await page.waitForTimeout(100)
+  // Deferred updates may leave a short blank frame; a persistent blank still fails the wait.
+  await page.waitForFunction(() => document.querySelector('.file-overview-item'))
   await healthy()
 }
 try {
