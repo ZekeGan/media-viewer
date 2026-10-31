@@ -176,7 +176,7 @@ try {
   await choose('此資料夾的版面方案', '預設版面')
   await drawer.getByRole('tab', { name: '來源匯入', exact: true }).click()
   await drawer.getByRole('textbox', { name: '資料來源', exact: true }).click()
-  assert.equal(await page.getByRole('option').count(), 11)
+  assert.equal(await page.getByRole('option').count(), 12)
   await page.screenshot({ path: path.join(screens, 'sources.png') })
   await page.keyboard.press('Escape')
   await drawer.getByRole('button', { name: '關閉資料夾設定', exact: true }).click()

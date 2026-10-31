@@ -408,10 +408,8 @@
     max-height: none;
 }
 
-.document-viewer {
-    inset: 0;
-    z-index: 400;
-    -webkit-app-region: no-drag;
+.document-viewer.overlay-frame {
+    background: var(--panel);
 }
 
 .document-viewer.document-embedded {
@@ -1063,4 +1061,10 @@
     border-bottom: 1px dashed var(--line);
     color: var(--muted);
     font-size: 12px;
+}
+
+.drawer-dock-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 6px;
 }

@@ -67,7 +67,7 @@ export function DocumentViewer({
   const view = (
     <FocusTrap active={!embedded}>
       <div
-        className={'document-viewer' + (embedded ? ' document-embedded' : '')}
+        className={'document-viewer' + (embedded ? ' document-embedded' : ' overlay-frame')}
         role="dialog"
         aria-modal="true"
         aria-label={file.name}

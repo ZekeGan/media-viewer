@@ -1411,17 +1411,13 @@ export function BrowseWorkspace({
       <Drawer
         opened={!!config && !docked}
         onClose={closeConfig}
-        title={
-          <Group gap="xs" wrap="nowrap">
-            <span>{tr('資料夾設定 · ') + (config?.name ?? '')}</span>
-            {panelOpen && wide && dockToggle(tr('停靠到右側面板'), 'panel-right')}
-          </Group>
-        }
+        title={tr('資料夾設定 · ') + (config?.name ?? '')}
         position="right"
         size="lg"
         zIndex={300}
         closeButtonProps={{ 'aria-label': tr('關閉資料夾設定') }}
       >
+        {panelOpen && wide && <div className="drawer-dock-row">{dockToggle(tr('停靠到右側面板'), 'panel-right')}</div>}
         {!docked && settingsBody}
       </Drawer>
     </div>

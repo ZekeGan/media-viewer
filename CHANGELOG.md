@@ -2,6 +2,11 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.13.1 — 2026-11-01
+
+- DocumentViewer now uses the shared full-window overlay frame.
+- Fix the folder settings drawer losing its accessible name after the dock toggle was added (the toggle moved into the drawer body).
+
 ## 0.13.0 — 2026-11-01
 
 - Fix non-game folders in game projects showing a bare name/path card; every folder page now shares the details / subfolders / files frame.
