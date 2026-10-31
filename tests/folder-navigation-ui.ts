@@ -29,7 +29,7 @@ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
 const button=(name:string)=>page.getByRole('button',{name,exact:true})
 const center=()=>page.locator('.workspace-breadcrumb'),right=()=>page.locator('.folder-panel-header')
 const current=async(name:string)=>{await page.waitForFunction(name=>document.querySelector('.breadcrumb-current')?.textContent?.trim()===name,name).catch(async error=>{console.error(await page.evaluate(()=>Array.from(document.querySelectorAll('.reader,.media-viewer-shell,.document-viewer,.mantine-Drawer-content,.mantine-Modal-content,.mantine-Menu-dropdown,.mantine-Select-dropdown,[role="dialog"]')).map(node=>({tag:node.tagName,classes:node.className,display:getComputedStyle(node).display,visibility:getComputedStyle(node).visibility}))));throw error});await page.waitForFunction(()=>!document.querySelector('.media-loading'));assert.equal((await right().locator('strong').innerText()).trim(),name)}
-const buttons=async(back:boolean,forward:boolean)=>{for(const area of [center(),right()]){assert.equal(await area.getByRole('button',{name:'返回',exact:true}).isDisabled(),!back);assert.equal(await area.getByRole('button',{name:'前進',exact:true}).isDisabled(),!forward)}}
+const buttons=async(back:boolean,forward:boolean)=>{await page.waitForFunction(({back,forward})=>['.workspace-breadcrumb','.folder-panel-header'].every(selector=>{const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>(selector+' button'));return buttons.find(button=>button.getAttribute('aria-label')==='返回')?.disabled===!back&&buttons.find(button=>button.getAttribute('aria-label')==='前進')?.disabled===!forward}),{back,forward});for(const area of [center(),right()]){assert.equal(await area.getByRole('button',{name:'返回',exact:true}).isDisabled(),!back);assert.equal(await area.getByRole('button',{name:'前進',exact:true}).isDisabled(),!forward)}}
 const go=async(name:string)=>{await page.locator('.folder-panel-body .media-subfolder').getByRole('button',{name,exact:true}).click();await current(name)}
 const side=async(delta:-1|1,area='.folder-panel-body',duplicate=true,route:'native'|'dom'|'dom-first'='native')=>{
   const bounds=await page.locator(area).first().boundingBox();assert.ok(bounds)
@@ -49,8 +49,11 @@ try{
   await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.setMinimumSize(0,0);win.setBounds({width:1500,height:950});win.focus()})
   await fs.mkdir(path.join(media,'Untracked'))
   await button('開啟專案 Navigation').first().click();await page.locator('.mixed-media-browser').waitFor();await current('Media');await buttons(false,false)
+  const currentFolder=right().getByRole('button',{name:'前往資料夾 Media',exact:true})
+  await currentFolder.focus();await currentFolder.press('Enter');await current('Media');await buttons(false,false)
   assert.equal(await page.locator('.media-subfolder').getByRole('button',{name:'Untracked',exact:true}).isDisabled(),true)
   await go('A');await go('B');await buttons(true,false)
+  await right().getByRole('button',{name:'前往資料夾 B',exact:true}).click();await current('B');await buttons(true,false)
   await side(-1,'.folder-panel-body',true,'dom');await current('A');await buttons(true,true)
   await side(1,'.folder-panel-body',true,'dom');await current('B');await buttons(true,false)
   // Let unmatched DOM-only commands expire before testing another route.
@@ -87,7 +90,7 @@ try{
   await side(-1);await current('Media')
   await page.screenshot({path:path.join(root,'history.png')})
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1))
-  await button('開啟專案 Multi navigation').first().click();await page.locator('.content-subfolders').waitFor();await current('Multi');await buttons(false,false)
+  await button('開啟專案 Multi navigation').first().click();await page.locator('.media-subfolders, .content-subfolders').waitFor();await current('Multi');await buttons(false,false)
   const cards=await page.locator('.folder-card').count();assert.ok(cards>1)
   await go('A');assert.equal(await page.locator('.folder-card').count(),cards)
   await side(-1);await current('Multi');await buttons(false,true)

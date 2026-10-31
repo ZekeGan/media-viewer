@@ -791,7 +791,7 @@ export function FolderPanel({
                       disabled={disabled}
                       onClick={() => boundary('not-game')}
                     >
-                      {tr('這不是遊戲')}
+                      {tr('這不是遊戲目錄')}
                     </Button>
                   </Group>
                 </>

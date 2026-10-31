@@ -6,6 +6,7 @@ const paths = {
   music: <><path d="M8 14V4l9-2v10M8 7l9-2"/><ellipse cx="5" cy="15" rx="3" ry="2"/><ellipse cx="14" cy="13" rx="3" ry="2"/></>,
   video: <><rect x="2" y="4" width="11" height="12" rx="2"/><path d="m13 8 5-3v10l-5-3Z"/></>,
   folder: <path d="M2 5a1 1 0 0 1 1-1h5l2 2h7a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z"/>,
+  'folder-go': <><path d="M9 17H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5l2 2h7a1 1 0 0 1 1 1v2"/><path d="M10 14h8m-3-3 3 3-3 3"/></>,
   'folder-settings': <><path d="M9 17H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5l2 2h7a1 1 0 0 1 1 1v2"/><circle cx="14" cy="14" r="3"/><path d="M14 10v1m0 6v1m-4-4h1m6 0h1m-7-3 1 1m4 4 1 1m0-6-1 1m-4 4-1 1"/></>,
   image: <><rect x="2" y="3" width="16" height="14" rx="1"/><circle cx="6" cy="7" r="1"/><path d="m2 15 5-5 4 4 3-3 4 4"/></>,
   file: <><path d="M4 2h8l4 4v12H4Z"/><path d="M12 2v5h4"/></>,
