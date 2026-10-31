@@ -1236,6 +1236,16 @@ export function BrowseWorkspace({
                 </Tooltip>
                 {project.mediaCategory !== 'video' && <strong>{detail.name}</strong>}
 
+                <Tooltip label={tr('前往此資料夾')}>
+                  <ActionIcon
+                    aria-label={tr('前往資料夾 {0}', detail.name)}
+                    variant="subtle"
+                    disabled={busy}
+                    onClick={() => void open(detail.rowId)}
+                  >
+                    <Icon name="folder-go" />
+                  </ActionIcon>
+                </Tooltip>
                 <Tooltip label={tr('資料夾設定')}>
                   <ActionIcon
                     aria-label={tr('資料夾設定')}

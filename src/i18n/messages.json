@@ -5134,5 +5134,83 @@
     "en": "Project root",
     "ja": "プロジェクトのルート",
     "es": "Raíz del proyecto"
+  },
+  "共 {0} 項": {
+    "zh-CN": "共 {0} 项",
+    "en": "{0} items",
+    "ja": "全 {0} 件",
+    "es": "{0} elementos"
+  },
+  "檔案資訊": {
+    "zh-CN": "文件信息",
+    "en": "File info",
+    "ja": "ファイル情報",
+    "es": "Información del archivo"
+  },
+  "大小": {
+    "zh-CN": "大小",
+    "en": "Size",
+    "ja": "サイズ",
+    "es": "Tamaño"
+  },
+  "修改時間": {
+    "zh-CN": "修改时间",
+    "en": "Modified",
+    "ja": "更新日時",
+    "es": "Modificado"
+  },
+  "字幕": {
+    "zh-CN": "字幕",
+    "en": "Subtitles",
+    "ja": "字幕",
+    "es": "Subtítulos"
+  },
+  "壓縮檔": {
+    "zh-CN": "压缩包",
+    "en": "Archive",
+    "ja": "アーカイブ",
+    "es": "Archivo comprimido"
+  },
+  "PDF 文件": {
+    "zh-CN": "PDF 文档",
+    "en": "PDF document",
+    "ja": "PDF ドキュメント",
+    "es": "Documento PDF"
+  },
+  "圖片網址": {
+    "zh-CN": "图片网址",
+    "en": "Image URL",
+    "ja": "画像 URL",
+    "es": "URL de la imagen"
+  },
+  "設為封面": {
+    "zh-CN": "设为封面",
+    "en": "Set as cover",
+    "ja": "カバーに設定",
+    "es": "Usar como portada"
+  },
+  "圖片預覽": {
+    "zh-CN": "图片预览",
+    "en": "Image preview",
+    "ja": "画像プレビュー",
+    "es": "Vista previa de la imagen"
+  },
+  "無法取得圖片，原封面保持不變": {
+    "zh-CN": "无法获取图片，原封面保持不变",
+    "en": "Could not get the image; the current cover is unchanged",
+    "ja": "画像を取得できませんでした。現在のカバーは変更されません",
+    "es": "No se pudo obtener la imagen; la portada actual no cambia"
+  },
+  "封面保存失敗，原封面保持不變": {
+    "zh-CN": "封面保存失败，原封面保持不变",
+    "en": "Saving the cover failed; the current cover is unchanged",
+    "ja": "カバーの保存に失敗しました。現在のカバーは変更されません",
+    "es": "No se pudo guardar la portada; la portada actual no cambia"
+  },
+  "尚無封面": {
+    "zh-CN": "暂无封面",
+    "en": "No cover yet",
+    "ja": "カバーなし",
+    "es": "Sin portada"
   }
 }

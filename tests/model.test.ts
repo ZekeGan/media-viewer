@@ -88,3 +88,19 @@ test('validation preserves existing optional null compatibility and rejected inp
   reject(validateProject, rejected, '影片接續播放設定不合法')
   assert.deepEqual(rejected, original)
 })
+
+test('game cover cells are accepted only by game projects', () => {
+  const withCover = (category: string, where: 'cells' | 'preset' | 'content') => {
+    const project = modelProject()
+    const cover = { cellId: 'game-cover-cell', kind: 'game-cover' as const, grid: { x: 0, y: 8, w: 12, h: 3 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
+    project.mediaCategory = category
+    if (where === 'cells') project.cells.push(cover)
+    else if (where === 'preset') project.layoutPresets![0].cells.push({ ...cover, cellId: 'game-cover-preset' })
+    else project.contentCells!.manga.push({ ...cover, cellId: 'game-cover-content' })
+    return project
+  }
+  for (const where of ['cells', 'preset', 'content'] as const) {
+    assert.doesNotThrow(() => validateProject(withCover('game', where)))
+    reject(validateProject, withCover('manga', where), '遊戲封面組件只能用於遊戲專案')
+  }
+})

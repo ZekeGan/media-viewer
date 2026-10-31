@@ -14,6 +14,7 @@ import { SearchIndex } from './search-index'
 import { completionNotice } from '../shared/notifications'
 import {projectImageCells} from '../shared/layouts'
 import { metadata } from './metadata'
+import { fetchImageUrl, type ImageUrlOptions, type RemoteImage } from './image-url'
 import { parseSubtitles } from '../shared/subtitles'
 import { hiddenFileNames } from './hidden'
 import { imageTypes } from '../shared/images'
@@ -36,6 +37,8 @@ export class Explorer {
   private overviewPages=new Map<string,{rootId:string;folderId:string;scope:string;folders:string[];folder:number;contentCursor?:string;expires:number}>()
   private files = new Map<string,{rowId:string;name:string;file:string;mime:string;portable?:boolean}>()
   private externals = new Map<string,{rowId:string;file:string}>()
+  private imagePreviews = new Map<string,RemoteImage&{expires:number}>()
+  imageUrlOptions:ImageUrlOptions={}
   private previews = new Map<string,{preview:MetadataPreview;cover?:{bytes:Buffer;mime:string;ext:string};expires:number}>()
   private thumbnailReads=0
   private audioCoverTail:Promise<unknown>=Promise.resolve()
@@ -299,6 +302,8 @@ export class Explorer {
         if(req.assetId===null)delete record.details.cellImages[cell.attributeId??cell.cellId];else record.details.cellImages[cell.attributeId??cell.cellId]=req.assetId
         await saveFolder(row.path,record,req.revision);break
       }
+      case 'imageUrlPreview': return {imagePreview:await this.imageUrlPreview(req.url)}
+      case 'imageUrlApply': await this.applyImageUrl(req);break
       case 'metadataPreview': return {preview:await this.metadataPreview(req.source,req.provider)}
       case 'metadataApply': await this.applyMetadata(req);break
       default: throw new Error('不支援的操作')
@@ -346,6 +351,22 @@ export class Explorer {
     for(const [id,p] of this.previews)if(p.expires<Date.now())this.previews.delete(id)
     if(this.previews.size>=10)this.previews.delete(this.previews.keys().next().value!)
     this.previews.set(preview.token,{preview,cover:item.cover,expires:Date.now()+15*60*1000});return preview
+  }
+  private async imageUrlPreview(url:string) {
+    const item=await fetchImageUrl(url,this.imageUrlOptions),token=randomUUID()
+    for(const [id,p] of this.imagePreviews)if(p.expires<Date.now())this.imagePreviews.delete(id)
+    while(this.imagePreviews.size>=5)this.imagePreviews.delete(this.imagePreviews.keys().next().value!)
+    this.imagePreviews.set(token,{...item,expires:Date.now()+15*60*1000})
+    return {token,image:'data:'+item.mime+';base64,'+item.bytes.toString('base64'),name:item.name,size:item.bytes.length}
+  }
+  private async applyImageUrl(req:Extract<ExplorerRequest,{action:'imageUrlApply'}>) {
+    const item=this.imagePreviews.get(req.token);if(!item||item.expires<Date.now())throw new Error('圖片預覽已過期，請重新取得')
+    const {row,record}=await this.record(req.rowId,req.revision),assetId=randomUUID(),relativePath=`assets/${assetId}.${item.ext}`,target=path.join(row.path,DATA_DIR,relativePath)
+    await safePath(row.path,target);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,item.bytes,{flag:'wx'})
+    record.assets.push({assetId,relativePath,originalName:item.name,mediaType:item.mime})
+    if(req.cover){record.details??=newDetails();record.details.bannerAssetId=assetId;validateDetails(record.details)}
+    try{await saveFolder(row.path,record,req.revision)}catch(e){await fs.unlink(target).catch(()=>{});throw e}
+    this.imagePreviews.delete(req.token)
   }
   private async applyMetadata(req:Extract<ExplorerRequest,{action:'metadataApply'}>) {
     const item=this.previews.get(req.token);if(!item||item.expires<Date.now())throw new Error('候選已過期，請重新取得');if(!Array.isArray(req.keys)||!req.keys.every(k=>item.preview.values.some(v=>v.key===k)))throw new Error('匯入欄位不合法')

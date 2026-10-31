@@ -243,6 +243,23 @@ export function MediaBrowser({
             </ActionIcon>
           </Menu.Target>
           <Menu.Dropdown>
+            <Menu.Label>{tr('檔案展示方式')}</Menu.Label>
+            {(
+              [
+                ['masonry', '瀑布流'],
+                ['tiles', '縮圖'],
+                ['list', '列表'],
+              ] as const
+            ).map(([value, label]) => (
+              <Menu.Item
+                key={value}
+                leftSection={view === value ? <Icon name="check" /> : null}
+                onClick={() => setView(value)}
+              >
+                {tr(label)}
+              </Menu.Item>
+            ))}
+            <Menu.Divider />
             <Menu.Item
               leftSection={grouped ? <Icon name="check" /> : null}
               onClick={() => setGrouped((value) => !value)}

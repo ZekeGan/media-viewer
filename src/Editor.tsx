@@ -13,7 +13,7 @@ import { cardPresets, editorFields, presetDraft, syncPresetDraft, selectPreset, 
 
 const typeKinds:Record<string,CellKind>={string:'field-text',tags:'field-tags',number:'field-number',datetime:'field-date',boolean:'field-boolean',enum:'field-enum',url:'field-url',date:'field-date-only'}
 export function Editor({ project, rows, busy, save, close, act, onDirty, targetLabel=tr("卡片"),presets=false }: { project: Project; rows: FolderRow[]; busy: boolean; act:(request:Request)=>Promise<Response|undefined>; save: (p: Project,preset?:{name:string;asNew:boolean}) => Promise<boolean>; close: () => void; onDirty: (dirty: boolean) => void; targetLabel?:string;presets?:boolean }) {
-const labels: Record<CellKind, string> = { name: tr("資料夾名稱"), path: tr("目前路徑"), 'field-text': tr("自訂文字"), 'field-tags':tr("標籤"),'field-number':tr("數字"),'field-date':tr("日期時間"),'field-boolean':tr('是／否'),'field-enum':tr('單選'),'field-url':tr('網址'),'field-date-only':tr('日期'),'static-text':tr('固定文字'),spacer:tr('空白間距'),'system-info':tr('系統資訊'),image:tr("圖片"),divider:tr("分隔線"), 'open-folder': tr("開啟資料夾") }
+const labels: Record<CellKind, string> = { name: tr("資料夾名稱"), path: tr("目前路徑"), 'field-text': tr("自訂文字"), 'field-tags':tr("標籤"),'field-number':tr("數字"),'field-date':tr("日期時間"),'field-boolean':tr('是／否'),'field-enum':tr('單選'),'field-url':tr('網址'),'field-date-only':tr('日期'),'static-text':tr('固定文字'),spacer:tr('空白間距'),'system-info':tr('系統資訊'),image:tr("圖片"),divider:tr("分隔線"), 'open-folder': tr("開啟資料夾"),'game-cover':tr("遊戲封面") }
 const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),number:tr("數字"),datetime:tr("日期時間"),boolean:tr('是／否'),enum:tr('單選'),url:tr('網址'),date:tr('日期')}
 
  useLocale()
@@ -58,7 +58,7 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
     attributeId??=bindings.find(f=>f.type===cellType(kind))?.attributeId
     if(isFieldKind(kind)&&!attributeId){attributeId=crypto.randomUUID();let alias=cellType(kind),i=2;while(bindings.some(f=>f.alias.toLowerCase()===alias.toLowerCase()))alias=`${cellType(kind)}_${i++}`;bindings=[...bindings,{attributeId,alias,type:cellType(kind)}]}
     if(kind==='image')attributeId=crypto.randomUUID()
-    const cell: Cell = { cellId: crypto.randomUUID(), kind, ...(isFieldKind(kind)||kind==='image' ? { attributeId } : {}), grid: grid ?? { x: 0, y, w: 12, h: kind==='image'?3:1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
+    const cell: Cell = { cellId: crypto.randomUUID(), kind, ...(isFieldKind(kind)||kind==='image' ? { attributeId } : {}), grid: grid ?? { x: 0, y, w: 12, h: kind==='image'||kind==='game-cover'?3:1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
     if (cell.grid.y + cell.grid.h > 100) { setError(tr("畫布沒有空間，請先移動或刪除組件")); return }
     change({ ...draft, fieldBindings:bindings,cells: [...cells, cell] }); setSelected(cell.cellId);setError('')
   }
@@ -93,7 +93,7 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
     {error && <p role="alert" className="error">{error}</p>}
     <div className="editor">
       <aside className="editor-palette" aria-label={tr("拖入組件")}><h3>{tr("組件")}</h3>
-        <section className="palette-section"><h4>{tr("基礎組件")}</h4><div className="basic-palette">{(['name','path','static-text','spacer','system-info','image','divider','open-folder'] as CellKind[]).map(kind=><div key={kind} className="palette-item" draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',kind);e.dataTransfer.effectAllowed='copy';dragImage(e)}}><Button fullWidth size="xs" variant="default" onClick={()=>add(kind)}>{labels[kind]}</Button></div>)}</div></section>
+        <section className="palette-section"><h4>{tr("基礎組件")}</h4><div className="basic-palette">{(['name','path','static-text','spacer','system-info','image',...(draft.mediaCategory==='game'?['game-cover' as const]:[]),'divider','open-folder'] as CellKind[]).map(kind=><div key={kind} className="palette-item" draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',kind);e.dataTransfer.effectAllowed='copy';dragImage(e)}}><Button fullWidth size="xs" variant="default" onClick={()=>add(kind)}>{labels[kind]}</Button></div>)}</div></section>
         <section className="project-field-palette"><h4>{tr('專案欄位')}</h4><Stack gap="xs">{draft.fieldBindings.map(binding=>paletteField(binding))}</Stack></section>
         <Accordion variant="separated" className="existing-fields"><Accordion.Item value="existing"><Accordion.Control>{tr("引用資料夾既有欄位")}<Badge size="xs" color="gray">{availableFields.length}</Badge></Accordion.Control><Accordion.Panel>
 

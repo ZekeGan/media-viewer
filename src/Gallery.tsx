@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { Icon } from './icons'
 import { QueueMenu } from './QueueMenu'
-import { ActionIcon, Button, Center, Group, SegmentedControl, Stack, Tooltip } from '@mantine/core'
+import { ActionIcon, Button, Center, Group, Modal, SegmentedControl, Stack, Tooltip } from '@mantine/core'
 import { canPreviewMedia, mediaIdentity } from '../shared/media'
 import type { MediaEntry, OverviewEntry, ReadingPrefs } from '../shared/explorer'
 import {
@@ -24,6 +24,22 @@ import {
 } from '../shared/gallery'
 const Reader = lazy(() => import('./Reader').then((module) => ({ default: module.Reader })))
 const PAGE_SIZE = 200
+const friendlyType = (entry: MediaEntry) => {
+  const extension = entry.name.includes('.') ? entry.name.split('.').pop()!.toUpperCase() : ''
+  const label = {
+    image: tr('圖片'),
+    video: tr('影片'),
+    audio: tr('音樂'),
+    subtitle: tr('字幕'),
+    archive: tr('壓縮檔'),
+    pdf: tr('PDF 文件'),
+    folder: tr('資料夾'),
+    other: tr('其他'),
+  }[entry.kind]
+  return extension && entry.kind !== 'pdf' ? label + ' · ' + extension : label
+}
+const fileSize = (bytes: number) =>
+  bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + ' MB' : (bytes / 1024).toFixed(1) + ' KB'
 const Tile = memo(
   function Tile({
     entry,
@@ -126,12 +142,14 @@ const Tile = memo(
         }
       >
         <span className="thumbnail-image">
-          {!supported ? (
+          {!supported && mode === 'list' ? (
+            <Icon name="file" size={20} />
+          ) : !supported ? (
             <span className="unsupported-file-info">
               <Icon name="file" size={28} />
               <small>{tr('不支援內建預覽')}</small>
               <small>
-                {entry.mime} · {(entry.size / 1024).toFixed(1)} KB
+                {friendlyType(entry)} · {fileSize(entry.size)}
               </small>
             </span>
           ) : entry.kind !== 'image' && !entry.thumb ? (
@@ -169,7 +187,7 @@ const Tile = memo(
         style={style}
         data-index={tile.index}
         onClick={() => select(tile.index)}
-        onContextMenu={picking && playable ? (event) => menu(tile.index, event) : undefined}
+        onContextMenu={(event) => menu(tile.index, event)}
       >
         {thumbnail}
         {location}
@@ -177,19 +195,19 @@ const Tile = memo(
           {entry.name}
           {!supported && (
             <small className="unsupported-file-reason">
-              {tr('不支援內建預覽')} · {entry.mime}
+              {tr('不支援內建預覽')} · {friendlyType(entry)}
             </small>
           )}
         </span>
         <small>{new Date(entry.modified).toLocaleDateString(currentLocale())}</small>
-        <small>{(entry.size / 1024).toFixed(1)} KB</small>
+        <small>{fileSize(entry.size)}</small>
       </div>
     ) : (
       <div
         className={'gallery-tile ' + (picked ? 'picked' : '')}
         style={style}
         data-index={tile.index}
-        onContextMenu={picking && playable ? (event) => menu(tile.index, event) : undefined}
+        onContextMenu={(event) => menu(tile.index, event)}
       >
         {thumbnail}
         {location}
@@ -255,7 +273,8 @@ export function Gallery({
     [focused, setFocused] = useState(-1),
     [version, setVersion] = useState(0),
     [picked, setPicked] = useState<Set<string>>(new Set()),
-    [menu, setMenu] = useState<{ x: number; y: number }>()
+    [menu, setMenu] = useState<{ x: number; y: number; entry: MediaEntry }>(),
+    [info, setInfo] = useState<MediaEntry>()
   const [view, setView] = useState({ top: 0, height: 700, width: 0 }),
     actualTop = useRef(0),
     grid = useRef<HTMLDivElement>(null),
@@ -484,11 +503,13 @@ export function Gallery({
       if (!entry) return
       event.preventDefault()
       const box = event.currentTarget.getBoundingClientRect()
-      pickAnchor.current ??= current.current.page * PAGE_SIZE + index
-      setPicked((previous) =>
-        previous.has(mediaIdentity(entry)) ? previous : new Set([mediaIdentity(entry)])
-      )
-      setMenu({ x: event.clientX || box.left + 8, y: event.clientY || box.top + 8 })
+      if (['audio', 'video'].includes(entry.kind)) {
+        pickAnchor.current ??= current.current.page * PAGE_SIZE + index
+        setPicked((previous) =>
+          previous.has(mediaIdentity(entry)) ? previous : new Set([mediaIdentity(entry)])
+        )
+      }
+      setMenu({ x: event.clientX || box.left + 8, y: event.clientY || box.top + 8, entry })
     },
     [images]
   )
@@ -508,7 +529,6 @@ export function Gallery({
     scroll.current?.scrollTo({ top: 0 })
     measure()
   }
-  const selection = selected === undefined ? undefined : images[selected]
   return (
     <div className="gallery">
       <Group justify="space-between" mb="sm">
@@ -677,23 +697,58 @@ export function Gallery({
             />
           ))}
       </div>
-      {menu && onEnqueue && (
+      {menu && (
         <QueueMenu
           x={menu.x}
           y={menu.y}
           count={pickedFiles.length}
           onClose={() => setMenu(undefined)}
-          onAdd={() => {
-            onEnqueue(pickedFiles)
-            setPicked(new Set())
+          onAdd={
+            onEnqueue && pickedFiles.length
+              ? () => {
+                  onEnqueue(pickedFiles)
+                  setPicked(new Set())
+                  setMenu(undefined)
+                }
+              : undefined
+          }
+          onInfo={() => {
+            setInfo(menu.entry)
             setMenu(undefined)
           }}
         />
       )}
+      <Modal
+        opened={!!info}
+        onClose={() => setInfo(undefined)}
+        title={info?.name}
+        size="sm"
+        zIndex={600}
+      >
+        {info && (
+          <dl className="file-info">
+            <dt>{tr('類型')}</dt>
+            <dd>{friendlyType(info)}</dd>
+            <dt>{tr('大小')}</dt>
+            <dd>{fileSize(info.size)}</dd>
+            <dt>{tr('修改時間')}</dt>
+            <dd>{new Date(info.modified).toLocaleString(currentLocale())}</dd>
+            <dt>{tr('位置')}</dt>
+            <dd>{'sourcePath' in info ? String(info.sourcePath) : tr('目前資料夾')}</dd>
+            <dt>MIME</dt>
+            <dd>{info.mime}</dd>
+          </dl>
+        )}
+      </Modal>
       {images.length > PAGE_SIZE && (
         <Center mt="sm" style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <ActionIcon variant="light" disabled={!page} onClick={() => changePage(page - 1)}>
+            <ActionIcon
+              variant="light"
+              aria-label={tr('上一組')}
+              disabled={!page}
+              onClick={() => changePage(page - 1)}
+            >
               <Icon name="arrow-left" />
             </ActionIcon>
 
@@ -705,6 +760,7 @@ export function Gallery({
 
             <ActionIcon
               variant="light"
+              aria-label={tr('下一組')}
               disabled={(page + 1) * PAGE_SIZE >= images.length}
               onClick={() => changePage(page + 1)}
             >

@@ -52,8 +52,8 @@ IGDB、TMDB 需要 API 憑證，本輪依使用者要求排除。沒有內建 ke
 | 優先順序 | 來源 | 適用範圍與研究重點 |
 | --- | --- | --- |
 | 1 | 既有 VNDB、Bangumi、AniList | 先確認現有來源適用性；VNDB 著重視覺小說，Bangumi／AniList 補動畫、漫畫等作品資訊，不宣稱涵蓋全部同人作品 |
-| 2 | [DLsite](https://www.dlsite.com/home/)、[FANZA／DMM](https://support.dmm.com/affiliate/article/47547) | 同人遊戲、漫畫及適用的影音商品；DLsite 公開開發介面尚未確認，FANZA 官方 API 的資格、商品範圍與可選憑證管理需先確認。使用憑證屬待決方案，不直接解除現行無憑證限制 |
-| 3 | [BOOTH](https://booth.pm/)、[Melonbooks](https://www.melonbooks.co.jp/)、[虎之穴](https://ec.toranoana.jp/tora_r/ec) | 補個人製作遊戲、同人誌與冷門作品；逐站確認指定商品網址可取得資料及使用限制，不預設解析方式 |
+| 2 | [DLsite](https://www.dlsite.com/home/) | **已接入（2026-11-01）**：使用者貼上精確作品網址，main 讀取 DLsite 未文件化的公開 /product/info/ajax JSON（robots.txt 未禁止，每次僅一次使用者觸發的請求，不帶 Cookie、不繞過年齡確認）；取得標題、社團代碼、作品類型、發售日、年齡分級、價格、下載數與評分，封面限 img.dlsite.jp。端點無官方文件，欄位可能變動，失敗只顯示錯誤、不改原資料。**FANZA 已移除**（官方 API 需 API ID／affiliate ID，與免憑證限制衝突） |
+| 3 | [BOOTH](https://booth.pm/)、[Melonbooks](https://www.melonbooks.co.jp/)、[虎之穴](https://ec.toranoana.jp/tora_r/ec) | **本輪未接入**：BOOTH 的 JSON 端點無法於此環境驗證（測試商品回 404），待取得真實商品網址再查；Melonbooks 無 robots.txt 且需年齡確認 Cookie 才能取得商品頁，虎之穴只有 HTML，兩者皆無公開 API，不以程式送出年齡確認或解析 HTML，維持不接入直到條款與官方能力確認 |
 
 沿用精確作品網址 → 預覽 → 確認套用；同人動畫可優先查原販售頁，一般動畫／漫畫搭配作品資料庫。保留來源命名空間，區分原版／漢化版、單行本／單話及本體／DLC；不依同名自動合併、覆寫人工資料或下載作品內容。進度只記於 [S16](WORK_ITEMS.md#最新回饋)。
 

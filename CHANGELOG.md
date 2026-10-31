@@ -2,6 +2,15 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.11.0 — 2026-11-01
+
+- Queue panel: the toolbar badge is no longer clipped, both tabs share list/image views, auto-advance is an icon toggle, and counts read "N items" / "N files".
+- Add a game cover image URL import (preview, confirm, portable asset) with main-process download limits that reject private addresses, credentials, unsupported content and oversized files.
+- Add the "game cover" base cell for game projects in the block editor.
+- Add DLsite as a metadata source (exact product URL; FANZA is not supported).
+- File context menu with file info; friendly file type names; aligned folder text in the reader toolbar; pagination buttons get accessible names; narrow media toolbars can switch the display mode from the more-options menu.
+- Remove the obsolete media-ui test and stale video-viewer queue assertions.
+
 ## 0.10.0 — 2026-11-01
 
 - Queue: single click only plays (unqueued files are trial playback); right-click, Ctrl/Shift multi-select and Shift+arrows add to the queue; the queue entry moves to the top toolbar; the queue panel offers list and image views.

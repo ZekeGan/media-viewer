@@ -80,6 +80,17 @@ export async function publicMetadata(provider:Exclude<MetadataSourceId,'eh'|'exh
       if(typeof meta.Categories?.value==='string')list('TAGS',meta.Categories.value.split('|'))
       image=info?.thumburl;break
     }
+    case 'dlsite': {
+      const found=match(/^\/(maniax|home|girls|girls-drama|bl|bl-drama|comic|books|ai|soft|app|appx|pro)\/(?:work|announce)\/=\/product_id\/([A-Z]{2}\d{5,8})(?:\.html)?\/?$/),site=found[1],id=found[2]
+      const data=(await json('https://www.dlsite.com/'+site+'/product/info/ajax?product_id='+id+'&cdn_cache_min=1'))[id]
+      if(!data||typeof data!=='object')throw new Error('無法取得公開作品資料；作品可能已下架或不存在')
+      canonical='https://www.dlsite.com/'+site+'/work/=/product_id/'+id+'.html';title=clean(data.work_name)
+      text('PRODUCT_ID',id);text('MAKER_ID',data.maker_id);text('WORK_TYPE',data.work_type);text('SERIES',data.title_name)
+      if(typeof data.regist_date==='string')text('RELEASE_DATE',data.regist_date.slice(0,10))
+      text('AGE_CATEGORY',({1:'全年齡',2:'R-15',3:'成人'} as Record<number,string>)[data.age_category])
+      number('PRICE_JPY',data.price);number('DOWNLOAD_COUNT',data.dl_count);number('RATING',data.rate_average_2dp)
+      if(typeof data.work_image==='string'&&data.work_image.startsWith('//'))image='https:'+data.work_image;break
+    }
     case 'pixiv': {
       const id=match(/^(?:\/[a-z]{2})?\/artworks\/([1-9]\d{0,12})\/?$/)[1],response=await json('https://www.pixiv.net/ajax/illust/'+id)
       const data=response.body
@@ -101,7 +112,7 @@ export async function publicMetadata(provider:Exclude<MetadataSourceId,'eh'|'exh
   values.unshift({key:'TITLE',type:'string',value:title},{key:'SOURCE_URL',type:'string',value:canonical})
   const result:Result={preview:{provider,title:title.slice(0,200),source:canonical,values}}
   if(typeof image==='string')try{
-    const url=new URL(image),hosts=['lain.bgm.tv','s4.anilist.co','covers.openlibrary.org','upload.wikimedia.org','i.pximg.net']
+    const url=new URL(image),hosts=['lain.bgm.tv','s4.anilist.co','covers.openlibrary.org','upload.wikimedia.org','i.pximg.net','img.dlsite.jp']
     if(url.protocol!=='https:'||url.port||url.username||url.password||!hosts.includes(url.hostname))throw new Error('封面來源未允許')
     const bytes=await limitedBytes(await fetcher(url,{signal:AbortSignal.timeout(15000),redirect:'error',...(provider==='pixiv'?{headers:{Referer:canonical}}:{})}),10*1024*1024)
     const [ext,mime]=bytes[0]===255&&bytes[1]===216?['jpg','image/jpeg']:bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?['png','image/png']:bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP'?['webp','image/webp']:[]

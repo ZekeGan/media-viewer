@@ -6,3 +6,5 @@
 .cell-progress>.mantine-Progress-root { width:100%; }
 .card-cell .cell-rating,.editor-cell .cell-rating { display:flex; min-width:0; flex-wrap:wrap; align-items:center; gap:5px; }
 .cell-condition-hidden { opacity:.55; font-style:italic; }
+
+.cell-image-placeholder { display: grid; place-items: center; min-height: 80px; padding: 8px; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: 12px; }

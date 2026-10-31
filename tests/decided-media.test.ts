@@ -31,6 +31,7 @@ test('public metadata adapters use no credentials, retain source identities and 
     ['openlibrary','https://openlibrary.org/works/OL12W',{key:'/works/OL12W',title:'Title',subjects:['Tag']}],
     ['pixiv','https://www.pixiv.net/artworks/12',{error:false,body:{id:'12',title:'Title',userName:'Artist',tags:{tags:[{tag:'Tag'}]}}}],
     ['commons','https://commons.wikimedia.org/wiki/File:Test.jpg',{query:{pages:[{pageid:12,title:'File:Test.jpg',imageinfo:[{extmetadata:{ObjectName:{value:'Title'},LicenseShortName:{value:'CC0'}}}]}]}}],
+    ['dlsite','https://www.dlsite.com/maniax/work/=/product_id/RJ123456.html',{RJ123456:{work_name:'Title',maker_id:'RG1',work_type:'ADV',regist_date:'2025-01-02 00:00:00',age_category:3,price:1100,dl_count:5,rate_average_2dp:4.5}}],
     ['hitomi','https://hitomi.la/galleries/12.html','var galleryinfo = '+JSON.stringify({id:12,title:'Title',files:[{}],artists:[{artist:'Artist'}]})+';'],
   ]
   for(const [provider,url,body]of cases){
@@ -41,7 +42,7 @@ test('public metadata adapters use no credentials, retain source identities and 
     await assert.rejects(metadata(url,(async()=>new Response('{}',{status:403}))as typeof fetch))
     await assert.rejects(metadata(url,(async()=>new Response('x',{headers:{'content-length':String(3*1024*1024)}}))as typeof fetch),/過大/)
   }
-  for(const source of ['https://__proto__/subject/12','https://constructor/subject/12','https://bgm.tv.evil.test/subject/12','http://vndb.org/v12','https://user:pass@anilist.co/anime/12','https://api.themoviedb.org/3/movie/12'])await assert.rejects(metadata(source,(async()=>{throw new Error('MUST NOT FETCH')})as typeof fetch),error=>!String(error).includes('MUST NOT FETCH'))
+  for(const source of ['https://__proto__/subject/12','https://constructor/subject/12','https://bgm.tv.evil.test/subject/12','http://vndb.org/v12','https://user:pass@anilist.co/anime/12','https://api.themoviedb.org/3/movie/12','https://www.dlsite.com/evil/work/=/product_id/RJ123456.html','https://www.dlsite.com/maniax/work/=/product_id/rj123456.html','https://www.fanza.example/x'])await assert.rejects(metadata(source,(async()=>{throw new Error('MUST NOT FETCH')})as typeof fetch),error=>!String(error).includes('MUST NOT FETCH'))
   assert.equal(metadataSources.some(source=>['tmdb','igdb'].includes(source.id)),false)
   await assert.rejects(metadata('https://hitomi.la/reader/12.html',(async()=>new Response('var galleryinfo={"id":12,"title":"Title"};globalThis.injected=true;'))as typeof fetch),/未執行/)
   const cover=await metadata('https://bgm.tv/subject/12',(async()=>new Response(JSON.stringify({id:12,name:'Title',images:{medium:'https://localhost/private.png'}})))as typeof fetch)

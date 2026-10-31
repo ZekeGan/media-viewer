@@ -43,10 +43,12 @@ export type ExplorerRequest =
  | { action: 'runTarget'; rowId: string; templateId: string }
  | { action: 'subtitle'; rowId: string; fileId?: string; externalToken?: string; import?: boolean; encoding?: string }
  | { action: 'chooseSubtitle'; rowId: string }
+ | { action: 'imageUrlPreview'; url: string }
+ | { action: 'imageUrlApply'; rowId: string; revision: number; token: string; cover: boolean }
  | { action: 'metadataPreview'; source: string; provider?:MetadataSourceId }
  | { action: 'metadataApply'; rowId: string; revision: number; token: string; keys: string[]; image: boolean; mode?:'fill'|'replace' }
  | { action: 'rebuildIndex' }
-export interface ExplorerResponse { overview?:OverviewResult; snapshot?: Snapshot; content?: ContentResult; search?: SearchResult; subtitle?: { token: string; name: string; text: string; portable: boolean }; preview?: MetadataPreview; cancelled?: boolean; notice?: Notice }
+export interface ExplorerResponse { overview?:OverviewResult; snapshot?: Snapshot; content?: ContentResult; search?: SearchResult; subtitle?: { token: string; name: string; text: string; portable: boolean }; preview?: MetadataPreview; imagePreview?: { token: string; image: string; name: string; size: number }; cancelled?: boolean; notice?: Notice }
 export interface ExplorerApi { request(request: ExplorerRequest): Promise<ExplorerResponse>; dropSubtitle(rowId: string,file: File): Promise<ExplorerResponse> }
 export const newDetails = (): FolderDetails => ({ schemaVersion: 1 })
 export const defaultSubtitle = (): SubtitlePrefs => ({ offset: 0, size: 24, bottom: 8, color: '#ffffff', background: '#000000', encoding: 'utf-8' })

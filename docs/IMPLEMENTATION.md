@@ -68,6 +68,7 @@
 | `tests/library.test.ts` | 可攜讀寫、清理／復原、重疊專案、副本／遷移、取消與路徑限制 |
 | `tests/model.test.ts` | 可攜 folder／project／details 的接受／拒絕、CELL／字幕／路徑邊界、第一個錯誤順序、既有 null 相容性與輸入不變；資料 fixture 在 `tests/support/model-fixtures.ts` |
 | `tests/explorer.test.ts` | 型別值／覆寫、搜尋、媒體串流、字幕、遊戲動作與來源固定回應 |
+| `tests/image-url.test.ts` | 遊戲封面圖片網址：內網／憑證／重新導向／非圖片／超限拒絕、預覽不寫入、版本衝突與過期 token 保留原封面 |
 | `tests/decided.test.ts`／`tests/decided-media.test.ts` | 系統語言、型別／方案、設定匯出入／失敗復原、免憑證來源、唯讀 ZIP、總覽來源及穩定查詢 |
 | `tests/decided-ui.ts` | 實際欄位／方案／來源選單、面板偏好、虛擬總覽／即時語言、ZIP 解碼／原生 PDF、原生設定匯出／取消／匯入／復原；受控原檔不變 |
 | `tests/workspace.test.ts` | UI 設定、排序、併發及失敗保留 |
@@ -80,7 +81,6 @@
 | `tests/folder-navigation-ui.ts` | `pnpm exec tsx tests/folder-navigation-ui.ts`：左右共用歷史／停用狀態、資料夾圖示、原生命令加 DOM 序列不重複導覽、跨模式／縮放／專案隔離、可見浮層阻擋、缺失記錄拒絕與原檔／可攜記錄比對；原生命令採受控事件注入，不代表各實體滑鼠驅動已驗收 |
 | `tests/gallery-performance-ui.ts` | `pnpm exec tsx tests/gallery-performance-ui.ts`：1,200 張受控圖片的首批／首圖時間、捲動幀距、DOM／請求上界、相簿與漫畫翻組及開啟；`GALLERY_BENCH_BASELINE=1` 僅供比較，略過新能力斷言 |
 | `tests/gallery.test.ts` | 圖庫可見範圍、鍵盤焦點保留、比例到達後欄位穩定與調寬 |
-| `tests/media-ui.ts` | `pnpm exec tsx tests/media-ui.ts`：隔離影片自動播放偏好、切專案／關窗停止與過期事件、相簿兩模式捲動穩定、搜尋範圍／開啟；使用 FFmpeg 受控影音 |
 | `tests/media-feedback-ui.ts` | `pnpm exec tsx tests/media-feedback-ui.ts`：音樂篩選後的封面自動展示／選擇／壞圖復原、影片佇列清單／圖片切換及鍵盤提示、相同影片元件保留、漫畫舊檔案偏好回退；受控素材與可攜記錄逐位元比對，不代表音樂發聲驗收 |
 | `tests/media-workspace-ui.ts` | `pnpm exec tsx tests/media-workspace-ui.ts`：混合列表三種展示的不支援檔案限制／資訊與所在資料夾、預設收合佇列／過渡／焦點／減少動態效果、241 張圖虛擬清單與閱讀狀態、影音與 PDF 元件保留／卸載、損壞影片錯誤及 PDF／CBZ；隔離資料比對原檔與記錄 |
 | `tests/media-scope-ui.ts` | `pnpm exec tsx tests/media-scope-ui.ts`：目前／子資料夾範圍、三種排列搭配來源分組及收合、同名檔案／來源佇列、關閉還原及明確前往來源；比對原檔／專案與非閱讀資料 |

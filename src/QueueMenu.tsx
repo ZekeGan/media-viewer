@@ -2,18 +2,20 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { t as tr, useLocale } from './i18n'
 
-// Shared "add to play queue" context menu for Gallery and the playback panel.
+// Shared file context menu (add to play queue / file info) for Gallery and the playback panel.
 export function QueueMenu({
   x,
   y,
   count,
   onAdd,
+  onInfo,
   onClose,
 }: {
   x: number
   y: number
   count: number
-  onAdd: () => void
+  onAdd?: () => void
+  onInfo?: () => void
   onClose: () => void
 }) {
   useLocale()
@@ -48,9 +50,16 @@ export function QueueMenu({
         }
       }}
     >
-      <button ref={item} role="menuitem" onClick={onAdd}>
-        {count > 1 ? tr('加入播放佇列（{0} 項）', String(count)) : tr('加入播放佇列')}
-      </button>
+      {onAdd && (
+        <button ref={item} role="menuitem" onClick={onAdd}>
+          {count > 1 ? tr('加入播放佇列（{0} 項）', String(count)) : tr('加入播放佇列')}
+        </button>
+      )}
+      {onInfo && (
+        <button ref={onAdd ? undefined : item} role="menuitem" onClick={onInfo}>
+          {tr('檔案資訊')}
+        </button>
+      )}
     </div>,
     document.body
   )

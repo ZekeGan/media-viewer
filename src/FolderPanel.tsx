@@ -22,6 +22,7 @@ import {
   Textarea,
 } from '@mantine/core'
 import { visibleCells } from '../shared/layouts'
+import { ImageUrlImport } from './ImageUrlImport'
 import {
   contentCells,
   gameActionTemplates,
@@ -546,6 +547,7 @@ export function FolderPanel({
                 >
                   {tr('匯入封面')}
                 </Button>
+                <ImageUrlImport row={row} run={run} disabled={disabled || fieldDirty} />
               </section>
             )}
             {!!assets.length && (
