@@ -1,0 +1,137 @@
+import { useEffect, useRef, useState } from 'react'
+import { ActionIcon, Button, Tooltip } from '@mantine/core'
+import { fieldValue, type FolderRow, type Project } from '../shared/model'
+import { Icon } from './icons'
+import { t as tr, useLocale } from './i18n'
+
+// Filled values only; 0 and false are real values, empty strings and arrays are not.
+const shown = (value: unknown) =>
+  value == null || value === '' || (Array.isArray(value) && !value.length)
+    ? undefined
+    : typeof value === 'boolean'
+      ? tr(value ? '是' : '否')
+      : Array.isArray(value)
+        ? value.join(', ')
+        : typeof value === 'object'
+          ? JSON.stringify(value)
+          : String(value)
+
+export function FolderDetails({
+  row,
+  project,
+  openFolder,
+}: {
+  row: FolderRow
+  project: Project
+  openFolder: () => void
+}) {
+  useLocale()
+  const [copied, setCopied] = useState(false),
+    [copyError, setCopyError] = useState(''),
+    timer = useRef(0)
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+  const parts = row.path.split(/[\\/]+/).filter(Boolean),
+    location = row.depth > 1 ? parts.slice(-(row.depth - 1)).join('/') : tr('專案根目錄'),
+    fields = project.fieldBindings.flatMap((field) => {
+      const text = shown(fieldValue(row, field.attributeId))
+      return text === undefined ? [] : [{ id: field.attributeId, label: field.alias, text }]
+    })
+  return (
+    <details className="folder-details">
+      <summary>{tr('資料夾詳情')}</summary>
+      <dl>
+        <div className="folder-details-row">
+          <dt>{tr('位置')}</dt>
+          <dd>
+            <Tooltip label={row.path} events={{ hover: true, focus: true, touch: false }}>
+              <span className="folder-details-path" tabIndex={0}>
+                {location}
+              </span>
+            </Tooltip>
+            <Tooltip label={copied ? tr('已複製') : tr('複製完整路徑')}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label={tr('複製完整路徑')}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(row.path)
+                    setCopyError('')
+                    setCopied(true)
+                    window.clearTimeout(timer.current)
+                    timer.current = window.setTimeout(() => setCopied(false), 1500)
+                  } catch (error) {
+                    setCopyError(String(error))
+                  }
+                }}
+              >
+                <Icon name={copied ? 'check' : 'file'} size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={tr('在檔案總管開啟')}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label={tr('在檔案總管開啟')}
+                onClick={openFolder}
+              >
+                <Icon name="folder" size={14} />
+              </ActionIcon>
+            </Tooltip>
+          </dd>
+        </div>
+        {fields.map((field) => (
+          <div className="folder-details-row" key={field.id}>
+            <dt title={field.label}>{field.label}</dt>
+            <dd>
+              <span>{field.text}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {copyError && <small role="alert">{copyError}</small>}
+    </details>
+  )
+}
+
+export function SubfolderList({
+  folders,
+  childNames,
+  busy,
+  onChild,
+  className = '',
+}: {
+  folders: { id: string; name: string }[]
+  childNames?: string[]
+  busy: boolean
+  onChild: (name: string) => void
+  className?: string
+}) {
+  useLocale()
+  if (!folders.length) return null
+  return (
+    <details className={'media-subfolders ' + className} open>
+      <summary>
+        {tr('子資料夾')} ({folders.length})
+      </summary>
+      <div>
+        {folders.map((folder) => (
+          <div className="media-subfolder" key={folder.id}>
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              disabled={busy || !childNames?.includes(folder.name)}
+              title={childNames?.includes(folder.name) ? folder.name : tr('尚未建立或受保護')}
+              onClick={() => onChild(folder.name)}
+            >
+              <Icon name="folder" size={14} />
+              {folder.name}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </details>
+  )
+}

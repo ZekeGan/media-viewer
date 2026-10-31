@@ -40,7 +40,7 @@ try{
  for(const name of ['Audio media','Audio legacy']){
   if(name==='Audio legacy'){await page.getByRole('button',{name:'開啟專案 Audio media',exact:true}).first().click();await page.locator('.mixed-media-browser').waitFor()}
   await page.getByRole('button',{name:'開啟專案 '+name,exact:true}).first().click();await page.locator('.mixed-media-browser').waitFor()
-  if(name==='Audio legacy'){await page.locator('.media-folder-info summary').click();assert.equal(await page.locator('.media-folder-info .cell-name').evaluate(node=>getComputedStyle(node).color),'rgb(18, 52, 86)');await page.locator('.media-folder-info summary').click()}
+  if(name==='Audio legacy'){assert.equal(await page.locator('.folder-details').evaluate(node=>(node as HTMLDetailsElement).open),false);await page.locator('.folder-details summary').click();await page.locator('.folder-details').getByRole('button',{name:'複製完整路徑',exact:true}).waitFor();await page.locator('.folder-details').getByRole('button',{name:'在檔案總管開啟',exact:true}).waitFor();assert.equal(await page.locator('.folder-details-path').innerText(),'專案根目錄');await page.locator('.folder-details summary').click()}
   await page.locator('.media-thumbnail').filter({hasText:'embedded.mp3'}).click();await page.locator('audio').waitFor({state:'attached'})
   await page.waitForFunction(()=>{const audio=document.querySelector('audio');return !!audio&&!audio.paused&&audio.currentTime>.2&&!audio.muted&&audio.volume>0}).catch(async error=>{console.error(await page.locator('audio').evaluate(node=>{const a=node as HTMLAudioElement;return {src:a.currentSrc,paused:a.paused,time:a.currentTime,ready:a.readyState,error:a.error?.message,volume:a.volume,muted:a.muted}}));throw error})
   const decoded=await page.locator('audio').evaluate(async node=>{
@@ -72,7 +72,8 @@ try{
   if(name==='Audio media'){
    await page.getByRole('button',{name:'切換媒體佇列',exact:true}).click()
    await page.getByRole('tab',{name:/目前資料夾/}).click()
-   await page.getByRole('button',{name:'加入佇列 fixture.mp4',exact:true}).click()
+   const queueFile=async(file:string)=>{await page.locator('.playback-items:visible').getByRole('button',{name:file,exact:true}).click({button:'right'});await page.getByRole('menuitem',{name:'加入播放佇列',exact:true}).click()}
+   await queueFile('embedded.mp3');await queueFile('fixture.mp4')
    await page.getByRole('tab',{name:'播放佇列',exact:true}).click()
    await page.evaluate(()=>{(window as any).backgroundAudio=document.querySelector('audio')})
    await page.getByRole('button',{name:'縮小播放',exact:true}).click()
@@ -85,10 +86,15 @@ try{
    await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.restore();win.focus()})
    await page.getByRole('button',{name:'返回播放佇列',exact:true}).click()
    await page.getByRole('tab',{name:/目前資料夾/}).click()
-   const add=page.getByRole('button',{name:'加入佇列 embedded.mp3',exact:true})
-   await add.click();await add.click()
+   await queueFile('embedded.mp3');await queueFile('embedded.mp3')
    await page.getByRole('tab',{name:'播放佇列',exact:true}).click()
    assert.equal(await page.locator('.playback-items:visible>div').count(),4)
+   await page.getByRole('tab',{name:/目前資料夾/}).click()
+   await page.locator('.playback-items:visible').getByRole('button',{name:'embedded.mp3',exact:true}).click()
+   await page.getByRole('tab',{name:'播放佇列',exact:true}).click()
+   assert.equal(await page.locator('.playback-items:visible>div').count(),4,'single click plays without changing the queue')
+   await page.screenshot({path:path.join(root,'queue-list.png')})
+   await page.getByRole('button',{name:'圖片模式',exact:true}).click();await page.screenshot({path:path.join(root,'queue-images.png')});await page.getByRole('button',{name:'清單模式',exact:true}).click()
    await page.getByRole('button',{name:'fixture.mp4',exact:true}).click()
    await page.waitForFunction(()=>{const video=document.querySelector('video');return !!video&&!video.paused&&video.currentTime>.1})
    await page.getByRole('button',{name:'縮小播放',exact:true}).click()
@@ -117,6 +123,12 @@ try{
    await page.mouse.move(bounds.x+25,bounds.y+20);await page.mouse.down();await page.mouse.move(30,100,{steps:6});await page.mouse.up()
    await page.waitForTimeout(220)
    let rect=await page.locator('.playback-mini').boundingBox();assert.ok(rect&&rect.x>=0&&rect.y>=0)
+   const windowBounds=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].getBounds())
+   const top=await header.boundingBox();assert.ok(top)
+   await page.mouse.move(top.x+25,top.y+20);await page.mouse.down();await page.mouse.move(top.x+60,2,{steps:6});await page.mouse.up();await page.waitForTimeout(220)
+   rect=await page.locator('.playback-mini').boundingBox();assert.ok(rect&&rect.y<=10,'mini player can sit against the top edge')
+   assert.equal(await page.locator('.playback-mini').evaluate(node=>getComputedStyle(node).getPropertyValue('-webkit-app-region')),'no-drag','mini player opts out of the title bar drag region')
+   assert.deepEqual(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].getBounds()),windowBounds,'dragging the mini player must not move the native window')
    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setBounds({width:800,height:600}))
    await page.waitForTimeout(220);rect=await page.locator('.playback-mini').boundingBox();assert.ok(rect&&rect.x+rect.width<=800&&rect.y+rect.height<=600)
    await page.screenshot({path:path.join(root,'mini.png')})

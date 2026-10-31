@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import { Icon } from './icons'
+import { QueueMenu } from './QueueMenu'
 import { ActionIcon, Button, Center, Group, SegmentedControl, Stack, Tooltip } from '@mantine/core'
 import { canPreviewMedia, mediaIdentity } from '../shared/media'
 import type { MediaEntry, OverviewEntry, ReadingPrefs } from '../shared/explorer'
@@ -33,8 +34,10 @@ const Tile = memo(
     open,
     select,
     ratio,
-    enqueue,
-    queued,
+    picking,
+    picked,
+    pick,
+    menu,
     openFolder,
   }: {
     entry: MediaEntry
@@ -45,8 +48,10 @@ const Tile = memo(
     open: (index: number) => void
     select: (index: number) => void
     ratio: (id: string, value: number) => void
-    enqueue?: (entry: MediaEntry) => void
-    queued?: boolean
+    picking?: boolean
+    picked?: boolean
+    pick: (index: number, mode: 'toggle' | 'range') => void
+    menu: (index: number, event: React.MouseEvent) => void
     openFolder?: (entry: MediaEntry) => void
   }) {
     useLocale()
@@ -84,21 +89,7 @@ const Tile = memo(
       if (mode === 'masonry' && node?.complete && node.naturalHeight)
         ratio(mediaIdentity(entry), node.naturalWidth / node.naturalHeight)
     }, [mode, entry, ratio])
-    const add =
-      ['audio', 'video'].includes(entry.kind) && enqueue ? (
-        <button
-          className="media-enqueue"
-          aria-label={
-            queued ? tr('移出音樂佇列 {0}', entry.name) : tr('加入音樂佇列 {0}', entry.name)
-          }
-          onClick={(event) => {
-            event.stopPropagation()
-            enqueue(entry)
-          }}
-        >
-          <Icon name={queued ? 'check' : 'plus'} size={16} />
-        </button>
-      ) : null
+    const playable = ['audio', 'video'].includes(entry.kind)
     const supported = canPreviewMedia(entry)
     const location =
       !supported && openFolder ? (
@@ -123,7 +114,16 @@ const Tile = memo(
         aria-label={
           'sourcePath' in entry ? String(entry.sourcePath) + '/' + entry.name : entry.name
         }
-        onClick={() => (supported ? open(tile.index) : select(tile.index))}
+        aria-pressed={picking && playable ? !!picked : undefined}
+        onClick={(event) =>
+          picking && (event.ctrlKey || event.metaKey)
+            ? pick(tile.index, 'toggle')
+            : picking && event.shiftKey
+              ? pick(tile.index, 'range')
+              : supported
+                ? open(tile.index)
+                : select(tile.index)
+        }
       >
         <span className="thumbnail-image">
           {!supported ? (
@@ -165,13 +165,13 @@ const Tile = memo(
     const style = { left: tile.x, top: tile.y, width: tile.width, height: tile.height }
     return mode === 'list' ? (
       <div
-        className={'gallery-tile image-file-row ' + (selected ? 'selected' : '')}
+        className={'gallery-tile image-file-row ' + (selected ? 'selected ' : '') + (picked ? 'picked' : '')}
         style={style}
         data-index={tile.index}
         onClick={() => select(tile.index)}
+        onContextMenu={picking && playable ? (event) => menu(tile.index, event) : undefined}
       >
         {thumbnail}
-        {add}
         {location}
         <span title={entry.name}>
           {entry.name}
@@ -185,9 +185,13 @@ const Tile = memo(
         <small>{(entry.size / 1024).toFixed(1)} KB</small>
       </div>
     ) : (
-      <div className="gallery-tile" style={style} data-index={tile.index}>
+      <div
+        className={'gallery-tile ' + (picked ? 'picked' : '')}
+        style={style}
+        data-index={tile.index}
+        onContextMenu={picking && playable ? (event) => menu(tile.index, event) : undefined}
+      >
         {thumbnail}
-        {add}
         {location}
       </div>
     )
@@ -195,12 +199,14 @@ const Tile = memo(
   (before, after) =>
     before.open === after.open &&
     before.openFolder === after.openFolder &&
-    before.enqueue === after.enqueue &&
+    before.picking === after.picking &&
+    before.pick === after.pick &&
+    before.menu === after.menu &&
     before.entry === after.entry &&
     before.mode === after.mode &&
     before.playing === after.playing &&
     before.selected === after.selected &&
-    before.queued === after.queued &&
+    before.picked === after.picked &&
     before.tile.index === after.tile.index &&
     before.tile.x === after.tile.x &&
     before.tile.y === after.tile.y &&
@@ -220,7 +226,6 @@ export function Gallery({
   onOpen,
   onOpenFolder,
   onEnqueue,
-  queuedIds,
   groupBySource = false,
   sourceRoot,
   onSource,
@@ -236,8 +241,7 @@ export function Gallery({
   suspended?: boolean
   onOpen?: (entry: MediaEntry, entries: MediaEntry[]) => void
   onOpenFolder?: (entry: MediaEntry) => void
-  onEnqueue?: (entry: MediaEntry) => void
-  queuedIds?: string[]
+  onEnqueue?: (entries: MediaEntry[]) => void
   groupBySource?: boolean
   sourceRoot?: string
   onSource?: (id: string) => void
@@ -249,7 +253,9 @@ export function Gallery({
     [reader, setReader] = useState<number>(),
     [selected, setSelected] = useState<number>(),
     [focused, setFocused] = useState(-1),
-    [version, setVersion] = useState(0)
+    [version, setVersion] = useState(0),
+    [picked, setPicked] = useState<Set<string>>(new Set()),
+    [menu, setMenu] = useState<{ x: number; y: number }>()
   const [view, setView] = useState({ top: 0, height: 700, width: 0 }),
     actualTop = useRef(0),
     grid = useRef<HTMLDivElement>(null),
@@ -259,7 +265,8 @@ export function Gallery({
     ratioFrame = useRef(0),
     anchor = useRef<{ index: number; y: number; scrollTop: number }>(),
     focusNext = useRef<number>(),
-    modeAnchor = useRef<{ index: number; origin: number }>()
+    modeAnchor = useRef<{ index: number; origin: number }>(),
+    pickAnchor = useRef<number>()
   const images = useMemo(
       () => entries.filter((entry) => (mixed ? entry.kind !== 'folder' : entry.kind === 'image')),
       [entries, mixed]
@@ -441,9 +448,56 @@ export function Gallery({
     },
     [onOpen, images]
   )
-  const select = useCallback(
-    (index: number) => setSelected(current.current.page * PAGE_SIZE + index),
-    []
+  const select = useCallback((index: number) => {
+    pickAnchor.current = current.current.page * PAGE_SIZE + index
+    setSelected(pickAnchor.current)
+  }, [])
+  const pick = useCallback(
+    (index: number, mode: 'toggle' | 'range') => {
+      const at = current.current.page * PAGE_SIZE + index
+      if (!images[at]) return
+      if (mode === 'range') {
+        const from = pickAnchor.current ?? at
+        setPicked(
+          new Set(
+            images
+              .slice(Math.min(from, at), Math.max(from, at) + 1)
+              .map((entry) => mediaIdentity(entry))
+          )
+        )
+        return
+      }
+      pickAnchor.current = at
+      setPicked((previous) => {
+        const next = new Set(previous),
+          id = mediaIdentity(images[at])
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
+    },
+    [images]
+  )
+  const openMenu = useCallback(
+    (index: number, event: React.MouseEvent) => {
+      const entry = images[current.current.page * PAGE_SIZE + index]
+      if (!entry) return
+      event.preventDefault()
+      const box = event.currentTarget.getBoundingClientRect()
+      pickAnchor.current ??= current.current.page * PAGE_SIZE + index
+      setPicked((previous) =>
+        previous.has(mediaIdentity(entry)) ? previous : new Set([mediaIdentity(entry)])
+      )
+      setMenu({ x: event.clientX || box.left + 8, y: event.clientY || box.top + 8 })
+    },
+    [images]
+  )
+  const pickedFiles = useMemo(
+    () =>
+      images.filter(
+        (entry) => ['audio', 'video'].includes(entry.kind) && picked.has(mediaIdentity(entry))
+      ),
+    [images, picked]
   )
   const tiles = galleryWindow(layout, view.top, view.height, 240, focused)
   const changePage = (next: number) => {
@@ -510,6 +564,10 @@ export function Gallery({
           if (tile) setFocused(Number(tile.dataset.index))
         }}
         onKeyDown={(event) => {
+          if (event.key === 'Escape' && picked.size) {
+            setPicked(new Set())
+            return
+          }
           if (event.altKey || event.ctrlKey || event.metaKey) return
           const tile = (event.target as HTMLElement).closest<HTMLElement>('[data-index]')
           if (!tile) return
@@ -534,6 +592,10 @@ export function Gallery({
                   : visible[position + delta]
           if ((!delta && !['Home', 'End'].includes(event.key)) || next === undefined) return
           event.preventDefault()
+          if (event.shiftKey && onEnqueue) {
+            pickAnchor.current ??= page * PAGE_SIZE + index
+            pick(next, 'range')
+          }
           focusNext.current = next
           setFocused(next)
           const target = layout.tiles.find((tile) => tile.index === next)!,
@@ -607,12 +669,27 @@ export function Gallery({
               open={open}
               select={select}
               ratio={reportRatio}
-              enqueue={onEnqueue}
+              picking={!!onEnqueue}
+              picked={picked.has(mediaIdentity(items[tile.index]))}
+              pick={pick}
+              menu={openMenu}
               openFolder={onOpenFolder}
-              queued={queuedIds?.includes(mediaIdentity(items[tile.index]))}
             />
           ))}
       </div>
+      {menu && onEnqueue && (
+        <QueueMenu
+          x={menu.x}
+          y={menu.y}
+          count={pickedFiles.length}
+          onClose={() => setMenu(undefined)}
+          onAdd={() => {
+            onEnqueue(pickedFiles)
+            setPicked(new Set())
+            setMenu(undefined)
+          }}
+        />
+      )}
       {images.length > PAGE_SIZE && (
         <Center mt="sm" style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

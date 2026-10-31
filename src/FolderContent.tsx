@@ -10,6 +10,7 @@ import { Icon } from './icons'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Button, Group, Menu, Tooltip } from '@mantine/core'
 import { Card } from './Card'
+import { SubfolderList } from './FolderParts'
 import { Gallery } from './Gallery'
 import {
   contentCells,
@@ -483,24 +484,12 @@ export function FolderContent({
           }}
         />
       ) : null}
-      {content.entries.some((e) => e.kind === 'folder') && (
-        <div className="content-subfolders">
-          {content.entries
-            .filter((e) => e.kind === 'folder')
-            .map((e) => (
-              <div className="media-subfolder" key={e.id}>
-                <Button
-                  variant="subtle"
-                  disabled={busy || !childNames?.includes(e.name)}
-                  title={childNames?.includes(e.name) ? e.name : tr('尚未建立或受保護')}
-                  onClick={() => onChild(e.name)}
-                >
-                  <Icon name="folder" size={15} /> {e.name}
-                </Button>
-              </div>
-            ))}
-        </div>
-      )}
+      <SubfolderList
+        folders={content.entries.filter((e) => e.kind === 'folder')}
+        childNames={childNames}
+        busy={busy}
+        onChild={onChild}
+      />
     </div>
   )
 }

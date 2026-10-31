@@ -16,6 +16,7 @@ import {
 } from '@mantine/core'
 import type { FolderRow, LinkedProject, Snapshot } from '../shared/model'
 import { SearchDialog } from './SearchDialog'
+import { usePlayback } from './Playback'
 import {
   defaultWorkspace,
   sectionIds,
@@ -48,6 +49,7 @@ interface Props {
 const title = (p: LinkedProject) => p.project?.name ?? tr("待重新連結")
 export function DesktopShell(props: Props) {
  useLocale()
+ const playback = usePlayback()
 
   const { projects, selected, onOverlay, onDirty } = props
   const [workspace, setWorkspace] = useState<WorkspaceState>({ prefs: defaultWorkspace() })
@@ -481,6 +483,7 @@ export function DesktopShell(props: Props) {
             ●
           </span>
         )}
+        {!!playback?.count && <Tooltip label={tr("播放佇列")}><ActionIcon className="playback-toggle" aria-label={tr("播放佇列")+" · "+playback.count} variant="subtle" color="gray" onClick={playback.openQueue}><Icon name="list"/><span className="playback-toggle-count">{playback.count}</span></ActionIcon></Tooltip>}
         <Tooltip label={tr("應用程式設定")}><ActionIcon className="global-settings" aria-label={tr("應用程式設定")} variant="subtle" color="gray" disabled={props.busy} onClick={props.onSettings}><Icon name="settings"/></ActionIcon></Tooltip>
         <div className="window-controls">
           <button aria-label={tr("最小化視窗")} onClick={() => windowAction('minimize')}>

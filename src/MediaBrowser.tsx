@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ActionIcon, Button, Menu, Select, Tooltip } from '@mantine/core'
+import { ActionIcon, Menu, Select, Tooltip } from '@mantine/core'
 import type {
   ContentResult,
   ExplorerRequest,
@@ -18,8 +18,7 @@ import {
 import { Gallery } from './Gallery'
 import { MediaViewer } from './MediaViewer'
 import { usePlayback } from './Playback'
-import { Card } from './Card'
-import { contentCells } from '../shared/explorer'
+import { FolderDetails, SubfolderList } from './FolderParts'
 import { useFileVisibility } from './useFileVisibility'
 import { Icon } from './icons'
 import { t as tr, useLocale } from './i18n'
@@ -73,10 +72,8 @@ export function MediaBrowser({
       file: MediaEntry
       source: FolderRow
       filter: MediaFilter
-      added?: string[]
     }>(),
     [opening, setOpening] = useState('')
-  const [audioIds, setAudioIds] = useState<string[]>([])
   const alive = useRef(true),
     operation = useRef(0)
   useEffect(() => {
@@ -148,23 +145,11 @@ export function MediaBrowser({
   )
   const folders = entries.filter((entry) => entry.kind === 'folder'),
     pending = scope === 'descendants' ? overview.loading : loading
-  const added = useMemo(() => {
-    const byId = new Map(
-      shown.filter((entry) => entry.kind === 'audio').map((entry) => [mediaIdentity(entry), entry])
-    )
-    return audioIds.flatMap((id) => byId.get(id) ?? [])
-  }, [shown, audioIds])
-  const addedSources = new Map<string, typeof added>()
-  for (const entry of added) {
-    const group = addedSources.get(entry.rowId) ?? []
-    group.push(entry)
-    addedSources.set(entry.rowId, group)
-  }
   const playback = usePlayback()
   useEffect(() => {
     playback?.source({ row, project, entries: entries.filter((entry) => entry.kind !== 'folder') })
   }, [row.rowId, entries, project])
-  const open = async (entry: MediaEntry, playAdded = false) => {
+  const open = async (entry: MediaEntry) => {
     if (!canPreviewMedia(entry) || busy || opening) return
     const sourceId = (entry as OverviewEntry).rowId ?? row.rowId,
       token = ++operation.current
@@ -183,7 +168,7 @@ export function MediaBrowser({
         return
       }
       if (source?.record)
-        setSession({ file: entry, source, filter, ...(playAdded ? { added: [...audioIds] } : {}) })
+        setSession({ file: entry, source, filter })
     } finally {
       if (alive.current && token === operation.current) setOpening('')
     }
@@ -193,8 +178,7 @@ export function MediaBrowser({
     ? sourceFiles.filter(
         (entry) =>
           entry.kind === 'subtitle' ||
-          (matchesMedia(entry, session.filter) &&
-            (!session.added || session.added.includes(mediaIdentity(entry))))
+          matchesMedia(entry, session.filter)
       )
     : []
   return (
@@ -288,41 +272,12 @@ export function MediaBrowser({
         </p>
       )}
       {!!opening && <small role="status">{tr('載入內容…')}</small>}
-      <details className="media-folder-info">
-        <summary>{tr('資料夾資訊')}</summary>
-        <Card
-          row={row}
-          project={{
-            ...project,
-            folderLayouts: undefined,
-            cells: contentCells(project, project.mediaCategory),
-          }}
-          open={() => void act({ action: 'open', rowId: row.rowId })}
-        />
-      </details>
-      {!!folders.length && (
-        <details className="media-subfolders" open>
-          <summary>
-            {tr('子資料夾')} ({folders.length})
-          </summary>
-          <div>
-            {folders.map((folder) => (
-              <div className="media-subfolder" key={folder.id}>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  disabled={busy || !childNames?.includes(folder.name)}
-                  title={childNames?.includes(folder.name) ? folder.name : tr('尚未建立或受保護')}
-                  onClick={() => onChild(folder.name)}
-                >
-                  <Icon name="folder" size={14} />
-                  {folder.name}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+      <FolderDetails
+        row={row}
+        project={project}
+        openFolder={() => void act({ action: 'open', rowId: row.rowId })}
+      />
+      <SubfolderList folders={folders} childNames={childNames} busy={busy} onChild={onChild} />
       <Gallery
         key={scope + '/' + filter + '/' + view}
         entries={shown}
@@ -353,27 +308,26 @@ export function MediaBrowser({
         onOpenFolder={(entry) =>
           void act({ action: 'open', rowId: (entry as OverviewEntry).rowId ?? row.rowId })
         }
-        onEnqueue={(entry) => {
-          const source = sourceRows.find(
-            (source) => source.rowId === ((entry as OverviewEntry).rowId ?? row.rowId)
-          )
-          if (source && playback) {
-            playback.add(
-              {
-                row: source,
-                project,
-                entries: visible.filter((file) => file.rowId === source.rowId),
-              },
-              entry
-            )
-            return
-          }
-          setAudioIds((ids) => {
-            const id = mediaIdentity(entry)
-            return ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]
-          })
-        }}
-        queuedIds={audioIds}
+        onEnqueue={
+          playback
+            ? (files) => {
+                for (const source of sourceRows) {
+                  const group = files.filter(
+                    (file) => ((file as OverviewEntry).rowId ?? row.rowId) === source.rowId
+                  )
+                  if (group.length)
+                    playback.add(
+                      {
+                        row: source,
+                        project,
+                        entries: visible.filter((file) => file.rowId === source.rowId),
+                      },
+                      group
+                    )
+                }
+              }
+            : undefined
+        }
       />
       {session && (
         <MediaViewer

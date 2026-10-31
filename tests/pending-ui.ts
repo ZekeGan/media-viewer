@@ -69,7 +69,7 @@ try{
  assert.ok((await deletion.textContent())!.includes('受影響欄位：1'));await deletion.getByRole('button',{name:'取消',exact:true}).click();assert.equal(await button('刪除欄位 Flag').count(),1)
  await button('刪除欄位 Flag').click();await button('確認刪除欄位及資料').click();await deletion.waitFor({state:'hidden'});assert.equal(await button('刪除欄位 Flag').count(),0);await button('取消').click()
  await button('開啟專案 Pending Manga').first().click();assert.equal(await toolbar.getByText('檔案',{exact:true}).count(),0)
- await page.locator('.content-subfolders').getByRole('button',{name:'a',exact:true}).click()
+ await page.locator('.media-subfolders').getByRole('button',{name:'a',exact:true}).click()
  await page.locator('.media-thumbnail').filter({hasText:'page.png'}).click()
  await page.getByRole('dialog',{name:'漫畫閱讀器',exact:true}).waitFor();assert.equal(await page.locator('.reader-page-total').textContent(),'/ 1');await button('退出閱讀器').click()
  await button('開啟專案 Pending Manga').first().hover();await button('專案選單 Pending Manga').click();await page.getByRole('menuitem',{name:'專案設定',exact:true}).click()

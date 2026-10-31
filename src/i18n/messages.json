@@ -5086,5 +5086,53 @@
     "en": "Keep project identity, fields, layouts, covers and legacy playback preferences. The media page does not autoplay on folder entry. Cancel before saving; saving backs up original settings.",
     "ja": "ID・フィールド・レイアウト・カバー・旧再生設定を保持します。フォルダー移動で自動再生しません。保存前はキャンセル可能で、保存時に元の設定をバックアップします。",
     "es": "Conserva identidad, campos, diseños, portadas y preferencias anteriores. No reproduce al entrar en carpetas. Puedes cancelar antes de guardar; se crea una copia de la configuración original."
+  },
+  "加入播放佇列": {
+    "zh-CN": "加入播放队列",
+    "en": "Add to play queue",
+    "ja": "再生キューに追加",
+    "es": "Añadir a la cola"
+  },
+  "加入播放佇列（{0} 項）": {
+    "zh-CN": "加入播放队列（{0} 项）",
+    "en": "Add {0} items to play queue",
+    "ja": "再生キューに追加（{0} 件）",
+    "es": "Añadir {0} elementos a la cola"
+  },
+  "試播中（未加入佇列）": {
+    "zh-CN": "试播中（未加入队列）",
+    "en": "Trial playback (not queued)",
+    "ja": "試聴中（キュー未追加）",
+    "es": "Reproducción de prueba (fuera de la cola)"
+  },
+  "佇列是空的，在檔案上按右鍵可加入": {
+    "zh-CN": "队列为空，在文件上右键即可加入",
+    "en": "The queue is empty. Right-click a file to add it.",
+    "ja": "キューは空です。ファイルを右クリックして追加できます。",
+    "es": "La cola está vacía. Haz clic derecho en un archivo para añadirlo."
+  },
+  "資料夾詳情": {
+    "zh-CN": "文件夹详情",
+    "en": "Folder details",
+    "ja": "フォルダーの詳細",
+    "es": "Detalles de la carpeta"
+  },
+  "位置": {
+    "zh-CN": "位置",
+    "en": "Location",
+    "ja": "場所",
+    "es": "Ubicación"
+  },
+  "複製完整路徑": {
+    "zh-CN": "复制完整路径",
+    "en": "Copy full path",
+    "ja": "フルパスをコピー",
+    "es": "Copiar ruta completa"
+  },
+  "專案根目錄": {
+    "zh-CN": "项目根目录",
+    "en": "Project root",
+    "ja": "プロジェクトのルート",
+    "es": "Raíz del proyecto"
   }
 }
