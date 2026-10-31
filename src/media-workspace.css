@@ -1068,3 +1068,15 @@
     justify-content: flex-end;
     margin-bottom: 6px;
 }
+
+.canvas.group-editing {
+    border: 2px solid var(--accent);
+}
+
+.group-editing-bar {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.group-editing-bar > strong {
+    color: var(--accent);
+}

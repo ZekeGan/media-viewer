@@ -884,7 +884,10 @@ export function Editor({
             onChange={(v) => setPreviewId(v ?? undefined)}
             mb="md"
           />
-          <div ref={containerRef as React.RefObject<HTMLDivElement>} className="canvas">
+          <div
+            ref={containerRef as React.RefObject<HTMLDivElement>}
+            className={`canvas ${group ? 'group-editing' : ''}`}
+          >
             {group && (
               <div className="group-editing-bar">
                 <Button
@@ -897,7 +900,15 @@ export function Editor({
                 >
                   {tr('← 返回上層')}
                 </Button>
-                <small>{tr('正在編輯群組內容；群組內不能再放群組，組件需落在群組範圍內。')}</small>
+                <strong>{tr('群組內容')}</strong>
+                <small>
+                  {tr(
+                    '可用空間：12 欄 × {rows} 列，已用 {used} 列、剩餘 {free} 列。組件需落在此範圍內。'
+                  )
+                    .replace('{rows}', String(group.grid.h))
+                    .replace('{used}', String(childBottom(group)))
+                    .replace('{free}', String(Math.max(0, group.grid.h - childBottom(group))))}
+                </small>
               </div>
             )}
             {!level.length && (
@@ -1048,6 +1059,11 @@ export function Editor({
                     {tr(
                       '群組可整體移動、縮放並設定顯示條件。群組只有一層，雙擊或按下方按鈕編輯內容。'
                     )}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {tr('目前高度 {rows} 列，內容已用 {used} 列；高度不能縮小到低於內容。')
+                      .replace('{rows}', String(selectedCell.grid.h))
+                      .replace('{used}', String(childBottom(selectedCell)))}
                   </Text>
                   <Button
                     variant="default"

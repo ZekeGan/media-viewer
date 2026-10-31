@@ -2,6 +2,10 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.13.3 — 2026-11-01
+
+- Group editing is visibly distinct (accent border and tinted bar), shows the group's 12 × N capacity with used and free rows, and the group inspector states the minimum height set by its contents.
+
 ## 0.13.2 — 2026-11-01
 
 - Add Prettier as a dev dependency with format and format:check scripts, and format all TypeScript sources and tests (formatting only, no behaviour change).

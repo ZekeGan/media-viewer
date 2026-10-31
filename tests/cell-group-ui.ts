@@ -59,6 +59,15 @@ try {
   assert.equal(await page.locator('.editor-cell').count(), 2)
   await page.locator('.editor-cell').first().dblclick()
   await page.locator('.group-editing-bar').waitFor()
+  assert.ok(
+    await page.locator('.canvas.group-editing').count(),
+    'group editing is visibly distinct'
+  )
+  assert.match(
+    await page.locator('.group-editing-bar').innerText(),
+    /剩餘 \d+ 列/,
+    'capacity shown'
+  )
   assert.equal(await page.locator('.editor-cell').count(), 2, 'inner level shows the two children')
   assert.equal(
     await page.locator('.basic-palette').getByRole('button', { name: '群組', exact: true }).count(),
