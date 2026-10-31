@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { t as tr, useLocale } from './i18n'
 
 // Shared file context menu (add to play queue / file info) for Gallery and the playback panel.
-export function QueueMenu({
+export function FileMenu({
   x,
   y,
   count,

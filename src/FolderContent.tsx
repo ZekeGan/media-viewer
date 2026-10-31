@@ -10,7 +10,7 @@ import { Icon } from './icons'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ActionIcon, Button, Group, Menu, Tooltip } from '@mantine/core'
 import { Card } from './Card'
-import { SubfolderList } from './FolderParts'
+import { FolderDetails, FolderHeader } from './FolderParts'
 import { Gallery } from './Gallery'
 import {
   contentCells,
@@ -73,7 +73,9 @@ export function FolderContent({
       contentRow.current = row.rowId
     }
     setError('')
-    const paged = ['album', 'manga', 'media'].includes(project.mediaCategory)
+    const paged =
+      ['album', 'manga', 'media'].includes(project.mediaCategory) ||
+      (project.mediaCategory === 'game' && !isGameFolder(row))
     void (async () => {
       let cursor: string | undefined
       const counted: ContentResult['entries'] = []
@@ -125,7 +127,11 @@ export function FolderContent({
   if (!content) return <p className="media-loading">{tr('載入內容…')}</p>
   const visibleEntries = content.entries.filter((entry) => visibleFile(entry, visibility))
   const selectedFile = visibleEntries.find((entry) => entry.id === selectedFileId) ?? selectedEntry
-  if (['media', 'music', 'album', 'video', 'other'].includes(project.mediaCategory)&&(!selectedFile||['audio','video'].includes(selectedFile.kind)))
+  // Everything that is not a dedicated game ROOT or manga work uses the unified folder page.
+  const unified =
+    ['media', 'music', 'album', 'video', 'other'].includes(project.mediaCategory) ||
+    (project.mediaCategory === 'game' && !isGameFolder(row))
+  if (unified && (!selectedFile || ['audio', 'video'].includes(selectedFile.kind)))
     return (
       <MediaBrowser
         row={row}
@@ -249,6 +255,11 @@ export function FolderContent({
     ]
     return (
       <div className="game-content">
+        <FolderDetails
+          row={row}
+          project={project}
+          openFolder={() => void act({ action: 'open', rowId: row.rowId })}
+        />
         <div className="game-banner">
           {(row.boundary?.state === 'candidate' ||
             row.record?.details?.boundary?.state === 'candidate') && (
@@ -440,6 +451,15 @@ export function FolderContent({
           </Button>
         </p>
       )}
+      <FolderHeader
+        row={row}
+        project={project}
+        openFolder={() => void act({ action: 'open', rowId: row.rowId })}
+        folders={content.entries.filter((e) => e.kind === 'folder')}
+        childNames={childNames}
+        busy={busy}
+        onChild={onChild}
+      />
       <div className="media-info-template">
         {project.mediaCategory === 'manga' && first && (
           <img
@@ -484,12 +504,6 @@ export function FolderContent({
           }}
         />
       ) : null}
-      <SubfolderList
-        folders={content.entries.filter((e) => e.kind === 'folder')}
-        childNames={childNames}
-        busy={busy}
-        onChild={onChild}
-      />
     </div>
   )
 }

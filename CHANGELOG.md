@@ -2,6 +2,12 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.13.0 — 2026-11-01
+
+- Fix non-game folders in game projects showing a bare name/path card; every folder page now shares the details / subfolders / files frame.
+- Add one-level CELL groups with an inner editing mode.
+- Refactor: RightPanel frame, shared overlay-frame, FileMenu and ViewToggle components, shared UI test harness.
+
 ## 0.12.0 — 2026-11-01
 
 - Folder settings can be docked as a tab in the right panel (content | settings) with a per-project preference; narrow windows fall back to the drawer.

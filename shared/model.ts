@@ -4,7 +4,7 @@ import { imageTypes } from './images'
 import { httpUrl, validFieldValue } from './fields'
 import { validStableQuery, type StableQuery } from './query'
 export const DATA_DIR = '.media-viewer'
-export type CellKind = 'name' | 'path' | 'field-text' | 'field-tags' | 'field-number' | 'field-date' | 'field-boolean' | 'field-enum' | 'field-url' | 'field-date-only' | 'static-text' | 'spacer' | 'system-info' | 'image' | 'divider' | 'open-folder' | 'game-cover'
+export type CellKind = 'name' | 'path' | 'field-text' | 'field-tags' | 'field-number' | 'field-date' | 'field-boolean' | 'field-enum' | 'field-url' | 'field-date-only' | 'static-text' | 'spacer' | 'system-info' | 'image' | 'divider' | 'open-folder' | 'game-cover' | 'group'
 export interface Cell {
   cellId: string; kind: CellKind; attributeId?: string
   grid: { x: number; y: number; w: number; h: number }
@@ -13,6 +13,8 @@ export interface Cell {
   systemInfo?: 'category' | 'files' | 'size'
   presentation?: 'badge' | 'rating' | 'progress'
   imageFit?: 'contain' | 'cover'
+  // Only on kind 'group': one level of child cells laid out on the group's own 12-column grid.
+  cells?: Cell[]
   maximum?: number
   copyValue?: boolean
   condition?: { attributeId:string; operator:'set'|'unset'|'equals'|'not-equals'; value?:string|number|boolean }
@@ -117,10 +119,20 @@ function validFieldBinding(f: unknown): boolean {
     && (f.type !== 'enum' || Array.isArray(f.options) && f.options.length > 0 && f.options.length <= 100 && new Set(f.options).size === f.options.length && f.options.every((option: unknown) => text(option, 100) && option.trim().length > 0))
 }
 
+export const allCells = (cells: Cell[]): Cell[] => cells.flatMap(c => c.kind === 'group' ? [c, ...(c.cells ?? [])] : [c])
+const overlaps = (cells: { grid: Cell['grid'] }[]) => cells.some((a, i) => cells.slice(i + 1).some(({ grid: b }) =>
+  a.grid.x < b.x + b.w && a.grid.x + a.grid.w > b.x && a.grid.y < b.y + b.h && a.grid.y + a.grid.h > b.y))
+function validGroup(c: Record<string, unknown>): boolean {
+  const cells = c.cells as unknown, grid = c.grid as Cell['grid'] | undefined
+  return Array.isArray(cells) && cells.length <= 50 && !!grid
+    && cells.every(child => validCell(child) && (child as Cell).kind !== 'group' && (child as Cell).grid.y + (child as Cell).grid.h <= grid.h)
+    && !overlaps(cells as Cell[])
+}
 function validCell(c: unknown): boolean {
   return obj(c)
     && id(c.cellId)
-    && ['name', 'path', 'field-text', 'field-tags', 'field-number', 'field-date', 'field-boolean', 'field-enum', 'field-url', 'field-date-only', 'static-text', 'spacer', 'system-info', 'image', 'divider', 'open-folder', 'game-cover'].includes(c.kind)
+    && ['name', 'path', 'field-text', 'field-tags', 'field-number', 'field-date', 'field-boolean', 'field-enum', 'field-url', 'field-date-only', 'static-text', 'spacer', 'system-info', 'image', 'divider', 'open-folder', 'game-cover', 'group'].includes(c.kind)
+    && (c.kind === 'group' ? validGroup(c) : c.cells === undefined)
     && (c.text === undefined || text(c.text, 10000))
     && (c.systemInfo === undefined || ['category', 'files', 'size'].includes(c.systemInfo))
     && (c.presentation === undefined || c.presentation === 'badge' && ['field-enum','field-boolean'].includes(c.kind) || ['rating','progress'].includes(c.presentation) && c.kind === 'field-number')
@@ -288,13 +300,14 @@ export function validateProject(v: unknown): asserts v is Project {
     || !v.fieldBindings.every(validFieldBinding)
     || !Array.isArray(v.cells)
     || v.cells.length > 50
-    || !v.cells.every(validCell)) throw new Error('專案設定不合法或版本不支援')
-  if (new Set(v.cells.map(c => c.cellId)).size !== v.cells.length
+    || !v.cells.every(validCell)
+    || allCells(v.cells).length > 50) throw new Error('專案設定不合法或版本不支援')
+  if (new Set(allCells(v.cells).map(c => c.cellId)).size !== allCells(v.cells).length
     || new Set(v.fieldBindings.map(f => f.alias.toLowerCase())).size !== v.fieldBindings.length) throw new Error('組件 ID 或欄位別名重複')
-  if(v.mediaCategory!=='game'&&[...v.cells,...(Array.isArray(v.layoutPresets)?v.layoutPresets.flatMap((p:{cells?:unknown})=>Array.isArray(p?.cells)?p.cells:[]):[]),...(obj(v.contentCells)?Object.values(v.contentCells).flatMap(cells=>Array.isArray(cells)?cells:[]):[])].some((c:unknown)=>obj(c)&&c.kind==='game-cover'))throw new Error('遊戲封面組件只能用於遊戲專案')
-  for(const cell of v.cells)if(cell.condition){
-    const field=v.fieldBindings.find(field=>field.attributeId===cell.condition.attributeId)
-    if(!field || ['equals','not-equals'].includes(cell.condition.operator) && (!['string','enum','url','date','datetime','number','boolean'].includes(field.type) || !validFieldValue(field.type,cell.condition.value,field.type==='enum'?undefined:field.options)))throw new Error('組件顯示條件不合法')
+  if(v.mediaCategory!=='game'&&[...allCells(v.cells),...(Array.isArray(v.layoutPresets)?v.layoutPresets.flatMap((p:{cells?:unknown})=>Array.isArray(p?.cells)?p.cells:[]):[]),...(obj(v.contentCells)?Object.values(v.contentCells).flatMap(cells=>Array.isArray(cells)?cells:[]):[])].some((c:unknown)=>obj(c)&&c.kind==='game-cover'))throw new Error('遊戲封面組件只能用於遊戲專案')
+  for(const cell of allCells(v.cells))if(cell.condition){const condition=cell.condition
+    const field=v.fieldBindings.find(field=>field.attributeId===condition.attributeId)
+    if(!field || ['equals','not-equals'].includes(condition.operator) && (!['string','enum','url','date','datetime','number','boolean'].includes(field.type) || !validFieldValue(field.type,condition.value,field.type==='enum'?undefined:field.options)))throw new Error('組件顯示條件不合法')
   }
   if(v.folderLayouts!==undefined&&(!obj(v.folderLayouts)||Object.keys(v.folderLayouts).length>50000||!Object.entries(v.folderLayouts).every(([folder,preset])=>id(folder)&&id(preset))))throw new Error('資料夾版面指定不合法')
   if (v.layoutPresets !== undefined) {

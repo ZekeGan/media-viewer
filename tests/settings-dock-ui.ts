@@ -1,8 +1,8 @@
-import { _electron as electron } from 'playwright-core'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import assert from 'node:assert/strict'
 import { Library } from '../electron/library'
+import { closeApp, launchApp } from './support/app'
 
 const base = path.resolve('.test-output')
 await fs.mkdir(base, { recursive: true })
@@ -14,33 +14,9 @@ await fs.writeFile(path.join(media, 'original.txt'), 'PRESERVE ORIGINAL')
 const lib = new Library(local, undefined, false)
 await lib.init()
 await lib.create(media, { name: 'Dock Test', mediaCategory: 'other', scanAll: true, depth: { mode: 'through', level: 2 } })
-const env = Object.fromEntries(
-  Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local }).filter((entry): entry is [string, string] => entry[1] !== undefined)
-)
-delete env.ELECTRON_RUN_AS_NODE
 const errors: string[] = []
-const launch = async () => {
-  const app = await electron.launch({ args: ['.'], env, timeout: 30000 }),
-    page = await app.firstWindow()
-  page.on('pageerror', (error) => errors.push(error.message))
-  page.setDefaultTimeout(15000)
-  await page.evaluate('window.__name=(target)=>target')
-  await app.evaluate(({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0]
-    win.setMinimumSize(0, 0)
-    win.setBounds({ width: 1500, height: 900 })
-  })
-  return { app, page }
-}
-const close = async (app: Awaited<ReturnType<typeof launch>>['app']) => {
-  await app.evaluate(({ BrowserWindow }) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.removeAllListeners('close')
-      win.webContents.on('will-prevent-unload', (event) => event.preventDefault())
-    }
-  })
-  await app.close()
-}
+const launch = () => launchApp(local, errors)
+const close = closeApp
 let { app, page } = await launch()
 const button = (name: string) => page.getByRole('button', { name, exact: true })
 try {

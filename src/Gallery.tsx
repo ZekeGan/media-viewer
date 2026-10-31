@@ -11,7 +11,7 @@ import {
   useState,
 } from 'react'
 import { Icon } from './icons'
-import { QueueMenu } from './QueueMenu'
+import { FileMenu } from './FileMenu'
 import { ActionIcon, Button, Center, Group, Modal, SegmentedControl, Stack, Tooltip } from '@mantine/core'
 import { canPreviewMedia, mediaIdentity } from '../shared/media'
 import type { MediaEntry, OverviewEntry, ReadingPrefs } from '../shared/explorer'
@@ -698,7 +698,7 @@ export function Gallery({
           ))}
       </div>
       {menu && (
-        <QueueMenu
+        <FileMenu
           x={menu.x}
           y={menu.y}
           count={pickedFiles.length}

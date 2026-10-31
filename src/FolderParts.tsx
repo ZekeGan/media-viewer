@@ -96,6 +96,32 @@ export function FolderDetails({
   )
 }
 
+// The shared frame head of every folder page: collapsed details, then direct subfolders (when allowed).
+export function FolderHeader({
+  row,
+  project,
+  openFolder,
+  folders,
+  childNames,
+  busy,
+  onChild,
+}: {
+  row: FolderRow
+  project: Project
+  openFolder: () => void
+  folders?: { id: string; name: string }[]
+  childNames?: string[]
+  busy: boolean
+  onChild: (name: string) => void
+}) {
+  return (
+    <>
+      <FolderDetails row={row} project={project} openFolder={openFolder} />
+      {folders && <SubfolderList folders={folders} childNames={childNames} busy={busy} onChild={onChild} />}
+    </>
+  )
+}
+
 export function SubfolderList({
   folders,
   childNames,

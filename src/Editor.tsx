@@ -6,14 +6,14 @@ import { Accordion, ActionIcon, Alert, Badge, Button, Checkbox, ColorInput, Grou
 import GridLayout, { useContainerWidth, type Layout } from 'react-grid-layout'
 import { transformStrategy } from 'react-grid-layout/core'
 import { grabOffset, localDragPosition } from './editorDrag'
-import { type Cell, type CellKind, type FolderRow, type Project,type Request,type Response,type FieldDeletionPreview } from '../shared/model'
+import { allCells, type Cell, type CellKind, type FolderRow, type Project,type Request,type Response,type FieldDeletionPreview } from '../shared/model'
 import { CellContent } from './Card'
 import { cellType, isFieldKind } from '../shared/explorer'
 import { cardPresets, editorFields, presetDraft, syncPresetDraft, selectPreset, addPreset, renamePreset, removePreset } from '../shared/layouts'
 
 const typeKinds:Record<string,CellKind>={string:'field-text',tags:'field-tags',number:'field-number',datetime:'field-date',boolean:'field-boolean',enum:'field-enum',url:'field-url',date:'field-date-only'}
 export function Editor({ project, rows, busy, save, close, act, onDirty, targetLabel=tr("卡片"),presets=false }: { project: Project; rows: FolderRow[]; busy: boolean; act:(request:Request)=>Promise<Response|undefined>; save: (p: Project,preset?:{name:string;asNew:boolean}) => Promise<boolean>; close: () => void; onDirty: (dirty: boolean) => void; targetLabel?:string;presets?:boolean }) {
-const labels: Record<CellKind, string> = { name: tr("資料夾名稱"), path: tr("目前路徑"), 'field-text': tr("自訂文字"), 'field-tags':tr("標籤"),'field-number':tr("數字"),'field-date':tr("日期時間"),'field-boolean':tr('是／否'),'field-enum':tr('單選'),'field-url':tr('網址'),'field-date-only':tr('日期'),'static-text':tr('固定文字'),spacer:tr('空白間距'),'system-info':tr('系統資訊'),image:tr("圖片"),divider:tr("分隔線"), 'open-folder': tr("開啟資料夾"),'game-cover':tr("遊戲封面") }
+const labels: Record<CellKind, string> = { name: tr("資料夾名稱"), path: tr("目前路徑"), 'field-text': tr("自訂文字"), 'field-tags':tr("標籤"),'field-number':tr("數字"),'field-date':tr("日期時間"),'field-boolean':tr('是／否'),'field-enum':tr('單選'),'field-url':tr('網址'),'field-date-only':tr('日期'),'static-text':tr('固定文字'),spacer:tr('空白間距'),'system-info':tr('系統資訊'),image:tr("圖片"),divider:tr("分隔線"), 'open-folder': tr("開啟資料夾"),'game-cover':tr("遊戲封面"),group:tr("群組") }
 const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),number:tr("數字"),datetime:tr("日期時間"),boolean:tr('是／否'),enum:tr('單選'),url:tr('網址'),date:tr('日期')}
 
  useLocale()
@@ -35,19 +35,26 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
   const dragGrab=useRef({x:0,y:0})
   const dragImage=(event:React.DragEvent<HTMLDivElement>)=>{const point=grabOffset(event.clientX,event.clientY,event.currentTarget.getBoundingClientRect());dragGrab.current=point;const ghost=event.currentTarget.cloneNode(true) as HTMLElement;const rect=event.currentTarget.getBoundingClientRect();Object.assign(ghost.style,{position:'fixed',left:'0px',top:'0px',width:rect.width+'px',height:rect.height+'px',margin:'0',transform:'none',pointerEvents:'none',zIndex:'-1'});ghost.setAttribute('aria-hidden','true');document.body.append(ghost);event.dataTransfer.setDragImage(ghost,point.x,point.y);setTimeout(()=>ghost.remove(),0)}
   const gridPosition=useMemo(()=>({...transformStrategy,calcDragPosition:(clientX:number,clientY:number,offsetX:number,offsetY:number)=>{const grid=containerRef.current?.querySelector<HTMLElement>('.react-grid-layout');return grid?localDragPosition(clientX,clientY,offsetX,offsetY,grid.getBoundingClientRect(),1,grid.scrollLeft,grid.scrollTop):{left:0,top:0}}}),[containerRef])
-  const selectedCell = draft.cells.find(c => c.cellId === selected), preview = rows.find(r => r.rowId === previewId)
+  const [groupId, setGroupId] = useState('')
+  const group = draft.cells.find(c => c.cellId === groupId && c.kind === 'group')
+  const level = group ? group.cells ?? [] : draft.cells
+  const withLevel = (cells: Cell[]): Project => ({ ...draft, cells: group ? draft.cells.map(c => c.cellId === group.cellId ? { ...c, cells } : c) : cells })
+  const childBottom = (c: Cell) => Math.max(1, ...(c.cells ?? []).map(child => child.grid.y + child.grid.h))
+  useEffect(() => { if (groupId && !group) { setGroupId(''); setSelected('') } }, [groupId, group])
+  const selectedCell = level.find(c => c.cellId === selected), preview = rows.find(r => r.rowId === previewId)
   const conditionField=draft.fieldBindings.find(field=>field.attributeId===selectedCell?.condition?.attributeId)
   const sources=useMemo(()=>editorFields(rows,project.projectId),[rows,project.projectId])
   const availableFields=sources.filter(a=>!draft.fieldBindings.some(f=>f.attributeId===a.attributeId))
   const change = (next: Project) => { if (JSON.stringify(next) === JSON.stringify(draft)) return; setPast([...past.slice(-49), structuredClone(draft)]); setFuture([]); setDraft(next) }
-  const updateCell = (update: Partial<Cell>) => change({ ...draft, cells: draft.cells.map(c => c.cellId === selected ? { ...c, ...update } : c) })
+  const updateCell = (update: Partial<Cell>) => change(withLevel(level.map(c => c.cellId === selected ? { ...c, ...update } : c)))
   const layoutChange = (layout: Layout) => {
-    change({ ...draft, cells: draft.cells.map(c => { const item = layout.find(l => l.i === c.cellId); return item ? { ...c, grid: { x: item.x, y: item.y, w: item.w, h: item.h } } : c }) })
+    change(withLevel(level.map(c => { const item = layout.find(l => l.i === c.cellId); return item ? { ...c, grid: { x: item.x, y: item.y, w: item.w, h: item.h } } : c })))
   }
   const add = (kind: CellKind, grid?: Cell['grid'], layout?: Layout, source?:Project['fieldBindings'][number]) => {
     if(source&&source.type!==cellType(kind)){setError(tr("欄位與組件型別不符"));return}
-    if (draft.cells.length >= 50) { setError(tr("POC 每張卡片最多 50 個組件")); return }
-    const cells = draft.cells.map(c => { const moved = layout?.find(l => l.i === c.cellId); return moved ? { ...c, grid: { x: moved.x, y: moved.y, w: moved.w, h: moved.h } } : c })
+    if (group && kind === 'group') { setError(tr("群組內不能再放群組")); return }
+    if (allCells(draft.cells).length >= 50) { setError(tr("POC 每張卡片最多 50 個組件")); return }
+    const cells = level.map(c => { const moved = layout?.find(l => l.i === c.cellId); return moved ? { ...c, grid: { x: moved.x, y: moved.y, w: moved.w, h: moved.h } } : c })
     const y = Math.max(0, ...cells.map(c => c.grid.y + c.grid.h))
     let bindings=draft.fieldBindings,attributeId=source?.attributeId
     if(source&&!bindings.some(f=>f.attributeId===source.attributeId)){
@@ -58,11 +65,11 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
     attributeId??=bindings.find(f=>f.type===cellType(kind))?.attributeId
     if(isFieldKind(kind)&&!attributeId){attributeId=crypto.randomUUID();let alias=cellType(kind),i=2;while(bindings.some(f=>f.alias.toLowerCase()===alias.toLowerCase()))alias=`${cellType(kind)}_${i++}`;bindings=[...bindings,{attributeId,alias,type:cellType(kind)}]}
     if(kind==='image')attributeId=crypto.randomUUID()
-    const cell: Cell = { cellId: crypto.randomUUID(), kind, ...(isFieldKind(kind)||kind==='image' ? { attributeId } : {}), grid: grid ?? { x: 0, y, w: 12, h: kind==='image'||kind==='game-cover'?3:1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
-    if (cell.grid.y + cell.grid.h > 100) { setError(tr("畫布沒有空間，請先移動或刪除組件")); return }
-    change({ ...draft, fieldBindings:bindings,cells: [...cells, cell] }); setSelected(cell.cellId);setError('')
+    const cell: Cell = { cellId: crypto.randomUUID(), kind, ...(isFieldKind(kind)||kind==='image' ? { attributeId } : {}),...(kind==='group'?{cells:[]}:{}), grid: grid ?? { x: 0, y, w: 12, h: kind==='image'||kind==='game-cover'||kind==='group'?3:1 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
+    if (cell.grid.y + cell.grid.h > (group ? group.grid.h : 100)) { setError(group ? tr("群組空間不足，請先放大群組或移動組件") : tr("畫布沒有空間，請先移動或刪除組件")); return }
+    change({ ...withLevel([...cells, cell]), fieldBindings:bindings }); setSelected(cell.cellId);setError('')
   }
-  const removeSelected=()=>{if(!selected||busy)return;change({...draft,cells:draft.cells.filter(c=>c.cellId!==selected)});setSelected('')}
+  const removeSelected=()=>{if(!selected||busy)return;change(withLevel(level.filter(c=>c.cellId!==selected)));setSelected('')}
   useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
       if(event.key!=='Delete'||event.isComposing||event.defaultPrevented||!selected||busy)return
@@ -93,7 +100,7 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
     {error && <p role="alert" className="error">{error}</p>}
     <div className="editor">
       <aside className="editor-palette" aria-label={tr("拖入組件")}><h3>{tr("組件")}</h3>
-        <section className="palette-section"><h4>{tr("基礎組件")}</h4><div className="basic-palette">{(['name','path','static-text','spacer','system-info','image',...(draft.mediaCategory==='game'?['game-cover' as const]:[]),'divider','open-folder'] as CellKind[]).map(kind=><div key={kind} className="palette-item" draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',kind);e.dataTransfer.effectAllowed='copy';dragImage(e)}}><Button fullWidth size="xs" variant="default" onClick={()=>add(kind)}>{labels[kind]}</Button></div>)}</div></section>
+        <section className="palette-section"><h4>{tr("基礎組件")}</h4><div className="basic-palette">{(['name','path','static-text','spacer','system-info','image',...(group?[]:['group' as const]),...(draft.mediaCategory==='game'?['game-cover' as const]:[]),'divider','open-folder'] as CellKind[]).map(kind=><div key={kind} className="palette-item" draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',kind);e.dataTransfer.effectAllowed='copy';dragImage(e)}}><Button fullWidth size="xs" variant="default" onClick={()=>add(kind)}>{labels[kind]}</Button></div>)}</div></section>
         <section className="project-field-palette"><h4>{tr('專案欄位')}</h4><Stack gap="xs">{draft.fieldBindings.map(binding=>paletteField(binding))}</Stack></section>
         <Accordion variant="separated" className="existing-fields"><Accordion.Item value="existing"><Accordion.Control>{tr("引用資料夾既有欄位")}<Badge size="xs" color="gray">{availableFields.length}</Badge></Accordion.Control><Accordion.Panel>
 
@@ -110,8 +117,8 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
         </form>
       </aside>
       <main className="canvas-wrap"><Select label={tr("使用真實資料預覽")} placeholder={tr("尚無資料夾")} data={rows.map(r => ({ value: r.rowId, label: `${r.name} · ${r.path}` }))} searchable value={previewId ?? null} onChange={v => setPreviewId(v ?? undefined)} mb="md" />
-        <div ref={containerRef as React.RefObject<HTMLDivElement>} className="canvas">{!draft.cells.length&&<Button variant="light" onClick={()=>add('static-text')}>{tr('加入第一個組件')}</Button>}{mounted && <GridLayout positionStrategy={gridPosition} width={width} style={{ minHeight: 320 }} layout={draft.cells.map(c => ({ i: c.cellId, ...c.grid,...(c.kind==='spacer'?{static:true,isDraggable:true,isResizable:true}:{}) }))} gridConfig={{ cols: 12, rowHeight: 42, maxRows: 100, margin: [4, 4], containerPadding: [0, 0] }} dropConfig={{ enabled: true, defaultItem: { w: 6, h: 1 }, onDragOver:()=>({dragOffsetX:(width/2-2)/2-dragGrab.current.x,dragOffsetY:21-dragGrab.current.y}) }} onDrop={(layout, item, event) => { const transfer=(event as DragEvent).dataTransfer,kind=transfer?.getData('text/plain') as CellKind,id=transfer?.getData('application/x-media-viewer-field'),source=id?draft.fieldBindings.find(f=>f.attributeId===id)??availableFields.filter(f=>!f.conflict).map(f=>({attributeId:f.attributeId,alias:f.key,type:f.type})).find(f=>f.attributeId===id):undefined;if(id&&!source){setError(tr("欄位已變更或型別衝突，請重新選擇"));return}if(item&&kind in labels)add(kind,{x:item.x,y:item.y,w:item.w,h:item.h},layout,source) }} onDragStop={layoutChange} onResizeStop={layoutChange}>
-          {draft.cells.map(cell => <div key={cell.cellId} onDragStart={event=>event.preventDefault()} className={`editor-cell ${selected === cell.cellId ? 'selected' : ''}`} style={{ ...cellColors(cell) }} tabIndex={0} onFocus={()=>setSelected(cell.cellId)} onClick={() => setSelected(cell.cellId)}><CellContent cell={cell} row={preview} project={draft} preview /></div>)}
+        <div ref={containerRef as React.RefObject<HTMLDivElement>} className="canvas">{group&&<div className="group-editing-bar"><Button size="xs" variant="subtle" onClick={()=>{setGroupId('');setSelected(group.cellId)}}>{tr('← 返回上層')}</Button><small>{tr('正在編輯群組內容；群組內不能再放群組，組件需落在群組範圍內。')}</small></div>}{!level.length&&<Button variant="light" onClick={()=>add('static-text')}>{tr('加入第一個組件')}</Button>}{mounted && <GridLayout positionStrategy={gridPosition} width={width} style={group ? { height: group.grid.h * 46 - 4 } : { minHeight: 320 }} layout={level.map(c => ({ i: c.cellId, ...c.grid,...(c.kind==='group'?{minH:childBottom(c)}:{}),...(c.kind==='spacer'?{static:true,isDraggable:true,isResizable:true}:{}) }))} gridConfig={{ cols: 12, rowHeight: 42, maxRows: group ? group.grid.h : 100, margin: [4, 4], containerPadding: [0, 0] }} dropConfig={{ enabled: true, defaultItem: { w: 6, h: 1 }, onDragOver:()=>({dragOffsetX:(width/2-2)/2-dragGrab.current.x,dragOffsetY:21-dragGrab.current.y}) }} onDrop={(layout, item, event) => { const transfer=(event as DragEvent).dataTransfer,kind=transfer?.getData('text/plain') as CellKind,id=transfer?.getData('application/x-media-viewer-field'),source=id?draft.fieldBindings.find(f=>f.attributeId===id)??availableFields.filter(f=>!f.conflict).map(f=>({attributeId:f.attributeId,alias:f.key,type:f.type})).find(f=>f.attributeId===id):undefined;if(id&&!source){setError(tr("欄位已變更或型別衝突，請重新選擇"));return}if(item&&kind in labels)add(kind,{x:item.x,y:item.y,w:item.w,h:item.h},layout,source) }} onDragStop={layoutChange} onResizeStop={layoutChange}>
+          {level.map(cell => <div key={cell.cellId} onDragStart={event=>event.preventDefault()} onDoubleClick={()=>{if(cell.kind==='group'){setGroupId(cell.cellId);setSelected('')}}} className={`editor-cell ${selected === cell.cellId ? 'selected' : ''}`} style={{ ...cellColors(cell) }} tabIndex={0} onFocus={()=>setSelected(cell.cellId)} onClick={() => setSelected(cell.cellId)}><CellContent cell={cell} row={preview} project={draft} preview /></div>)}
         </GridLayout>}</div>
       </main>
       <aside className="editor-inspector" aria-label={tr("組件設定")}><h3>{tr("組件設定")}</h3>{selectedCell ? <Stack gap="sm"><strong>{labels[selectedCell.kind]}</strong><Text size="xs" c="dimmed">{tr("調整這個組件的呈現，不會改動資料夾原值。")}</Text>
@@ -120,6 +127,7 @@ const typeLabels:Record<string,string>={string:tr("文字"),tags:tr("標籤"),nu
         {selectedCell.kind==='field-enum'&&<TagsInput label={tr('選項')} value={draft.fieldBindings.find(field=>field.attributeId===selectedCell.attributeId)?.options??[]} onChange={options=>change({...draft,fieldBindings:draft.fieldBindings.map(field=>field.attributeId===selectedCell.attributeId?{...field,options}:field)})}/>}
 
         {['image','game-cover'].includes(selectedCell.kind)&&<Select label={tr('圖片填滿方式')} allowDeselect={false} value={selectedCell.imageFit??(selectedCell.kind==='game-cover'?'cover':'contain')} data={[{value:'cover',label:tr('填滿容器（裁切多餘部分）')},{value:'contain',label:tr('完整顯示（保留空白）')}]} onChange={value=>updateCell({imageFit:value as Cell['imageFit']})}/>}
+        {selectedCell.kind==='group'&&<><Text size="sm" c="dimmed">{tr('群組可整體移動、縮放並設定顯示條件。群組只有一層，雙擊或按下方按鈕編輯內容。')}</Text><Button variant="default" size="xs" onClick={()=>{setGroupId(selectedCell.cellId);setSelected('')}}>{tr('編輯群組內容')}</Button></>}
         {selectedCell.kind==='image'&&<Text size="sm" c="dimmed">{tr("這是選用圖片組件。可新增多張；保存版面後，在資料夾設定的「圖片」頁分別選圖，沒有圖片可留空。")}</Text>}
         {isFieldKind(selectedCell.kind) && <Select label={tr("綁定欄位")} value={selectedCell.attributeId} data={draft.fieldBindings.filter(f => f.type === cellType(selectedCell.kind)).map(f => ({ value: f.attributeId, label: f.alias }))} onChange={v => v && updateCell({ attributeId: v })} />}
         {['field-number','field-enum','field-boolean'].includes(selectedCell.kind)&&<Select label={tr('顯示方式')} allowDeselect={false} value={selectedCell.presentation??'plain'} data={[{value:'plain',label:tr('一般文字')},...(selectedCell.kind==='field-number'?[{value:'rating',label:tr('評分')},{value:'progress',label:tr('進度')}]:[{value:'badge',label:tr('狀態徽章')}])]} onChange={value=>updateCell({presentation:value==='plain'?undefined:value as Cell['presentation']})}/>}

@@ -5,6 +5,7 @@ import type { OverviewEntry } from '../shared/explorer'
 import type { FolderNavigation } from '../shared/workspace'
 import { t as tr, useLocale, currentLocale } from './i18n'
 import { Icon } from './icons'
+import { RightPanel } from './RightPanel'
 import {
   lazy,
   Suspense,
@@ -1233,24 +1234,20 @@ export function BrowseWorkspace({
         style={{ '--panel-width': browse.panelWidth + 'px' } as React.CSSProperties}
       >
         {detail && panelOpen && (
-          <>
-            <div
-              role="separator"
-              aria-label={tr('調整資料夾內容寬度')}
-              className="panel-resizer"
-              onPointerDown={(e) => {
-                resize.current = { id: 'panel', start: e.clientX, width: browse.panelWidth }
-                e.currentTarget.setPointerCapture(e.pointerId)
-              }}
-              onPointerMove={moveWidth}
-              onPointerUp={stopWidth}
-            />
-            <aside
-              className={'folder-panel ' + (project.mediaCategory === 'video' ? 'video-panel' : '')}
-              aria-label={tr('資料夾內容')}
-              style={{ width: browse.panelWidth }}
-            >
-              <div className="folder-panel-header">
+          <RightPanel
+            className={project.mediaCategory === 'video' ? 'video-panel' : ''}
+            label={tr('資料夾內容')}
+            resizerLabel={tr('調整資料夾內容寬度')}
+            width={browse.panelWidth}
+            onResizeStart={(e) => {
+              resize.current = { id: 'panel', start: e.clientX, width: browse.panelWidth }
+              e.currentTarget.setPointerCapture(e.pointerId)
+            }}
+            onResizeMove={moveWidth}
+            onResizeEnd={stopWidth}
+            bodyRef={panelBody}
+            header={
+              <>
                 <Tooltip label={tr('返回上一個瀏覽位置')}>
                   <ActionIcon
                     aria-label={tr('返回')}
@@ -1321,8 +1318,10 @@ export function BrowseWorkspace({
                 >
                   <Icon name="close" />
                 </ActionIcon>
-              </div>
-              {docked && (
+              </>
+            }
+            tabs={
+              docked ? (
                 <div className="folder-panel-dock-tabs" role="tablist" aria-label={tr('右側面板分頁')}>
                   <Button
                     size="compact-sm"
@@ -1347,8 +1346,32 @@ export function BrowseWorkspace({
                   <span className="folder-panel-dock-spacer" />
                   {dockToggle(tr('改為抽屜顯示設定'), 'panel-left')}
                 </div>
+              ) : undefined
+            }
+            footer={
+              <>
+              {canReturnTop && (
+                <Button
+                  className="manga-top"
+                  size="compact-sm"
+                  variant="default"
+                  aria-label={tr('返回頂部')}
+                  onClick={() =>
+                    panelBody.current?.scrollTo({
+                      top: 0,
+                      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+                        ? 'instant'
+                        : 'smooth',
+                    })
+                  }
+                >
+                  <Icon name="arrow-up" size={15} />
+                  {tr('返回頂部')}
+                </Button>
               )}
-              <div ref={panelBody} className="folder-panel-body">
+              </>
+            }
+          >
                 {docked && config ? (
                   <div className="folder-panel-dock-settings">{settingsBody}</div>
                 ) : (
@@ -1382,28 +1405,7 @@ export function BrowseWorkspace({
                   ) : null}
                 </Suspense>
                 )}
-              </div>
-              {canReturnTop && (
-                <Button
-                  className="manga-top"
-                  size="compact-sm"
-                  variant="default"
-                  aria-label={tr('返回頂部')}
-                  onClick={() =>
-                    panelBody.current?.scrollTo({
-                      top: 0,
-                      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
-                        ? 'instant'
-                        : 'smooth',
-                    })
-                  }
-                >
-                  <Icon name="arrow-up" size={15} />
-                  {tr('返回頂部')}
-                </Button>
-              )}
-            </aside>
-          </>
+          </RightPanel>
         )}
       </div>
       <Drawer

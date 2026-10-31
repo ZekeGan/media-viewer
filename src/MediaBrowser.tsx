@@ -18,7 +18,7 @@ import {
 import { Gallery } from './Gallery'
 import { MediaViewer } from './MediaViewer'
 import { usePlayback } from './Playback'
-import { FolderDetails, SubfolderList } from './FolderParts'
+import { FolderHeader } from './FolderParts'
 import { useFileVisibility } from './useFileVisibility'
 import { Icon } from './icons'
 import { t as tr, useLocale } from './i18n'
@@ -183,6 +183,15 @@ export function MediaBrowser({
     : []
   return (
     <div className="mixed-media-browser">
+      <FolderHeader
+        row={row}
+        project={project}
+        openFolder={() => void act({ action: 'open', rowId: row.rowId })}
+        folders={folders}
+        childNames={childNames}
+        busy={busy}
+        onChild={onChild}
+      />
       <div className="mixed-media-toolbar">
         <Select
           className="media-scope-select"
@@ -289,12 +298,6 @@ export function MediaBrowser({
         </p>
       )}
       {!!opening && <small role="status">{tr('載入內容…')}</small>}
-      <FolderDetails
-        row={row}
-        project={project}
-        openFolder={() => void act({ action: 'open', rowId: row.rowId })}
-      />
-      <SubfolderList folders={folders} childNames={childNames} busy={busy} onChild={onChild} />
       <Gallery
         key={scope + '/' + filter + '/' + view}
         entries={shown}

@@ -1,0 +1,41 @@
+import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core'
+
+// Shared Electron UI test harness: environment, launch with a fixed window size, and a close that
+// bypasses unload prompts. New UI tests should use these instead of copying the boilerplate.
+export const testEnv = (local: string) => {
+  const env = Object.fromEntries(
+    Object.entries({ ...process.env, MEDIA_VIEWER_TEST_DATA: local }).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined
+    )
+  )
+  delete env.ELECTRON_RUN_AS_NODE
+  return env
+}
+
+export async function launchApp(
+  local: string,
+  errors: string[],
+  size = { width: 1500, height: 900 }
+): Promise<{ app: ElectronApplication; page: Page }> {
+  const app = await electron.launch({ args: ['.'], env: testEnv(local), timeout: 30000 }),
+    page = await app.firstWindow()
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.setDefaultTimeout(15000)
+  await page.evaluate('window.__name=(target)=>target')
+  await app.evaluate(({ BrowserWindow }, bounds) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    win.setMinimumSize(0, 0)
+    win.setBounds(bounds)
+  }, size)
+  return { app, page }
+}
+
+export async function closeApp(app: ElectronApplication) {
+  await app.evaluate(({ BrowserWindow }) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.removeAllListeners('close')
+      win.webContents.on('will-prevent-unload', (event) => event.preventDefault())
+    }
+  })
+  await app.close()
+}

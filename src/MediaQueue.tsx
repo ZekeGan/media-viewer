@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ActionIcon, Tooltip } from '@mantine/core'
+import { Tooltip } from '@mantine/core'
 import type { MediaEntry } from '../shared/explorer'
 import { Icon } from './icons'
 import { t as tr } from './i18n'
+import { ViewToggle } from './ViewToggle'
 
 export function MediaQueue({ entries, selected, choose, loading, video, view, changeView }: { entries: MediaEntry[]; selected: string; choose: (file: MediaEntry) => void; loading: boolean; video: boolean; view: 'list'|'images'; changeView: (view:'list'|'images')=>void }) {
   const root = useRef<HTMLDivElement>(null), [viewport, setViewport] = useState({top:0,height:600})
@@ -11,9 +12,7 @@ export function MediaQueue({ entries, selected, choose, loading, video, view, ch
   useEffect(() => { const node=root.current,index=entries.findIndex(entry=>entry.id===selected);if(!node||index<0)return;const top=index*height;if(top<node.scrollTop||top+height>node.scrollTop+node.clientHeight)node.scrollTop=Math.max(0,top-node.clientHeight/2);setViewport(value=>({...value,top:node.scrollTop})) },[selected,height,entries.length])
   const first=Math.max(0,Math.floor(viewport.top/height)-3),last=Math.min(entries.length,Math.ceil((viewport.top+viewport.height)/height)+3)
   return <aside className={'media-queue'+(thumbnails?' media-queue-thumbnails':'')} aria-label={tr('媒體佇列')}>
-    <header><strong>{tr('目前資料夾')} · {entries.length}{loading?'…':''}</strong>{video&&<div role="group" aria-label={tr('影片佇列展示')}>
-      {(['list','images'] as const).map(mode=><Tooltip key={mode} zIndex={450} label={tr(mode==='list'?'清單模式':'圖片模式')}><ActionIcon variant={view===mode?'light':'subtle'} aria-label={tr(mode==='list'?'清單模式':'圖片模式')} aria-pressed={view===mode} onClick={()=>changeView(mode)}><Icon name={mode==='list'?'list':'image'}/></ActionIcon></Tooltip>)}
-    </div>}</header>
+    <header><strong>{tr('目前資料夾')} · {entries.length}{loading?'…':''}</strong>{video&&<ViewToggle view={view} change={changeView}/>}</header>
     <div ref={root} className="media-queue-scroll" onScroll={event=>{const top=event.currentTarget.scrollTop;setViewport(value=>({...value,top}))}}><div style={{height:entries.length*height,position:'relative'}}>{entries.slice(first,last).map((entry,index)=><Tooltip key={entry.id} zIndex={450} label={entry.name} disabled={!thumbnails} events={{hover:true,focus:true,touch:false}}><button className={entry.id===selected?'active':''} style={{top:(first+index)*height,height}} aria-label={entry.name} aria-current={entry.id===selected?'true':undefined} onClick={()=>choose(entry)}>
       <div className="media-queue-preview"><Icon name={entry.kind==='audio'?'music':entry.kind==='image'?'image':entry.kind==='video'?'video':'file'} size={24}/>{entry.thumb&&entry.mime!=='image/gif'&&<img key={entry.thumb} src={entry.thumb} alt="" loading="lazy" onError={event=>{event.currentTarget.style.visibility='hidden'}}/>}</div>{!thumbnails&&<span>{entry.name}</span>}
     </button></Tooltip>)}</div></div>

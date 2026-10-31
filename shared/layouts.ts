@@ -1,6 +1,6 @@
-import type { Cell, FolderRow, Project } from './model'
+import { allCells, type Cell, type FolderRow, type Project } from './model'
 export function projectImageCells(project:Project):Cell[]{
-  return [...new Map([...project.cells,...project.layoutPresets?.flatMap(p=>p.cells)??[],...Object.values(project.contentCells??{}).flat()].filter(c=>c.kind==='image').map(c=>[c.cellId,c])).values()]
+  return [...new Map(allCells([...project.cells,...project.layoutPresets?.flatMap(p=>p.cells)??[],...Object.values(project.contentCells??{}).flat()]).filter(c=>c.kind==='image').map(c=>[c.cellId,c])).values()]
 }
 export interface EditorField { attributeId:string; key:string; type:string; shared:boolean; private:boolean; conflict:boolean; hasData:boolean }
 export function editorFields(rows:FolderRow[],projectId:string):EditorField[]{

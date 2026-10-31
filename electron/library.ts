@@ -3,7 +3,7 @@ import {projectImageCells} from '../shared/layouts'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
-import { DATA_DIR, defaultCells, validateFolder, validateProject, type Project, type ProjectInput, type FolderRecord, type FolderRow, type Snapshot, type ScanProgress, type CleanupPreview, type CleanupResult, type LinkedProject, type LegacyPreview, type ProjectRemovalPreview } from '../shared/model'
+import { DATA_DIR, allCells, defaultCells, validateFolder, validateProject, type Project, type ProjectInput, type FolderRecord, type FolderRow, type Snapshot, type ScanProgress, type CleanupPreview, type CleanupResult, type LinkedProject, type LegacyPreview, type ProjectRemovalPreview } from '../shared/model'
 import { atomicJson, ensureFolder, exists, fingerprint, folderFile, keyPath, message, missing, projectFile, readFolder, readJson, relPath, restoreJson, safePath, saveFolder, within } from './files'
 import { hideDirectories } from './hidden'
 import { detectGame, insideAppBundle, GameProbeLimit } from './game-detection'
@@ -148,7 +148,7 @@ export class Library {
         preview.fields+=project.fieldBindings.filter(field=>field.attributeId===attributeId).length
         preview.tables+=project.fieldBindings.filter(field=>field.attributeId===attributeId).length
         const layouts=new Map<string,Project['cells']>([[project.activeLayoutId??'default',project.cells],...project.layoutPresets?.map(p=>[p.id,p.cells] as const)??[],...Object.entries(project.contentCells??{}).map(([key,cells])=>['content:'+key,cells] as const)])
-        preview.layouts+=[...layouts.values()].flat().filter(cell=>cell.attributeId===attributeId||cell.condition?.attributeId===attributeId).length
+        preview.layouts+=allCells([...layouts.values()].flat()).filter(cell=>cell.attributeId===attributeId||cell.condition?.attributeId===attributeId).length
         preview.searches+=(project.savedSearches?.length??0)-(next.savedSearches?.length??0)
         changes.push({...guard,value:{...next,revision:project.revision+1}})
       }

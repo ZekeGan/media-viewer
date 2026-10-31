@@ -523,6 +523,7 @@ export function Reader({
       <div
         className={
           'reader' +
+          (embedded ? '' : ' overlay-frame') +
           (embedded ? ' reader-embedded' : '') +
           (manga ? ' manga-reader' : '') +
           (toolbar ? '' : ' reader-focused')

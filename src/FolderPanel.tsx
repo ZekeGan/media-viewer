@@ -40,6 +40,7 @@ import type {
   Request,
   Response,
 } from '../shared/model'
+import { allCells } from '../shared/model'
 type Act = (request: Request) => Promise<Response | undefined>
 type Run = (request: ExplorerRequest) => Promise<ExplorerResponse | undefined>
 export function FolderPanel({
@@ -139,7 +140,7 @@ export function FolderPanel({
     otherFields = fields.filter((f) => !configured.has(f.attributeId))
   const imageCells = [
     ...new Map(
-      [...rowCells(project, row), ...contentCells(project, project.mediaCategory)]
+      allCells([...rowCells(project, row), ...contentCells(project, project.mediaCategory)])
         .filter((c) => c.kind === 'image')
         .map((c) => [c.cellId, c])
     ).values(),

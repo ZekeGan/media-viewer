@@ -195,16 +195,20 @@
     font-size: 12px;
 }
 
-.media-viewer-shell {
+/* One frame for every full-window overlay (reader, media viewer, full playback). */
+.overlay-frame {
     position: fixed;
     inset: 0;
     z-index: 400;
-    display: flex;
-    flex-direction: column;
     background: var(--viewer-bg);
     color: var(--text);
     -webkit-app-region: no-drag;
     isolation: isolate;
+}
+
+.media-viewer-shell {
+    display: flex;
+    flex-direction: column;
 }
 
 .media-viewer-shell>header {
@@ -1049,4 +1053,14 @@
 
 .folder-panel-dock-settings {
     padding: 4px 2px 16px;
+}
+
+.group-editing-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--line);
+    color: var(--muted);
+    font-size: 12px;
 }
