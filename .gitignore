@@ -42,3 +42,6 @@ next-env.d.ts
 .local-backups/
 .test-output/
 .codex-remote-attachments/
+
+# graphify (rebuildable code graph)
+graphify-out/

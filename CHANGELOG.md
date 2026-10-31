@@ -2,6 +2,14 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.10.0 — 2026-11-01
+
+- Queue: single click only plays (unqueued files are trial playback); right-click, Ctrl/Shift multi-select and Shift+arrows add to the queue; the queue entry moves to the top toolbar; the queue panel offers list and image views.
+- Fix the mini player moving the native window when dragged over the title bar.
+- Add a collapsed folder-details section and a shared subfolder list across media and manga pages.
+- Archive legacy POC and stage documents under docs/archive; add CLAUDE.md for Claude Code.
+- Commit previously pending game-detection, navigation and App changes.
+
 ## 0.9.0 — 2026-10-30
 
 - Add a unified media workspace with source-aware cross-folder browsing, collapsible source groups and virtualized file layouts.

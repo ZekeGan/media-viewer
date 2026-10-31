@@ -16,11 +16,23 @@ Windows 優先的資料夾檢視器（Electron + React + Vite，pnpm），POC �
 4. 搜尋排除歷史／探索區，避免雜訊：`rg -g "!docs/{archive,history,design}" -g "!graphify-out" -g "!.test-output" …`。封存區只在追溯決策時才讀（`DECISIONS.md` 依 ID）。
 5. 工具輸出先限相關符號與錯誤，避免整檔／完整日誌；不足再擴讀缺少的上下文。
 
+## 程式結構查詢（graphify）
+
+- 結構性問題（入口、依賴、呼叫端、影響範圍、兩模組關係）先查 `graphify-out/graph.json`：`graphify explain "X"`、`graphify path "A" "B"`、`graphify query "問題"`；結果被截斷時加 `--budget`，或縮小問題。
+- 找字串、確切行號、非程式檔仍用 `rg`。圖譜是結構近似，`INFERRED` 邊需回原始碼核對後才能當依據。
+- 程式碼改動後執行 `graphify update .`（不用 LLM）；文件改動才用 `/graphify --update`。
+- `graphify-out/` 已列入 `.gitignore`，不提交。
+- 若 `graphify-out/graph.json` 不存在，不自動建置，直接用 `rg` 並在回報中說明。
+
 ## 修改原則
 
 - 最小必要修改，沿用現有風格；不加未要求的功能、設定、單次用抽象；不順手重構或刪既有問題（另提）。每段 diff 須對應本次需求。
 - 修錯先重現並定位根因，再用可觀察行為驗證。簡化不等於移除真實 I/O、非同步、資料衝突與復原處理。
 - 核定需求決定目標，程式決定現況，差距留 `WORK_ITEMS.md`，不擅改需求遷就實作；不確定的重要規則保留並標疑點。
+
+- **提交與版本號**：每批改動完成後 commit 並同步更新 package.json 版本與 CHANGELOG（新功能升次版號，純修正升修訂號）；推送須使用者核准，核准只涵蓋已提交的 commit。
+- **R-I18N**：發行前語系關卡等使用者確認要發布才執行，一般開發只局部同步新字串。
+- **UI／UX 規則**：新增與修改的介面都須有良好的 UX，沿用現有三主題、圖示、控制尺寸與焦點樣式，同類控制在各入口一致；完成前檢查窄窗、長文字、鍵盤焦點與三主題，不以「功能可用」代替。
 
 ## 不可省略的限制
 
