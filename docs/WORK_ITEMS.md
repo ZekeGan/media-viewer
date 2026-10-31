@@ -54,6 +54,7 @@ S14 已移除，不重新列入。
 
 ## 待查收與限制
 
+- **0.11.1**：遊戲封面組件縮放後圖片不貼合容器——原因是 object-fit: contain 在非原比例容器留空白，且佔位框固定 80px；改為預設填滿裁切並新增 imageFit 選項，game-cover-cell-ui 以 12×3／4×2／8×6 驗證卡片與編輯器。
 - **0.11.0 待查收**：B1～B4（徽章、兩 TAB 共用檢視、自動接續圖示鈕、共 N 項）以 audio-playback-ui 截圖確認；S15 後端以 image-url.test.ts 驗證（內網拒絕、版本衝突與過期保留原封面），**設定面板「圖片網址」介面尚無 Electron 自動化**（不為測試在正式程式加入關閉安全檢查的開關），請用真實 HTTPS 圖片網址實測；S16 DLsite 為未文件化端點，僅以假回應測試，**尚未對真實作品驗證**；S17 組件在編輯器的拖放與保存重開僅型別／驗證層測試，尚未目視；S20～S22 未逐一截圖。pending-ui 的群組拖曳步驟偶發逾時（不同行失敗，與本批無關，疑為拖放時序）。
 - **S12／S9／S11／S10／S13 已實作（未提交）**：S12 成因為迷你播放器未宣告 -webkit-app-region: no-drag，位於 Topbar 的 drag region 上時由作業系統接管拖曳；已加 no-drag。Playwright 無法產生 OS 層視窗拖曳，只驗計算樣式與視窗 bounds，**實體滑鼠拖曳仍待使用者查收**。S9：單擊不再追加，右鍵／Ctrl／Shift 點擊多選／Shift＋方向鍵加入，新增 QueueMenu；未入列單曲試播。S11：入口移至頂部工具列、佇列清單／圖片兩種呈現。S10／S13：FolderParts 的 FolderDetails（預設收合）與 SubfolderList，漫畫維持 Card 資訊 CELL。三主題與窄窗尚未逐一截圖查收。通過：tsc、build、audio-playback-ui（連跑 3 次通過，批次中曾有 1 次未重現的失敗）、pending-ui、folder-navigation-ui。
 - **測試整理（2026-11-01 使用者授權去留）**：media-ui.ts 為舊影片專案頁自動播放測試，已移除（搜尋、漫畫、遊戲改指向 search-dialog-ui／media-scope-ui／game-actions-ui）；media-workspace-ui 移除影片舊檢視器佇列斷言（影片改走全域播放）；media-scope-ui 暴露窄版缺少展示方式切換，已在「更多檔案選項」補上。仍待處理：appearance 語系測試因「這不是遊戲目錄」失敗，留待 R-I18N；Windows 唯讀 ACL 測試失敗屬環境，未調查。

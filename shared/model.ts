@@ -12,6 +12,7 @@ export interface Cell {
   text?: string
   systemInfo?: 'category' | 'files' | 'size'
   presentation?: 'badge' | 'rating' | 'progress'
+  imageFit?: 'contain' | 'cover'
   maximum?: number
   copyValue?: boolean
   condition?: { attributeId:string; operator:'set'|'unset'|'equals'|'not-equals'; value?:string|number|boolean }
@@ -123,6 +124,7 @@ function validCell(c: unknown): boolean {
     && (c.text === undefined || text(c.text, 10000))
     && (c.systemInfo === undefined || ['category', 'files', 'size'].includes(c.systemInfo))
     && (c.presentation === undefined || c.presentation === 'badge' && ['field-enum','field-boolean'].includes(c.kind) || ['rating','progress'].includes(c.presentation) && c.kind === 'field-number')
+    && (c.imageFit === undefined || ['contain', 'cover'].includes(c.imageFit) && ['image', 'game-cover'].includes(c.kind))
     && (c.maximum === undefined || c.kind === 'field-number' && typeof c.maximum === 'number' && Number.isFinite(c.maximum) && c.maximum > 0 && c.maximum <= 1e9)
     && (c.copyValue === undefined || c.kind.startsWith('field-') && typeof c.copyValue === 'boolean')
     && (c.condition === undefined || obj(c.condition) && id(c.condition.attributeId) && ['set','unset','equals','not-equals'].includes(c.condition.operator) && (['set','unset'].includes(c.condition.operator) ? c.condition.value === undefined : typeof c.condition.value === 'boolean' || typeof c.condition.value === 'number' && Number.isFinite(c.condition.value) || text(c.condition.value,10000)))

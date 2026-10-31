@@ -5212,5 +5212,23 @@
     "en": "No cover yet",
     "ja": "カバーなし",
     "es": "Sin portada"
+  },
+  "圖片填滿方式": {
+    "zh-CN": "图片填充方式",
+    "en": "Image fit",
+    "ja": "画像のフィット",
+    "es": "Ajuste de la imagen"
+  },
+  "填滿容器（裁切多餘部分）": {
+    "zh-CN": "填满容器（裁切多余部分）",
+    "en": "Fill the box (crop overflow)",
+    "ja": "枠いっぱいに表示（はみ出しをトリミング）",
+    "es": "Llenar el cuadro (recortar el exceso)"
+  },
+  "完整顯示（保留空白）": {
+    "zh-CN": "完整显示（保留空白）",
+    "en": "Show whole image (keep margins)",
+    "ja": "全体を表示（余白を残す）",
+    "es": "Mostrar completa (con márgenes)"
   }
 }

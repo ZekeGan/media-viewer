@@ -104,3 +104,12 @@ test('game cover cells are accepted only by game projects', () => {
     reject(validateProject, withCover('manga', where), '遊戲封面組件只能用於遊戲專案')
   }
 })
+
+test('image fit is limited to image cells and valid values', () => {
+  const project = modelProject()
+  const cell = { cellId: 'fit-cell', kind: 'image' as const, imageFit: 'cover' as const, grid: { x: 0, y: 9, w: 12, h: 3 }, style: { textColor: '#e4e6e8', backgroundColor: 'transparent' } }
+  project.cells.push(cell)
+  assert.doesNotThrow(() => validateProject(project))
+  reject(validateProject, { ...project, cells: [...project.cells.slice(0, -1), { ...cell, imageFit: 'stretch' }] }, '專案設定不合法或版本不支援')
+  reject(validateProject, { ...project, cells: [...project.cells.slice(0, -1), { ...cell, kind: 'name', imageFit: 'cover' }] }, '專案設定不合法或版本不支援')
+})

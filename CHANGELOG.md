@@ -2,6 +2,10 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.11.1 — 2026-11-01
+
+- Fix the game cover cell and image cells not filling their container when resized; add an image fit option (fill/crop or show whole) with fill as the default for game covers.
+
 ## 0.11.0 — 2026-11-01
 
 - Queue panel: the toolbar badge is no longer clipped, both tabs share list/image views, auto-advance is an icon toggle, and counts read "N items" / "N files".
