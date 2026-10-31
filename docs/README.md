@@ -8,6 +8,7 @@
 
 | 任務 | 必讀主章節 | 程式／符號入口 | 驗證入口 |
 | --- | --- | --- | --- |
+| 右側漫畫／遊戲／媒體共用 | [共用邊界](WORKSPACE_REVISION.md#右側組件共用邊界)、[詳情](WORKSPACE_REVISION.md#資料夾詳情)；改到專用操作才讀其主規格 | [BrowseWorkspace](../src/BrowseWorkspace.tsx)、[FolderContent](../src/FolderContent.tsx)、[MediaBrowser](../src/MediaBrowser.tsx)、[Gallery](../src/Gallery.tsx) | 按改動選 [pending UI](../tests/pending-ui.ts)、[來源 UI](../tests/media-scope-ui.ts)、[遊戲 UI](../tests/game-actions-ui.ts)，專用生命週期再擴大 |
 | 模組／IPC／資料流 | [架構邊界](ARCHITECTURE.md#資料流與邊界)、[責任表](ARCHITECTURE.md#按問題找入口) | [main](../electron/main.ts)、[preload](../electron/preload.ts) | 依實際契約選 [驗證矩陣](IMPLEMENTATION.md#驗證選擇) |
 | 建立、群組、左右欄 | [外框](WORKSPACE_REVISION.md#外框與專案區)、[建立](WORKSPACE_REVISION.md#建立與既有專案)、[介面細節](WORKSPACE_REVISION.md#工作區介面細節) | [DesktopShell](../src/DesktopShell.tsx)、[BrowseWorkspace](../src/BrowseWorkspace.tsx) | [workspace UI](../tests/workspace-ui.ts)、[workspace](../tests/workspace.test.ts) |
 | CARD／TABLE／TREE、導覽 | [三模式](WORKSPACE_REVISION.md#三模式與開啟行為)、[CARD 控制](WORKSPACE_REVISION.md#card-專屬控制) | [BrowseWorkspace](../src/BrowseWorkspace.tsx)、[TreeView](../src/TreeView.tsx)、[browse](../shared/browse.ts) | [revision](../tests/revision.test.ts)、[workspace UI](../tests/workspace-ui.ts)、[共用導覽 UI](../tests/folder-navigation-ui.ts)；側鍵再查 main／preload 的 `folder:navigate` |
@@ -44,6 +45,6 @@
 
 ## 歷史與探索
 
-[DECISIONS](DECISIONS.md) 依決策 ID 追溯；[DEV_LOG](DEV_LOG.md) 已封存。POC_*、STAGE1、STAGES_2_3、RELEASE_0_5_0 及主文件末尾的歷史區不是日常前置 Context，歷史測試不算本輪驗證。版本／依賴查 [package.json](../package.json)；版本任務才更新 CHANGELOG。
+[DECISIONS](DECISIONS.md) 依決策 ID 追溯；舊 POC、階段、ROADMAP、DEV_LOG、RELEASE_0_5_0 等已封存於 [archive](archive/)（日常搜尋請排除 docs/archive），與主文件末尾的歷史區都不是日常前置 Context，歷史測試不算本輪驗證。版本／依賴查 [package.json](../package.json)；版本任務才更新 CHANGELOG。
 
 [整理前快照](history/agent-docs-before-cleanup.md) 保留原文、不再追加。[視覺探索](design/README.md) 與 [風格比較](DESIGN_STYLE_OPTIONS.md) 未定案；歷史 R／T／UI-R 提案不因封存而變成已批准需求。不確定的重要限制先保留並標示待核對，不自行刪除。

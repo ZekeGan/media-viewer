@@ -1,6 +1,6 @@
 # 0.5.0 工作區與媒體修正交付
 
-> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](README.md)、[待查收](WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
+> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](../README.md)、[待查收](../WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
 
 
 日期：2026-10-27。來源：使用者授權開始實作 C-88～C-92、補版本並完成 Git 推送前準備。已完成實作與受控驗證，待使用者查收；深色配置是本輪基線，最終品牌風格仍可調整。
@@ -21,7 +21,7 @@
 
 ## 版本與資料相容
 
-- `package.json` 為 **0.5.0**；[CHANGELOG](../CHANGELOG.md) 補記此前漏升的 0.4.0 開發里程碑，沒有偽造歷史 release 或 tag。
+- `package.json` 為 **0.5.0**；[CHANGELOG](../../CHANGELOG.md) 補記此前漏升的 0.4.0 開發里程碑，沒有偽造歷史 release 或 tag。
 - 可攜 `schemaVersion` 仍為 1；新增可選 `scanAll`、`cardView`、`layoutPresets`／`activeLayoutId`。舊檔讀取不批次遷移；明確保存沿用 revision、原子置換與備份。較舊程式不保證理解新增圖片格式或樣式。
 - 舊專案保留原 `depth` 掃描上限；CARD 顯示調整不擴大建檔。可在整合設定明確選擇「擴大掃描至全部層級」再保存。新專案才預設全範圍掃描，遊戲／排除／連結保護沿用。
 - 純版面／列表保存不重新建檔掃描；位置、面板顯隱／尺寸與群組維持本機 `workspace-ui.json`。資料夾身分、值、圖片與版面仍依原契約可攜。
@@ -45,7 +45,7 @@
 2. 在 CARD 調多層／單層、層數、每列／每頁及方案；切 TREE／TABLE，確認分工與右側內容。
 3. 檢查遊戲封面、操作設定與欄位表，以及自己常用的 WebP／其他圖片樣本。
 
-截圖：[CARD](../.test-output/workspace05-screens/card.png)、[遊戲](../.test-output/workspace05-screens/game.png)、[800px](../.test-output/workspace05-screens/narrow.png)。截圖屬本機忽略的測試輸出，不納入 Git。
+截圖：[CARD](../../.test-output/workspace05-screens/card.png)、[遊戲](../../.test-output/workspace05-screens/game.png)、[800px](../../.test-output/workspace05-screens/narrow.png)。截圖屬本機忽略的測試輸出，不納入 Git。
 
 尚未執行：安裝包／簽章、真實遊戲或收藏大量建檔、所有圖片變體／大型圖、其他影片編碼及 E-Hentai 真實網路；延續既定後續項目。
 

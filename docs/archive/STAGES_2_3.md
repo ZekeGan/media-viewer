@@ -1,6 +1,6 @@
 # 第二／三階段實作與驗證
 
-> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](README.md)、[待查收](WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
+> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](../README.md)、[待查收](../WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
 
 
 2026-10-27，來源 C-87：使用者要求修正第一階段並連續完成第二／三階段；首個外部來源選 E-Hentai。外觀仍為可調基線，音樂／原生解碼／ASS／壓縮檔不因本次授權變成首輪必達。
@@ -35,6 +35,6 @@
 
 用 `pnpm dev` 開啟，先用另建測試資料夾：分類及拖排專案 → 切 CARD／TREE／TABLE 並選資料夾 → 調欄寬／導覽 → 編輯 CELL／內容模板及資料 → 搜尋／保存常用查詢 → 依分類測閱讀／播放。E-Hentai「網路資料」需貼完整公開圖庫網址，確認候選後才寫入。遊戲先用假目錄測 ROOT／唯讀繼續，不直接掃真實收藏。
 
-截圖：[外框](../.test-output/stages23-screens/home.png)、[TREE＋相簿](../.test-output/stages23-screens/tree-album.png)、[漫畫閱讀](../.test-output/stages23-screens/manga-reader.png)、[遊戲](../.test-output/stages23-screens/game.png)、[影片字幕設定](../.test-output/stages23-screens/video-subtitles.png)、[800px](../.test-output/stages23-screens/narrow.png)。測試輸出不提交 Git。
+截圖：[外框](../../.test-output/stages23-screens/home.png)、[TREE＋相簿](../../.test-output/stages23-screens/tree-album.png)、[漫畫閱讀](../../.test-output/stages23-screens/manga-reader.png)、[遊戲](../../.test-output/stages23-screens/game.png)、[影片字幕設定](../../.test-output/stages23-screens/video-subtitles.png)、[800px](../../.test-output/stages23-screens/narrow.png)。測試輸出不提交 Git。
 
 保留限制：群組／視窗偏好尚無跨設備匯出及損壞復原 UI；可攜清理不宣稱清除離線／未連結副本，也不刪除整個 Electron userData。E-Hentai 圖庫封面是來源縮圖，不是下載完整作品；其他來源／需登入來源後議。無法自動判定的引擎用人工 ROOT；數字比較／日期範圍、原生播放後端、ASS／內嵌字幕、壓縮檔／PDF 及音樂維持後續範圍。

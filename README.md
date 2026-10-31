@@ -10,9 +10,9 @@ The main idea is to explore a different way of browsing file collections:
 
 The project is currently in an **early development stage**.
 
-Version **0.5.0** includes CARD/TABLE/TREE browsing, typed fields and SQLite search, media viewers and E-Hentai metadata import, with refined workspace controls and protected folder navigation. Start with the [documentation index](docs/README.md), [current review guide](docs/RELEASE_0_5_0.md) and [changelog](CHANGELOG.md); visual previews remain exploratory. Supported formats and verification limits are recorded there.
+Current version: **0.9.0** (see [changelog](CHANGELOG.md)). Start with the [documentation index](docs/README.md) and [current work](docs/WORK_ITEMS.md).
 
-The Electron + React + Vite POC core flow and recovery work are implemented. See the [acceptance record](docs/POC_ACCEPTANCE.md) and [visual style options](docs/DESIGN_STYLE_OPTIONS.md). See [implementation, commands and remaining acceptance work](docs/IMPLEMENTATION.md). Run `pnpm install`, then `pnpm dev`. The [POC design](docs/POC_DESIGN_PACKAGE.md) and [wireframes](docs/POC_WIREFRAMES.md) describe the target; they are not a claim that all acceptance checks have passed.
+Run `pnpm install`, then `pnpm dev`. Commands and verification: [IMPLEMENTATION](docs/IMPLEMENTATION.md). Early POC design and stage records are kept in [docs/archive](docs/archive/) and are not current specs.
 
 ---
 
@@ -65,7 +65,7 @@ Project root ──→ portable settings ───┘
                   └──→ SQLite search index (rebuildable)
 ```
 
-The confirmed goal is to recover each managed folder's content on another device without the local database. Hidden portable records in individual folders are required so a folder can move independently; the app must also support individual and one-action cleanup across linked folders. Cleanup coverage and relinking details are still being designed; see [儲存與清理](docs/STORAGE_OPTIONS.md), [產品需求](docs/PRODUCT.md) and [設計草案](docs/DESIGN_DRAFT.md).
+The confirmed goal is to recover each managed folder's content on another device without the local database. Hidden portable records in individual folders are required so a folder can move independently; the app must also support individual and one-action cleanup across linked folders. Cleanup coverage and relinking details are still being designed; see [儲存與清理](docs/STORAGE_OPTIONS.md), [產品需求](docs/PRODUCT.md) and [設計草案](docs/archive/DESIGN_DRAFT.md).
 
 ---
 
@@ -84,7 +84,7 @@ The technology stack may change as the project evolves.
 
 ## Agent 開發交接
 
-後續開發請先讀 [AGENTS.md](AGENTS.md)。[專案定位](docs/PROJECT_OVERVIEW.md)、[已核定方向](docs/DECISIONS.md) 和[產品需求](docs/PRODUCT.md) 是交接基礎；[儲存與清理](docs/STORAGE_OPTIONS.md) 記錄每資料夾可攜方案，[資料夾與專案模型](docs/FOLDER_PROJECT_MODEL.md) 記錄跨專案共用值。[文件一致性稽核](docs/DOC_AUDIT.md)、[畫面與功能地圖](docs/SCREENS_AND_FEATURES.md)、[CELL 目錄](docs/CELL_CATALOG.md)、[未決設計](docs/OPEN_DECISIONS.md)、[外部資料補充](docs/METADATA_ENRICHMENT.md)、[搜尋設計](docs/SEARCH_DESIGN.md)、[積木編輯器](docs/EDITOR_DESIGN.md) 與 [路線圖](docs/ROADMAP.md) 安排後續審核。[技術現況](docs/ARCHITECTURE.md) 只描述原型；[目標架構](docs/TARGET_ARCHITECTURE.md)、[設計草案](docs/DESIGN_DRAFT.md)、[工作清單](docs/WORK_ITEMS.md) 與 [開發紀錄](docs/DEV_LOG.md) 供後續討論與實作。現有 `PLAN.md` 是早期構想，不能取代已確認需求。
+後續開發請先讀 [CLAUDE.md](CLAUDE.md)（Claude Code）或 [AGENTS.md](AGENTS.md)（Codex），再依 [文件索引](docs/README.md) 與 [當前工作](docs/WORK_ITEMS.md) 定位。產品邊界見 [產品需求](docs/PRODUCT.md)，已核定方向見 [DECISIONS](docs/DECISIONS.md)。早期構想、POC、階段與開發紀錄已封存於 [docs/archive](docs/archive/)，不是現行規格。
 
 ---
 

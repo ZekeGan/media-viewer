@@ -1,6 +1,6 @@
 # 第一階段：首頁與共用外框
 
-> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](README.md)、[待查收](WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
+> 歷史設計／交付紀錄：保留原時點的範圍、提案與驗證，不例行追加，不作每輪前置檢查；當前入口見 [文件索引](../README.md)、[待查收](../WORK_ITEMS.md)。舊「待審／未實作」及完成測試數不代表現在狀態，亦不取代本輪驗證。
 
 
 來源：使用者授權三階段開發，完成此階段先查收。沿用 C-85；UI 數值／深灰外觀為可調基線，未選最終風格。
@@ -42,6 +42,6 @@ userData/workspace-ui.json，schemaVersion 1：群組 ID／名稱／收合、專
 3. 建群組，拖入／選單移動專案、按愛心、收合；調整側欄寬度後重新開啟，確認分類及寬度保留。刪群組只取消分類。
 4. 用搜尋範圍與 `Ctrl+K` 找名稱／路徑，點結果開啟來源；測最小化／最大化還原及編輯群組名稱後關閉視窗。
 
-實際截圖：[首頁](../.test-output/stage1-screens/home.png)、[CARD 接入](../.test-output/stage1-screens/project.png)、[800px](../.test-output/stage1-screens/narrow.png)、[空白狀態](../.test-output/stage1-screens/empty.png)、[離線／設定損壞](../.test-output/stage1-screens/offline.png)。測試輸出不提交 Git；圖片是本次實測，外觀仍可調整。
+實際截圖：[首頁](../../.test-output/stage1-screens/home.png)、[CARD 接入](../../.test-output/stage1-screens/project.png)、[800px](../../.test-output/stage1-screens/narrow.png)、[空白狀態](../../.test-output/stage1-screens/empty.png)、[離線／設定損壞](../../.test-output/stage1-screens/offline.png)。測試輸出不提交 Git；圖片是本次實測，外觀仍可調整。
 
 已知邊界：本機群組尚無匯出／損壞復原 UI；完整搜尋、SQLite、TREE／TABLE、新共用選取及媒體內容留後兩階段。第二階段順序待本階段查收後再細排。

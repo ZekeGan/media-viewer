@@ -47,6 +47,16 @@ IGDB、TMDB 需要 API 憑證，本輪依使用者要求排除。沒有內建 ke
 
 ## 後續候選
 
+日本同人收藏新增來源候選，先研究可行性再接入；不代表下列商店已有 adapter 或穩定公開 API：
+
+| 優先順序 | 來源 | 適用範圍與研究重點 |
+| --- | --- | --- |
+| 1 | 既有 VNDB、Bangumi、AniList | 先確認現有來源適用性；VNDB 著重視覺小說，Bangumi／AniList 補動畫、漫畫等作品資訊，不宣稱涵蓋全部同人作品 |
+| 2 | [DLsite](https://www.dlsite.com/home/)、[FANZA／DMM](https://support.dmm.com/affiliate/article/47547) | 同人遊戲、漫畫及適用的影音商品；DLsite 公開開發介面尚未確認，FANZA 官方 API 的資格、商品範圍與可選憑證管理需先確認。使用憑證屬待決方案，不直接解除現行無憑證限制 |
+| 3 | [BOOTH](https://booth.pm/)、[Melonbooks](https://www.melonbooks.co.jp/)、[虎之穴](https://ec.toranoana.jp/tora_r/ec) | 補個人製作遊戲、同人誌與冷門作品；逐站確認指定商品網址可取得資料及使用限制，不預設解析方式 |
+
+沿用精確作品網址 → 預覽 → 確認套用；同人動畫可優先查原販售頁，一般動畫／漫畫搭配作品資料庫。保留來源命名空間，區分原版／漢化版、單行本／單話及本體／DLC；不依同名自動合併、覆寫人工資料或下載作品內容。進度只記於 [S16](WORK_ITEMS.md#最新回饋)。
+
 新增來源依上方分類清單；需要憑證的網站保留在未啟用範圍。首次發行日、平台／版本日期與購買日分開。批次／CSV 對照、名稱候選人工審核、galleryinfo.txt／本地線索擷取是候選，尚未自動納入現行流程。批次若選入需可暫停、分別報成功／模糊／失敗，不能繞過寫入安全。
 
 原 Steam／IGDB／E-Hentai 研究、SourceRecord 提案與完整例子見 [原稿](history/agent-docs-before-cleanup.md#metadata-enrichment)，不是現行能力或每輪必讀。新增來源前再驗證官方能力與要求，不依賴歷史研究推斷現況。
