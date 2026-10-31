@@ -417,6 +417,13 @@ export function BrowseWorkspace({
     setConfigTab(tab)
     setConfigId(id)
   }
+  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1101px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1101px)'),
+      update = () => setWide(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const closeConfig = () => {
     if (!configDirty || window.confirm(tr('放棄尚未保存的資料夾設定？'))) setConfigId(undefined)
   }
@@ -493,6 +500,36 @@ export function BrowseWorkspace({
     }
   }, [ready, project.mediaCategory, browse.contentMode])
   const panelOpen = !!detail && browse.panelVisible !== false
+  // Settings dock beside the content only when the right panel is visible and wide enough to sit in-line.
+  const docked = !!browse.settingsDock && panelOpen && wide
+  const settingsBody = config && (
+    <Suspense fallback={<p>{tr('載入設定…')}</p>}>
+      <FolderPanel
+        key={config.rowId}
+        initialTab={configTab}
+        row={config}
+        project={project}
+        busy={busy}
+        act={act}
+        run={run}
+        onDirty={reportDirty}
+      />
+    </Suspense>
+  )
+  const dockToggle = (label: string, icon: 'panel-right' | 'panel-left') => (
+    <Tooltip label={label}>
+      <ActionIcon
+        variant="subtle"
+        color="gray"
+        size="sm"
+        aria-label={label}
+        aria-pressed={!!browse.settingsDock}
+        onClick={() => persist({ ...state.current, settingsDock: !browse.settingsDock })}
+      >
+        <Icon name={icon} size={16} />
+      </ActionIcon>
+    </Tooltip>
+  )
   useEffect(() => {
     const body = panelBody.current
     setCanReturnTop(false)
@@ -1285,7 +1322,36 @@ export function BrowseWorkspace({
                   <Icon name="close" />
                 </ActionIcon>
               </div>
+              {docked && (
+                <div className="folder-panel-dock-tabs" role="tablist" aria-label={tr('右側面板分頁')}>
+                  <Button
+                    size="compact-sm"
+                    variant={config ? 'subtle' : 'light'}
+                    role="tab"
+                    aria-selected={!config}
+                    onClick={closeConfig}
+                  >
+                    {tr('內容')}
+                  </Button>
+                  <Button
+                    size="compact-sm"
+                    variant={config ? 'light' : 'subtle'}
+                    role="tab"
+                    aria-selected={!!config}
+                    disabled={busy}
+                    onClick={() => !config && openConfig(detail.rowId)}
+                  >
+                    {tr('設定')}
+                    {config ? ' · ' + config.name : ''}
+                  </Button>
+                  <span className="folder-panel-dock-spacer" />
+                  {dockToggle(tr('改為抽屜顯示設定'), 'panel-left')}
+                </div>
+              )}
               <div ref={panelBody} className="folder-panel-body">
+                {docked && config ? (
+                  <div className="folder-panel-dock-settings">{settingsBody}</div>
+                ) : (
                 <Suspense fallback={<p>{tr('載入內容…')}</p>}>
                   {panelOpen && (folderMode || filePreview) ? (
                     <FolderContent
@@ -1315,6 +1381,7 @@ export function BrowseWorkspace({
                     <p>{tr('選擇檔案以預覽')}</p>
                   ) : null}
                 </Suspense>
+                )}
               </div>
               {canReturnTop && (
                 <Button
@@ -1340,28 +1407,20 @@ export function BrowseWorkspace({
         )}
       </div>
       <Drawer
-        opened={!!config}
+        opened={!!config && !docked}
         onClose={closeConfig}
-        title={tr('資料夾設定 · ') + (config?.name ?? '')}
+        title={
+          <Group gap="xs" wrap="nowrap">
+            <span>{tr('資料夾設定 · ') + (config?.name ?? '')}</span>
+            {panelOpen && wide && dockToggle(tr('停靠到右側面板'), 'panel-right')}
+          </Group>
+        }
         position="right"
         size="lg"
         zIndex={300}
         closeButtonProps={{ 'aria-label': tr('關閉資料夾設定') }}
       >
-        {config && (
-          <Suspense fallback={<p>{tr('載入設定…')}</p>}>
-            <FolderPanel
-              key={config.rowId}
-              initialTab={configTab}
-              row={config}
-              project={project}
-              busy={busy}
-              act={act}
-              run={run}
-              onDirty={reportDirty}
-            />
-          </Suspense>
-        )}
+        {!docked && settingsBody}
       </Drawer>
     </div>
   )

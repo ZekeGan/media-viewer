@@ -4,7 +4,7 @@ import type { StableQuery } from './query'
 import type { Notice } from './notifications'
 import type { Attribute, Cell, Snapshot } from './model'
 export type BrowseMode = 'CARD' | 'TREE' | 'TABLE'
-export interface BrowseState { mode: BrowseMode; location: string; locations?:Partial<Record<BrowseMode,string>>; widths: Record<string, number>; columnOrder?:string[]; hiddenColumns?:string[]; treeCollapsed?:string[]; panelWidth: number; panelVisible?:boolean; detailId?:string; contentMode?:'folders'|'files'; filePresentation?:'tiles'|'groups'|'list'; fileScope?:'current'|'descendants'; fileRootId?:string; scroll?: number; scrolls?: Partial<Record<BrowseMode,number>>; viewport?: { x: number; y: number; zoom: number } }
+export interface BrowseState { mode: BrowseMode; location: string; locations?:Partial<Record<BrowseMode,string>>; widths: Record<string, number>; columnOrder?:string[]; hiddenColumns?:string[]; treeCollapsed?:string[]; panelWidth: number; panelVisible?:boolean; settingsDock?:boolean; detailId?:string; contentMode?:'folders'|'files'; filePresentation?:'tiles'|'groups'|'list'; fileScope?:'current'|'descendants'; fileRootId?:string; scroll?: number; scrolls?: Partial<Record<BrowseMode,number>>; viewport?: { x: number; y: number; zoom: number } }
 export interface GameBoundary { state: 'root' | 'not-game' | 'candidate'; engines: string[]; evidence: string[] }
 export interface ReadingPrefs { mode?:'image'|'manga'; page?: number; fit?: 'height' | 'width' | 'original'; spread?: boolean; rtl?: boolean; firstSingle?: boolean }
 export interface SubtitlePrefs { offset: number; size: number; bottom: number; color: string; background: string; encoding: 'utf-8' | 'big5' | 'shift_jis' }

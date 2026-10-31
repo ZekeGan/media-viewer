@@ -2,6 +2,10 @@
 
 The application version is independent of portable record `schemaVersion`.
 
+## 0.12.0 — 2026-11-01
+
+- Folder settings can be docked as a tab in the right panel (content | settings) with a per-project preference; narrow windows fall back to the drawer.
+
 ## 0.11.1 — 2026-11-01
 
 - Fix the game cover cell and image cells not filling their container when resized; add an image fit option (fill/crop or show whole) with fill as the default for game covers.

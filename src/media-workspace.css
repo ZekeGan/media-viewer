@@ -1034,3 +1034,19 @@
     padding: 0;
     line-height: 1.2;
 }
+
+.folder-panel-dock-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+}
+
+.folder-panel-dock-spacer {
+    flex: 1;
+}
+
+.folder-panel-dock-settings {
+    padding: 4px 2px 16px;
+}

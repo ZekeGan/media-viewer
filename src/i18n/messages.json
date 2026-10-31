@@ -5230,5 +5230,29 @@
     "en": "Show whole image (keep margins)",
     "ja": "全体を表示（余白を残す）",
     "es": "Mostrar completa (con márgenes)"
+  },
+  "右側面板分頁": {
+    "zh-CN": "右侧面板分页",
+    "en": "Right panel tabs",
+    "ja": "右パネルのタブ",
+    "es": "Pestañas del panel derecho"
+  },
+  "設定": {
+    "zh-CN": "设置",
+    "en": "Settings",
+    "ja": "設定",
+    "es": "Ajustes"
+  },
+  "改為抽屜顯示設定": {
+    "zh-CN": "改为抽屉显示设置",
+    "en": "Show settings in a drawer",
+    "ja": "設定をドロワーで表示",
+    "es": "Mostrar ajustes en un cajón"
+  },
+  "停靠到右側面板": {
+    "zh-CN": "停靠到右侧面板",
+    "en": "Dock to the right panel",
+    "ja": "右パネルに固定",
+    "es": "Anclar al panel derecho"
   }
 }
